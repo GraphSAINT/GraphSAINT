@@ -1,0 +1,31 @@
+network:
+  - '256-1-n-relu-concat'             # hidden layer dimension (before concat)
+  - '256-0-n-relu-concat'
+  - '256-1-n-relu-concat'
+  - '256-0-n-relu-concat'
+  - '128-0-n-relu-concat'
+  - 'softmax'       # output layer: sigmoid for multi-class; softmax for single class
+params:
+  - lr: 0.02
+    weight_decay: 0.0
+    norm_weight: True
+    norm_adj: 'rw'
+    model: 'gsaint'
+    q_threshold: 100
+    q_offset: 5
+phase:
+  - end: 3
+    dropout: 0.0
+    sampler: 'frontier'
+    size_subgraph: 500
+    size_frontier: 200
+    order: 1
+    max_deg: 10000
+  - end: 10         # end epoch for this phase
+    dropout: 0.2
+    sampler: 'frontier'
+    size_subgraph: 8000
+    size_frontier: 3000
+    order: 1
+    max_deg: 10000
+# batch norm: tf.layer

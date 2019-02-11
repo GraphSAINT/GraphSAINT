@@ -1,0 +1,42 @@
+network:
+  - '512-1-n-relu-mean'             # hidden layer dimension (before concat)
+  - '512-0-n-relu-mean'
+  - '512-1-n-relu-mean'
+  - '512-0-n-relu-mean'
+  - '512-1-n-relu-mean'
+  - '256-0-n-relu-mean'
+  - '128-0-n-relu-mean'
+  - 'softmax'       # output layer: sigmoid for multi-class; softmax for single class
+params:
+  - lr: 0.02
+    weight_decay: 0.0
+    norm_weight: True
+    norm_adj: 'rw'
+    model: 'gsaint'
+    q_threshold: 50
+    q_offset: 0
+    batch_norm: 'tf.layers'
+    skip: 'noskip' # 'noskip' for no skip
+phase:
+  - end: 3
+    dropout: 0.2
+    sampler: 'frontier'
+    size_subgraph: 1000
+    size_frontier: 400
+    order: 1
+    max_deg: 10000
+  # - end: 5         # end epoch for this phase
+  #   dropout: 0.4
+  #   sampler: 'frontier'
+  #   size_subgraph: 3000
+  #   size_frontier: 1200
+  #   order: 1
+  #   max_deg: 10000
+  - end: 40          # end epoch for this phase
+    dropout: 0.6
+    sampler: 'frontier'
+    size_subgraph: 6000
+    size_frontier: 1800
+    order: 1
+    max_deg: 10000
+#batch norm: tf.layer
