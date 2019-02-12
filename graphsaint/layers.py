@@ -19,8 +19,18 @@ def get_layer_uid(layer_name=''):
         return _LAYER_UIDS[layer_name]
 
 def sparse_tensor_dense_matmul_cpu(a,b):
-    with tf.device('/cpu:0'):
-        c=tf.sparse_tensor_dense_matmul(a,b)
+    # with tf.device('/cpu:0'):
+    #     c=tf.sparse_tensor_dense_matmul(a,b)
+    
+    # partition the matrix to run in GPU
+    NUM_SPLIT=4
+    a_part=tf.sparse.split(sp_input=a,num_split=NUM_SPLIT,axis=0)
+    c_part=[]
+    for i in range(NUM_SPLIT):
+        c_part.append(tf.sparse_tensor_dense_matmul(a_part[i],b))
+    c=tf.concat([c_part[0],c_part[1]],0)
+    for i in range(2,NUM_SPLIT):
+        c=tf.concat([c,c_part[i]],0)
     return c
 
 class Layer:
