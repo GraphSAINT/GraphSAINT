@@ -30,9 +30,6 @@ Learnable vars:
 # TODO: can try layer normalization -- MyLayerNorm in stochastic (layers.py)
 # TODO: check ppi -- many nodes are isolated? seems no use for max_deg
 
-# ---- data ----
-# http://networkrepository.com
-
 from graphsaint.globals import *
 from graphsaint.inits import *
 from graphsaint.supervised_models import Supervisedgraphsaint
@@ -53,20 +50,41 @@ import time
 import datetime
 import pdb
 import getpass
+import json
 
+class TimeLiner:
+    _timeline_dict = None
 
-#from tensorflow.python.client import device_lib
-#print(device_lib.list_local_devices())
+    def update_timeline(self, chrome_trace):
+        # convert crome trace to python dict
+        chrome_trace_dict = json.loads(chrome_trace)
+        # for first run store full trace
+        if self._timeline_dict is None:
+            self._timeline_dict = chrome_trace_dict
+        # for other - update only time consumption, not definitions
+        else:
+            for event in chrome_trace_dict['traceEvents']:
+                # events time consumption started with 'ts' prefix
+                if 'ts' in event:
+                    self._timeline_dict['traceEvents'].append(event)
 
+    def save(self, f_name):
+        with open(f_name, 'w') as f:
+            json.dump(self._timeline_dict, f)
 
-def evaluate_full_batch(sess,model,minibatch_iter,is_val=True,is_valtest=False):
+def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,is_val=True,is_valtest=False):
     """
     Full batch evaluation
     """
+    options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+    run_metadata = tf.RunMetadata()
     t1 = time.time()
     num_cls = minibatch_iter.class_arr.shape[-1]
     feed_dict, labels = minibatch_iter.minibatch_train_feed_dict(0.,is_val=True,is_test=True)
-    preds,loss = sess.run([model.preds, model.loss], feed_dict=feed_dict)
+    preds,loss = sess.run([model.preds, model.loss], feed_dict=feed_dict, options=options, run_metadata=run_metadata)
+    fetched_timeline = timeline.Timeline(run_metadata.step_stats)
+    chrome_trace = fetched_timeline.generate_chrome_trace_format()
+    many_runs_timeline.update_timeline(chrome_trace)
     if is_valtest:
         node_val_test = np.concatenate((minibatch_iter.node_val,minibatch_iter.node_test))
     else:
@@ -170,6 +188,9 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
     time_prepare = 0
     timestamp_chkpt = time.time()
     model_rand_serial = random.randint(1,1000)
+    options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+    run_metadata = tf.RunMetadata()
+    many_runs_timeline = TimeLiner()
     for ip,phase in enumerate(train_phases):
         tset_start = time.time()
         minibatch.set_sampler(phase,train_params['norm_weight'])
@@ -194,7 +215,11 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
                 feed_dict, labels = minibatch.minibatch_train_feed_dict(phase['dropout'],is_val=False,is_test=False)
                 t1 = time.time()
                 _,__,loss_train,pred_train = sess.run([train_stat[0], \
-                        model.opt_op, model.loss, model.preds], feed_dict=feed_dict)
+                        model.opt_op, model.loss, model.preds], feed_dict=feed_dict,
+                        options=options, run_metadata=run_metadata)
+                fetched_timeline = timeline.Timeline(run_metadata.step_stats)
+                chrome_trace = fetched_timeline.generate_chrome_trace_format()
+                many_runs_timeline.update_timeline(chrome_trace)
                 t2 = time.time()
                 time_train_ep += t2-t1
                 time_prepare_ep += t1-t0
@@ -215,7 +240,7 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
             time_prepare += time_prepare_ep
             if e % 1 == 0:
                 loss_val,f1mic_val,f1mac_val,time_eval = \
-                        evaluate_full_batch(sess,model,minibatch,is_val=True)
+                        evaluate_full_batch(sess,model,minibatch,many_runs_timeline,is_val=True)
                 #loss_test,f1mic_test,f1mac_test,time_eval2 = \
                 #        evaluate_full_batch(sess,model,minibatch,is_val=False)
                 if f1mic_val > f1mic_best:
@@ -246,6 +271,7 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
     #save_model_weights(weight_cur,FLAGS.data_prefix.split('/')[-1],e_best,FLAGS.train_config)
     #reload_model_weights(sess,model,weight_cur)
     printf("Optimization Finished!",type='WARN')
+    many_runs_timeline.save('timeline.json')
     # ---------- try reloading
     saver.restore(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
     loss_val, f1mic_val, f1mac_val, duration = evaluate_full_batch(sess,model,minibatch)
