@@ -178,8 +178,8 @@ class NodeMinibatchIterator(object):
         #    adj = self.adj_full_norm
         _num_edges = len(adj.nonzero()[1])
         _num_vertices = len(self.node_subgraph)
-        print('subgraph: {} vertices, {} edges, {:5.2f} degree\t\tis_val: {}, is_test: {}'\
-            .format(_num_vertices,_num_edges,_num_edges/_num_vertices,is_val,is_test))
+        # print('subgraph: {} vertices, {} edges, {:5.2f} degree\t\tis_val: {}, is_test: {}'\
+        #     .format(_num_vertices,_num_edges,_num_edges/_num_vertices,is_val,is_test))
         _indices_ph = np.column_stack(adj.nonzero())
         _shape_ph = adj.shape
         feed_dict.update({self.placeholders['adj_subgraph']: \
