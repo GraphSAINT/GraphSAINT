@@ -258,7 +258,6 @@ class HighOrderAggregator(Layer):
         for o in range(self.order):
             for a in range(o+1):
                 # vecs_hop[o+1] = tf.sparse_tensor_dense_matmul(adj_norm,vecs_hop[o+1])
-                # gpu_memory: 32bits, batch size cannot exceed 2^32^0.5=65536
                 _exceed_gpu_memory_space=tf.greater(tf.size(adj_norm),50000*50000)
                 vecs_hop[o+1]=tf.cond(_exceed_gpu_memory_space,lambda:sparse_tensor_dense_matmul_cpu(adj_norm,vecs_hop[o+1]),lambda:tf.sparse_tensor_dense_matmul(adj_norm,vecs_hop[o+1]))
         """
