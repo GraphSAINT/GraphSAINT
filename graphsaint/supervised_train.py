@@ -1,35 +1,3 @@
-"""
-TODO:
-
->> calculate accuracy, no label? (F1 calc warning)
-    -- you should plot class label frequency
--- new dataset: amazon/pokec
-
-* how will network generalize when sampling size is very large
-> obtain adj & test_adj of baseline
-> log trained model, test accuracy of trained model on preprocessed data
-> check the detailed classification result --> high deg nodes are more accurate?
-> GCN is not performing avg of neighbors by adj matrix, it is doing P matrix
-
-Learnable vars:
-* MeanAggregator/neigh_weights + self_weights
-* Dense/weights + bias
-
-
->> is GPU truly utilized?
->> systematic way of dse: using excel
->> more sampling algorithms
->> deeper layers
-"""
-
-# TODO: choose the normalization method of Laplacian
-# TODO: frontier sampling, maybe the adj should also be khop?
-# TODO: adj now assumes added self connection
-# TODO: when estimating norm loss values, is 20 a good number of repetition?
-# TODO: can replace the phi on X by multi-layer perceptron
-# TODO: can try layer normalization -- MyLayerNorm in stochastic (layers.py)
-# TODO: check ppi -- many nodes are isolated? seems no use for max_deg
-
 from graphsaint.globals import *
 from graphsaint.inits import *
 from graphsaint.supervised_models import Supervisedgraphsaint
@@ -121,8 +89,6 @@ def prepare(train_data,train_params,dims_gcn):
     adj_train = adj_train.astype(np.int32)
     adj_full_norm = adj_norm(adj_full,train_params['norm_adj'])
     num_classes = class_arr.shape[1]
-    # pad with dummy zero vector
-    # features = np.vstack([features, np.zeros((features.shape[1],))])
 
     dims = dims_gcn[:-1]
     loss_type = dims_gcn[-1]
@@ -223,7 +189,6 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
                 t2 = time.time()
                 time_train_ep += t2-t1
                 time_prepare_ep += t1-t0
-                #_loss_terms,_weight_loss_batch = sess.run([model.loss_terms,model._weight_loss_batch], feed_dict=feed_dict)
                 if not minibatch.batch_num % FLAGS.print_every:
                     t3 = time.time()
                     f1_mic,f1_mac = calc_f1(labels,pred_train,dims_gcn[-1])
@@ -241,16 +206,12 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
             if e % 1 == 0:
                 loss_val,f1mic_val,f1mac_val,time_eval = \
                         evaluate_full_batch(sess,model,minibatch,many_runs_timeline,is_val=True)
-                #loss_test,f1mic_test,f1mac_test,time_eval2 = \
-                #        evaluate_full_batch(sess,model,minibatch,is_val=False)
                 if f1mic_val > f1mic_best:
                     f1mic_best = f1mic_val
                     e_best = e
-                    #weight_cur = get_model_weights(sess,model,dims_gcn)
                     # ---------- try saver
                     savepath = saver.save(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
                 printf('   val loss {:.5f}\tmic {:.5f}\tmac {:.5f}',loss_val,f1mic_val,f1mac_val)
-                #printf('  test loss {:.5f}\tmic {:.5f}\tmac {:.5f}',loss_test,f1mic_test,f1mac_test)
                 printf('   avg train loss {:.5f}\tmic {:.5f}\tmac {:.5f}',f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr))
                     
                 misc_stat = sess.run([train_stat[1]],feed_dict={\
@@ -278,7 +239,6 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
     printf("Full validation stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}",loss_val,f1mic_val,f1mac_val)
     loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,is_val=False)
     printf("Full test stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}",loss_test,f1mic_test,f1mac_test)
-    # print('-- calc f1 time: ',time_calc_f1)
     return {'loss_val_opt':loss_val,'f1mic_val_opt':f1mic_val,'f1mac_val_opt':f1mac_val,\
             'loss_test_opt':loss_test,'f1mic_test_opt':f1mic_test,'f1mac_test_opt':f1mac_test,\
             'epoch_best':e_best,
@@ -293,9 +253,6 @@ def train_main(argv=None,**kwargs):
     train_config = None if 'train_config' not in kwargs.keys() else kwargs['train_config']
     train_params,train_phases,train_data,dims_gcn = parse_n_prepare(FLAGS,train_config=train_config)
     model,minibatch,sess,train_stat,ph_misc_stat,summary_writer = prepare(train_data,train_params,dims_gcn)
-    #cProfile.runctx("train(train_phases,train_params,dims_gcn,model,minibatch,sess,train_stat,ph_misc_stat,summary_writer)",\
-    #    globals(),locals(),'perf_ppi.profile')
-    #exit()
     time_start = time.time()
     ret = train(train_phases,train_params,dims_gcn,model,minibatch,sess,train_stat,ph_misc_stat,summary_writer)
     time_end = time.time()

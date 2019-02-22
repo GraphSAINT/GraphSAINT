@@ -2,10 +2,6 @@ import tensorflow as tf
 from graphsaint.inits import glorot,zeros,trained,ones,xavier,uniform
 from graphsaint.globals import *
 
-# Things you can try --
-# TODO: change initialization of order2_weights
-# TODO: merge the order1 and order2 weights and weighted mean by Chebychev
-
 # global unique layer ID dictionary for layer name assignment
 _LAYER_UIDS = {}
 
@@ -231,8 +227,6 @@ class HighOrderAggregator(Layer):
         vw = tf.matmul(vecs,self.vars['order{}_weights'.format(order)])
         if self.bias and not self.norm:
             vw += self.vars['order{}_bias'.format(order)]
-        #vw = self.act(vw)       # TODO: check the sequence
-        # with tf.variable_scope(self.name + '_vars'):
         if self.norm:
             if self.batch_norm == 'tf.nn':
                 mean,variance = tf.nn.moments(vw,axes=[1],keep_dims=True)
@@ -248,7 +242,6 @@ class HighOrderAggregator(Layer):
         vecs, adj_norm, nnz, len_feat = inputs
         # TODO: where should you put dropout? here or at the end of this aggr??
         vecs = tf.nn.dropout(vecs, 1-self.dropout)
-        # TODO ---
         vecs_hop = []
         for o in range(self.order+1):
             if self.dim_out > 0:
