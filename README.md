@@ -69,3 +69,9 @@ The hyperparameters needs in training is givin in `/train_config/<dataset><num_l
 To run the code on cpu
 
 `./run_graphsaint.sh <dataset_name> <path to train_config yml>`
+
+To run the code on gpu
+
+`./run_graphsaint.sh <dataset_name> <path to train_config yml> --gpu <GPU number>`
+
+For example `--gpu 0` will run on the first GPU. 

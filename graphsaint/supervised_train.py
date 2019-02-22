@@ -278,13 +278,11 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
     printf("Full validation stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}",loss_val,f1mic_val,f1mac_val)
     loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,is_val=False)
     printf("Full test stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}",loss_test,f1mic_test,f1mac_test)
-    print('-- calc f1 time: ',time_calc_f1)
+    # print('-- calc f1 time: ',time_calc_f1)
     return {'loss_val_opt':loss_val,'f1mic_val_opt':f1mic_val,'f1mac_val_opt':f1mac_val,\
             'loss_test_opt':loss_test,'f1mic_test_opt':f1mic_test,'f1mac_test_opt':f1mac_test,\
             'epoch_best':e_best,
-            'time_qest': time_qest,
-            'time_train': time_train,
-            'time_prepare': time_prepare}
+            'time_train': time_train}
 
 
 ########
