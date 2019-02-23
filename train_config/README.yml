@@ -1,0 +1,40 @@
+network:
+  - <dim>-<order>-<norm/bias>-<act>-<aggr>
+  - <dim>-<order>-<norm/bias>-<act>-<aggr>
+  ...
+
+  # one line denotes one layer
+  # <dim> dimension before concat
+  # <order> order of the GCN, 0 for NLP layer, max 2
+  # <norm/bias> n for norm; nb for norm and bias
+  # <act> activations, relu for relu; lin for no activation
+  # <aggr> concat for concat of neighbor and self; add for add
+params:
+  - lr: <lr>
+    weight_decay: <weight_decay>
+    norm_weight: <0/1>
+    norm_adj: <rw/sym> # rw for random walk; sym for symmetric 
+    model: <gs_mean/gsaint> # gw_mean for graphsage_mean
+    q_threshold: <q_threshold> # estimate the distribution of subgraph based on <q_threshold>*<fullgraph_size>/<subgraph_size> samples
+    q_offset: <q_offset> # add <q_offset> to all the nodes sampled to estimate the distribution
+    batch_norm: <tf.nn/tf.layers>
+    skip: <noskip/x-y> # noskip for no skip across the layers; x-y for the output of layer x added to the input of layer y, requires the same dimension
+phase:
+  - end: <end> # end epoch of this phase
+    dropout: <dropout>
+    sampler: <frontier/rw/khop/edge>
+    # frontier:
+    size_subgraph: <size_subgraph>
+    size_frontier: <size_frontier>
+    order: <order>
+    max_deg: <max_deg> # clip the degree to max_deg
+    # rw:
+    num_root: <num_root>
+    depth: <depth>
+    # khop:
+    size_subgraph: <size_subgraph>
+    order: <order>
+    # edge:
+    size_subgraph: <size_subgraph>
+  ...
+    
