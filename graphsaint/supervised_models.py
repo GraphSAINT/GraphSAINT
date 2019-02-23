@@ -8,13 +8,12 @@ import pdb
 
 
 class Supervisedgraphsaint:
-    """Implementation of supervised graphsaint."""
 
     def __init__(self, num_classes, placeholders, features,
             dims, train_params, type_loss, adj_full_norm, model_pretrain=None, **kwargs):
         '''
         Args:
-            - placeholders: Stanford TensorFlow placeholder object.
+            - placeholders: TensorFlow placeholder object.
             - features: Numpy array with node features.
             - adj: Numpy array with adjacency lists (padded with random re-samples)
             - degrees: Numpy array with node degrees.
@@ -34,16 +33,12 @@ class Supervisedgraphsaint:
         self.adj_subgraph  = placeholders['adj_subgraph']
         self.batch_norm = train_params['batch_norm']
         self.skip = train_params['skip']
-        # TODO: do I need to place features on CPU?
-        #with tf.device('/gpu:0'):
         self.features = tf.Variable(tf.constant(features, dtype=DTYPE), trainable=False)
-        # TODO
         _indices = np.column_stack(adj_full_norm.nonzero())
         _data = adj_full_norm.data
         _shape = adj_full_norm.shape
         with tf.device('/cpu:0'):
             self.adj_full_norm = tf.SparseTensorValue(_indices,_data,_shape)
-            # TODO: you should take into account normalization factor
         self.num_classes = num_classes
         self.sigmoid_loss = (type_loss=='sigmoid')
         _dims,_order,_act,_bias,_norm,_aggr = utils.parse_layer_yml(dims)
@@ -65,8 +60,6 @@ class Supervisedgraphsaint:
         self.build(model_pretrain=model_pretrain)
 
     def set_dims(self,dims):
-        # self.dims_weight
-        # self.dims_feat
         if self.gcn_model == 'gs_mean':
             self.dims_feat = [dims[0]] + [2*d for d in dims[1:]]
         elif self.gcn_model == 'gsaint':
@@ -83,14 +76,12 @@ class Supervisedgraphsaint:
         """
         model_pretrain_aggr = model_pretrain['meanaggr'] if model_pretrain else None
         model_pretrain_dense = model_pretrain['dense'] if model_pretrain else None
-        # TODO: specify tf device here?
         self.aggregators = self.get_aggregators(model_pretrain=model_pretrain_aggr)
         self.outputs = self.aggregate_subgraph()
         ################
         # OUPTUT LAYER #
         ################
         self.outputs = tf.nn.l2_normalize(self.outputs, 1)
-        # TODO: why 'act' as a linear mapping
         self.node_pred = layers.Dense(self.dims_feat[-1], self.num_classes, self.weight_decay,
                 dropout=self.placeholders['dropout'], act=lambda x:x, model_pretrain=model_pretrain_dense)
         self.node_preds = self.node_pred(self.outputs)
@@ -102,7 +93,6 @@ class Supervisedgraphsaint:
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
             grads_and_vars = self.optimizer.compute_gradients(self.loss)
-            # ---- why clip by value?? ----
             clipped_grads_and_vars = [(tf.clip_by_value(grad, -5.0, 5.0) if grad is not None else None, var)
                     for grad, var in grads_and_vars]
             self.grad, _ = clipped_grads_and_vars[0]
@@ -111,9 +101,6 @@ class Supervisedgraphsaint:
 
 
     def _loss(self):
-        # Weight decay loss
-        # [z]: see this: https://stats.stackexchange.com/questions/29130/difference-between-neural-net-weight-decay-and-learning-rate
-        # ---- 06082018 ----
         # these are all the trainable var
         for aggregator in self.aggregators:
             for var in aggregator.vars.values():
@@ -145,8 +132,6 @@ class Supervisedgraphsaint:
         if model_pretrain is None:
             model_pretrain = [None]*self.num_layers
         for layer in range(self.num_layers):
-            # TODO: may need to place the weights on CPU?
-            # TODO: need to add order and act info here in initialization
             aggregator = self.aggregator_cls(self.dims_weight[layer][0], self.dims_weight[layer][1],
                     dropout=self.placeholders['dropout'],name=name,model_pretrain=model_pretrain[layer],
                     bias=self.bias_layer[layer],act=self.act_layer[layer],order=self.order_layer[layer],\
@@ -159,7 +144,7 @@ class Supervisedgraphsaint:
         if mode == 'train':
             hidden = tf.nn.embedding_lookup(self.features, self.node_subgraph)
             adj = self.adj_subgraph
-        else:   # full batch evaluation / test
+        else:
             hidden = self.features
             adj = self.adj_full_norm
         skip_from=-1
@@ -168,11 +153,6 @@ class Supervisedgraphsaint:
             skip_from=int(self.skip.split('-')[0])
             skip_to=int(self.skip.split('-')[1])
         for layer in range(self.num_layers):
-            # last layer does not have ReLU activation function
-            #if self.gcn_model in ['gs_mean']:
-            #    is_act = False if layer==self.num_layers-1 else True
-            #elif self.gcn_model in ['gsaint']:
-            #    is_act = True if layer!=0 else False
             if layer==skip_to:
                 hidden=hidden+hidden_save
             hidden = self.aggregators[layer]((hidden,adj,self.nnz,self.dims_feat[layer]))
@@ -182,6 +162,4 @@ class Supervisedgraphsaint:
 
     def aggregate_fullgraph(self):
         pass
-        # TODO
-        #with tf.device('CPU'):
             

@@ -117,8 +117,6 @@ class NodeMinibatchIterator(object):
             subg_end = 0; tot_sampled_nodes = 0
             while True:
                 self.par_graph_sample('train')
-                # TODO: redo from here
-                #self.par_graph_sample('train','',self._set_sampler_args())
                 for i in range(subg_end,len(self.subgraphs_remaining_nodes)):
                     self.norm_weight_train[self.subgraphs_remaining_nodes[i]] += 1
                     tot_sampled_nodes += self.subgraphs_remaining_nodes[i].size
@@ -137,7 +135,7 @@ class NodeMinibatchIterator(object):
         t0 = time.time()
         _indptr,_indices,_data,_v = self.graph_sampler.par_sample(phase,**self._set_sampler_args())
         t1 = time.time()
-        print('   time: ',t1-t0)
+        print('sampling 200 subgraphs:   time = ',t1-t0)
         self.subgraphs_remaining_indptr.extend(_indptr)
         self.subgraphs_remaining_indices.extend(_indices)
         self.subgraphs_remaining_data.extend(_data)
@@ -154,12 +152,10 @@ class NodeMinibatchIterator(object):
 
             self.node_subgraph = self.subgraphs_remaining_nodes.pop()
             self.size_subgraph = len(self.node_subgraph)
-            #_adj_rev = self.adj_train_rev
             adj = sp.csr_matrix((self.subgraphs_remaining_data.pop(),self.subgraphs_remaining_indices.pop(),\
                         self.subgraphs_remaining_indptr.pop()),shape=(self.node_subgraph.size,self.node_subgraph.size))
             adj = adj_norm(adj,self.norm_adj)
             self.batch_num += 1
-        #self.node_subgraph.sort()
         feed_dict = dict()
         feed_dict.update({self.placeholders['node_subgraph']: self.node_subgraph})
         feed_dict.update({self.placeholders['labels']: self.class_arr[self.node_subgraph]})
@@ -169,17 +165,8 @@ class NodeMinibatchIterator(object):
         else:
             feed_dict.update({self.placeholders['norm_weight']:self.norm_weight_train})
         
-        # obtain adj of subgraph
-        #if not is_val and not is_test:
-        #    _adj_indptr,_adj_indices,_adj_data = adj_extract_cython(_adj_rev.indptr,_adj_rev.indices,self.node_subgraph)
-        #    _adj = sp.csr_matrix((_adj_data,_adj_indices,_adj_indptr),shape=(self.node_subgraph.size,self.node_subgraph.size))
-        #    adj = adj_norm(_adj,self.norm_adj)
-        #else:
-        #    adj = self.adj_full_norm
         _num_edges = len(adj.nonzero()[1])
         _num_vertices = len(self.node_subgraph)
-        # print('subgraph: {} vertices, {} edges, {:5.2f} degree\t\tis_val: {}, is_test: {}'\
-        #     .format(_num_vertices,_num_edges,_num_edges/_num_vertices,is_val,is_test))
         _indices_ph = np.column_stack(adj.nonzero())
         _shape_ph = adj.shape
         feed_dict.update({self.placeholders['adj_subgraph']: \
