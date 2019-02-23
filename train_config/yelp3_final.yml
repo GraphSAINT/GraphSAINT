@@ -1,20 +1,22 @@
 network:
+  - '512-0-n-relu-concat'
   - '256-1-n-relu-concat'             # hidden layer dimension (before concat)
-  - '512-0-n-relu-concat'
   - '256-1-n-relu-concat'
-  - '512-0-n-relu-concat'
-  - '256-1-n-relu-concat'
-  - '512-0-n-relu-concat'
-  - '512-0-n-relu-mean'
+  # - '512-0-n-relu-concat'
+  - '256-2-n-relu-concat'
+  # - '512-0-n-relu-concat'
+  # - '512-0-n-relu-concat'
   - 'sigmoid'       # output layer: sigmoid for multi-class; softmax for single class
 params:
-  - lr: 0.02
+  - lr: 0.03
     weight_decay: 0.0 #001
     norm_weight: 1
-    norm_adj: 'rw'
+    norm_adj: 'sym'
     model: 'gsaint'     # 'gs_mean' 'gsaint'
-    q_threshold: 100
-    q_offset: 1
+    q_threshold: 50
+    q_offset: 5
+    batch_norm: 'tf.layers'
+    skip: '0-2' # 'noskip' for no skip
 phase:
   #- end: 5
   #  dropout: 0.0
@@ -23,20 +25,19 @@ phase:
   #  size_frontier: 1000
   #  order: 1
   #  max_deg: 50
-  - end: 50         # end epoch for this phase
-    dropout: 0
-    # sampler: 'rw'
-    # num_root: 300
-    # depth: 10
+  - end: 30         # end epoch for this phase
+    dropout: 0.05
     sampler: 'frontier'
     size_subgraph: 2000
     size_frontier: 1000
     order: 1
     max_deg: 10000
-    # sampler: 'khop'
+    # sampler: 'rw'
+    # num_root: 500
+    # sampler: 'edge'
     # size_subgraph: 2000
-    # order: 1
-  # - end: 50         
+    # depth: 4
+  # - end: 50         # end epoch for this phase
   #   dropout: 0.3
   #   sampler: 'frontier'
   #   size_subgraph: 2000
