@@ -62,7 +62,7 @@ We have a cython module which need compile before running. Compile the module by
 
 ## Train Config
 
-The hyperparameters needs in training is givin in `/train_config/<dataset><num_layer>_final.yml`.
+The hyperparameters needs in training is givin in `/train_config/<dataset><num_layer>.yml`.
 
 ## Run
 

@@ -11,7 +11,9 @@ params:
     norm_adj: 'rw'
     model: 'gsaint'
     q_threshold: 50
-    q_offset: 1
+    q_offset: 0
+    batch_norm: 'tf.nn'
+    skip: 'noskip'
 phase:
   - end: 50
     dropout: 0.0
