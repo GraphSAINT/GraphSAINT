@@ -1,23 +1,22 @@
 network:
-  - '256-1-n-relu-concat'
   - '512-0-n-relu-concat'
   - '256-1-n-relu-concat'
-  - '512-0-n-relu-concat'
   - '256-1-n-relu-concat'
-  - '512-0-n-relu-concat'
-  - '512-0-n-relu-mean'
+  - '256-2-n-relu-concat'
   - 'sigmoid'
 params:
-  - lr: 0.02
+  - lr: 0.03
     weight_decay: 0.0
     norm_weight: 1
-    norm_adj: 'rw'
+    norm_adj: 'sym'
     model: 'gsaint'
-    q_threshold: 100
-    q_offset: 1
+    q_threshold: 50
+    q_offset: 5
+    batch_norm: 'tf.layers'
+    skip: '0-2'
 phase:
-  - end: 50
-    dropout: 0
+  - end: 30
+    dropout: 0.05
     sampler: 'frontier'
     size_subgraph: 2000
     size_frontier: 1000

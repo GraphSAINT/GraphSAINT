@@ -9,12 +9,12 @@ params:
     norm_weight: 1
     norm_adj: 'rw'
     batch_norm: 'tf.nn'
-    model: 'gsaint'
+    model: 'gsaint'   
     q_threshold: 100
     q_offset: 1
     skip: 'noskip'
 phase:
-  - end: 35
+  - end: 35 
     dropout: 0.0
     sampler: 'frontier'
     size_subgraph: 4000
