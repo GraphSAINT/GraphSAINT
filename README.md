@@ -64,6 +64,8 @@ We have a cython module which need compile before running. Compile the module by
 
 The hyperparameters needs in training is givin in `/train_config/<dataset><num_layer>.yml`.
 
+For detailed description of the config, please see `/train_config/README.yml`
+
 ## Run
 
 To run the code on cpu
