@@ -45,6 +45,13 @@ class NodeMinibatchIterator(object):
         self.class_arr = class_arr
         self.adj_full = adj_full
         self.adj_full_norm = adj_full_norm
+        s1=int(adj_full_norm.shape[0]/4)
+        s2=int(adj_full_norm.shape[0]/2)
+        s3=int(adj_full_norm.shape[0]/4*3)
+        self.adj_full_norm_0=adj_full_norm[:s1,:]
+        self.adj_full_norm_1=adj_full_norm[s1:s2,:]
+        self.adj_full_norm_2=adj_full_norm[s2:s3,:]
+        self.adj_full_norm_3=adj_full_norm[s3:,:]
         self.adj_train = adj_train
         self.adj_full_rev = self.adj_full.transpose()
         self.adj_train_rev = self.adj_train.transpose()
@@ -145,7 +152,11 @@ class NodeMinibatchIterator(object):
         """ DONE """
         if is_val or is_test:
             self.node_subgraph = np.arange(self.class_arr.shape[0])
-            adj = self.adj_full_norm
+            adj = sp.csr_matrix(([],[],np.zeros(2)), shape=(1,self.node_subgraph.shape[0]))
+            adj_0 = self.adj_full_norm_0
+            adj_1 = self.adj_full_norm_1
+            adj_2 = self.adj_full_norm_2
+            adj_3 = self.adj_full_norm_3
         else:
             if len(self.subgraphs_remaining_nodes) == 0:
                 self.par_graph_sample('train')
@@ -155,6 +166,10 @@ class NodeMinibatchIterator(object):
             adj = sp.csr_matrix((self.subgraphs_remaining_data.pop(),self.subgraphs_remaining_indices.pop(),\
                         self.subgraphs_remaining_indptr.pop()),shape=(self.node_subgraph.size,self.node_subgraph.size))
             adj = adj_norm(adj,self.norm_adj)
+            adj_0 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
+            adj_1 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
+            adj_2 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
+            adj_3 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
             self.batch_num += 1
         feed_dict = dict()
         feed_dict.update({self.placeholders['node_subgraph']: self.node_subgraph})
@@ -171,6 +186,14 @@ class NodeMinibatchIterator(object):
         _shape_ph = adj.shape
         feed_dict.update({self.placeholders['adj_subgraph']: \
             tf.SparseTensorValue(_indices_ph,adj.data,_shape_ph)})
+        feed_dict.update({self.placeholders['adj_subgraph_0']: \
+            tf.SparseTensorValue(np.column_stack(adj_0.nonzero()),adj_0.data,adj_0.shape)})
+        feed_dict.update({self.placeholders['adj_subgraph_1']: \
+            tf.SparseTensorValue(np.column_stack(adj_1.nonzero()),adj_1.data,adj_1.shape)})
+        feed_dict.update({self.placeholders['adj_subgraph_2']: \
+            tf.SparseTensorValue(np.column_stack(adj_2.nonzero()),adj_2.data,adj_2.shape)})
+        feed_dict.update({self.placeholders['adj_subgraph_3']: \
+            tf.SparseTensorValue(np.column_stack(adj_3.nonzero()),adj_3.data,adj_3.shape)})
         feed_dict.update({self.placeholders['nnz']: adj.size})
         if is_val or is_test:
             feed_dict[self.placeholders['is_train']]=False
