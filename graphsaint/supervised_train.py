@@ -53,7 +53,7 @@ def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,is_val=True
         preds,loss = sess.run([model.preds, model.loss], feed_dict=feed_dict, options=options, run_metadata=run_metadata)
         fetched_timeline = timeline.Timeline(run_metadata.step_stats)
         chrome_trace = fetched_timeline.generate_chrome_trace_format()
-        many_runs_timeline.update_timeline(chrome_trace)
+        many_runs_timeline.append(chrome_trace)
     else:
         preds,loss = sess.run([model.preds, model.loss], feed_dict=feed_dict)
     if is_valtest:
@@ -163,7 +163,8 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
     model_rand_serial = random.randint(1,1000)
     options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
     run_metadata = tf.RunMetadata()
-    many_runs_timeline = TimeLiner()
+    # many_runs_timeline = TimeLiner()
+    many_runs_timeline=[]
     for ip,phase in enumerate(train_phases):
         tset_start = time.time()
         minibatch.set_sampler(phase,train_params['norm_weight'])
@@ -181,6 +182,7 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
             l_size_subg = list()
             time_train_ep = 0
             time_prepare_ep = 0
+            time_timeline_ep=0
             time_mask = 0
             time_list = 0
             while not minibatch.end():
@@ -194,7 +196,9 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
                     t2 = time.time()
                     fetched_timeline = timeline.Timeline(run_metadata.step_stats)
                     chrome_trace = fetched_timeline.generate_chrome_trace_format()
-                    many_runs_timeline.update_timeline(chrome_trace)
+                    many_runs_timeline.append(chrome_trace)
+                    t3=time.time()
+                    time_timeline_ep+=t3-t2
                 else:
                     _,__,loss_train,pred_train = sess.run([train_stat[0], \
                             model.opt_op, model.loss, model.preds], feed_dict=feed_dict)
@@ -212,7 +216,10 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
                     l_size_subg.append(minibatch.size_subgraph)
                     t4 = time.time()
                     time_calc_f1 += t4 - t3
-            print('train time: {:4.2f}\tprepare time: {:4.2f}'.format(time_train_ep,time_prepare_ep))
+            if FLAGS.timeline:
+                print('train time: {:4.2f}\tprepare time: {:4.2f}\ttimeline time: {:4.2f}'.format(time_train_ep,time_prepare_ep,time_timeline_ep)) 
+            else:
+                print('train time: {:4.2f}\tprepare time: {:4.2f}'.format(time_train_ep,time_prepare_ep))
             time_train += time_train_ep
             time_prepare += time_prepare_ep
             if e % 1 == 0:
@@ -222,31 +229,39 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
                     f1mic_best = f1mic_val
                     e_best = e
                     # ---------- try saver
-                    savepath = saver.save(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
+                    tsave=time.time()
+                    # savepath = saver.save(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
+                    savepath = saver.save(sess, './temp_model_{}_rand{}.chkpt'.format(timestamp_chkpt,model_rand_serial))
+                    print('saver time: {:4.2f}'.format(time.time()-tsave))
                 printf('   val loss {:.5f}\tmic {:.5f}\tmac {:.5f}',loss_val,f1mic_val,f1mac_val)
                 printf('   avg train loss {:.5f}\tmic {:.5f}\tmac {:.5f}',f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr))
-                    
-                misc_stat = sess.run([train_stat[1]],feed_dict={\
-                                        ph_misc_stat['val_f1_micro']: f1mic_val,
-                                        ph_misc_stat['val_f1_macro']: f1mac_val,
-                                        ph_misc_stat['train_f1_micro']: f_mean(l_f1mic_tr),
-                                        ph_misc_stat['train_f1_macro']: f_mean(l_f1mac_tr),
-                                        ph_misc_stat['time_per_batch']: 0,#t_epoch/num_batches,
-                                        ph_misc_stat['time_per_epoch']: time_train_ep+time_prepare_ep,#t_epoch,
-                                        ph_misc_stat['size_subgraph']: f_mean(l_size_subg),
-                                        ph_misc_stat['learning_rate']: 0,#curr_learning_rate,
-                                        ph_misc_stat['epoch_sample_time']: 0})#t_epoch_sampling})
-                # tensorboard visualization
-                summary_writer.add_summary(_, e)
-                summary_writer.add_summary(misc_stat[0], e)
+                
+                if FLAGS.tensorboard:
+                    misc_stat = sess.run([train_stat[1]],feed_dict={\
+                                            ph_misc_stat['val_f1_micro']: f1mic_val,
+                                            ph_misc_stat['val_f1_macro']: f1mac_val,
+                                            ph_misc_stat['train_f1_micro']: f_mean(l_f1mic_tr),
+                                            ph_misc_stat['train_f1_macro']: f_mean(l_f1mac_tr),
+                                            ph_misc_stat['time_per_batch']: 0,#t_epoch/num_batches,
+                                            ph_misc_stat['time_per_epoch']: time_train_ep+time_prepare_ep,#t_epoch,
+                                            ph_misc_stat['size_subgraph']: f_mean(l_size_subg),
+                                            ph_misc_stat['learning_rate']: 0,#curr_learning_rate,
+                                            ph_misc_stat['epoch_sample_time']: 0})#t_epoch_sampling})
+                    # tensorboard visualization
+                    summary_writer.add_summary(_, e)
+                    summary_writer.add_summary(misc_stat[0], e)
         epoch_ph_start = int(phase['end'])
     #saver.save(sess, 'models/{data}'.format(data=FLAGS.data_prefix.split('/')[-1]),global_step=e)
     #save_model_weights(weight_cur,FLAGS.data_prefix.split('/')[-1],e_best,FLAGS.train_config)
     #reload_model_weights(sess,model,weight_cur)
     printf("Optimization Finished!",type='WARN')
-    many_runs_timeline.save('timeline.json')
+    timelines = TimeLiner()
+    for tl in many_runs_timeline:
+        timelines.update_timeline(tl)
+    timelines.save('timeline.json')
     # ---------- try reloading
-    saver.restore(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
+    # saver.restore(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
+    saver.restore(sess, './temp_model_{}_rand{}.chkpt'.format(timestamp_chkpt,model_rand_serial))
     loss_val, f1mic_val, f1mac_val, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline)
     printf("Full validation stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}",loss_val,f1mic_val,f1mac_val)
     loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,is_val=False)
