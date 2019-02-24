@@ -49,10 +49,13 @@ def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,is_val=True
     t1 = time.time()
     num_cls = minibatch_iter.class_arr.shape[-1]
     feed_dict, labels = minibatch_iter.minibatch_train_feed_dict(0.,is_val=True,is_test=True)
-    preds,loss = sess.run([model.preds, model.loss], feed_dict=feed_dict, options=options, run_metadata=run_metadata)
-    fetched_timeline = timeline.Timeline(run_metadata.step_stats)
-    chrome_trace = fetched_timeline.generate_chrome_trace_format()
-    many_runs_timeline.update_timeline(chrome_trace)
+    if FLAGS.timeline:
+        preds,loss = sess.run([model.preds, model.loss], feed_dict=feed_dict, options=options, run_metadata=run_metadata)
+        fetched_timeline = timeline.Timeline(run_metadata.step_stats)
+        chrome_trace = fetched_timeline.generate_chrome_trace_format()
+        many_runs_timeline.update_timeline(chrome_trace)
+    else:
+        preds,loss = sess.run([model.preds, model.loss], feed_dict=feed_dict)
     if is_valtest:
         node_val_test = np.concatenate((minibatch_iter.node_val,minibatch_iter.node_test))
     else:
@@ -70,6 +73,10 @@ def construct_placeholders(num_classes):
         'nnz': tf.placeholder(tf.int32, shape=(None), name='adj_nnz'),
         'dropout': tf.placeholder(DTYPE, shape=(None), name='dropout'),
         'adj_subgraph' : tf.sparse_placeholder(DTYPE,name='adj_subgraph'),
+        'adj_subgraph_0' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_0'),
+        'adj_subgraph_1' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_1'),
+        'adj_subgraph_2' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_2'),
+        'adj_subgraph_3' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_3'),
         'norm_weight': tf.placeholder(DTYPE,shape=(None),name='loss_weight'),
         'is_train': tf.placeholder(tf.bool, shape=(None), name='is_train')
     }
@@ -180,13 +187,18 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
                 t0 = time.time()
                 feed_dict, labels = minibatch.minibatch_train_feed_dict(phase['dropout'],is_val=False,is_test=False)
                 t1 = time.time()
-                _,__,loss_train,pred_train = sess.run([train_stat[0], \
-                        model.opt_op, model.loss, model.preds], feed_dict=feed_dict,
-                        options=options, run_metadata=run_metadata)
-                fetched_timeline = timeline.Timeline(run_metadata.step_stats)
-                chrome_trace = fetched_timeline.generate_chrome_trace_format()
-                many_runs_timeline.update_timeline(chrome_trace)
-                t2 = time.time()
+                if FLAGS.timeline:
+                    _,__,loss_train,pred_train = sess.run([train_stat[0], \
+                            model.opt_op, model.loss, model.preds], feed_dict=feed_dict,
+                            options=options, run_metadata=run_metadata)
+                    t2 = time.time()
+                    fetched_timeline = timeline.Timeline(run_metadata.step_stats)
+                    chrome_trace = fetched_timeline.generate_chrome_trace_format()
+                    many_runs_timeline.update_timeline(chrome_trace)
+                else:
+                    _,__,loss_train,pred_train = sess.run([train_stat[0], \
+                            model.opt_op, model.loss, model.preds], feed_dict=feed_dict)
+                    t2 = time.time()
                 time_train_ep += t2-t1
                 time_prepare_ep += t1-t0
                 if not minibatch.batch_num % FLAGS.print_every:

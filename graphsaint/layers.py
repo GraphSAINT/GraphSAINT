@@ -239,7 +239,7 @@ class HighOrderAggregator(Layer):
         return vw
 
     def _call(self, inputs):
-        vecs, adj_norm, nnz, len_feat = inputs
+        vecs, adj_norm, nnz, len_feat, adj_0, adj_1, adj_2, adj_3 = inputs
         # TODO: where should you put dropout? here or at the end of this aggr??
         vecs = tf.nn.dropout(vecs, 1-self.dropout)
         vecs_hop = []
@@ -250,9 +250,20 @@ class HighOrderAggregator(Layer):
                 vecs_hop.append(vecs)
         for o in range(self.order):
             for a in range(o+1):
+                # v1
                 # vecs_hop[o+1] = tf.sparse_tensor_dense_matmul(adj_norm,vecs_hop[o+1])
-                _exceed_gpu_memory_space=tf.greater(tf.size(adj_norm),50000*50000)
-                vecs_hop[o+1]=tf.cond(_exceed_gpu_memory_space,lambda:sparse_tensor_dense_matmul_cpu(adj_norm,vecs_hop[o+1]),lambda:tf.sparse_tensor_dense_matmul(adj_norm,vecs_hop[o+1]))
+
+                # v2
+                # _exceed_gpu_memory_space=tf.greater(tf.size(adj_norm),50000*50000)
+                # vecs_hop[o+1]=tf.cond(_exceed_gpu_memory_space,lambda:sparse_tensor_dense_matmul_cpu(adj_norm,vecs_hop[o+1]),lambda:tf.sparse_tensor_dense_matmul(adj_norm,vecs_hop[o+1]))
+
+                ans1=tf.sparse_tensor_dense_matmul(adj_norm,vecs_hop[o+1])
+                ans2_0=tf.sparse_tensor_dense_matmul(adj_0,vecs_hop[o+1])
+                ans2_1=tf.sparse_tensor_dense_matmul(adj_1,vecs_hop[o+1])
+                ans2_2=tf.sparse_tensor_dense_matmul(adj_2,vecs_hop[o+1])
+                ans2_3=tf.sparse_tensor_dense_matmul(adj_3,vecs_hop[o+1])
+                ans2=tf.concat([ans2_0,ans2_1,ans2_2,ans2_3],0)
+                vecs_hop[o+1]=tf.cond(self.is_train,lambda: tf.identity(ans1),lambda: tf.identity(ans2))
         """
         stride = 2**31//nnz
         f_cond = lambda i,r: i<len_feat

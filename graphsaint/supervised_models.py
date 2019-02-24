@@ -31,6 +31,10 @@ class Supervisedgraphsaint:
         self.num_layers = len(dims)
         self.weight_decay = train_params['weight_decay']
         self.adj_subgraph  = placeholders['adj_subgraph']
+        self.adj_subgraph_0=placeholders['adj_subgraph_0']
+        self.adj_subgraph_1=placeholders['adj_subgraph_1']
+        self.adj_subgraph_2=placeholders['adj_subgraph_2']
+        self.adj_subgraph_3=placeholders['adj_subgraph_3']
         self.batch_norm = train_params['batch_norm']
         self.skip = train_params['skip']
         self.features = tf.Variable(tf.constant(features, dtype=DTYPE), trainable=False)
@@ -155,7 +159,7 @@ class Supervisedgraphsaint:
         for layer in range(self.num_layers):
             if layer==skip_to:
                 hidden=hidden+hidden_save
-            hidden = self.aggregators[layer]((hidden,adj,self.nnz,self.dims_feat[layer]))
+            hidden = self.aggregators[layer]((hidden,adj,self.nnz,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,self.adj_subgraph_3))
             if layer==skip_from:
                 hidden_save=hidden
         return hidden
