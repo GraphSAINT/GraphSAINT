@@ -7,7 +7,6 @@ network:
   - '256-0-n-relu-mean'
   - '128-0-n-relu-mean'
 params:
-  - 'softmax'
   - lr: 0.02
     weight_decay: 0.0
     norm_weight: True
