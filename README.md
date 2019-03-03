@@ -1,3 +1,7 @@
+---
+output: pdf_document
+---
+
 # GraphSAINT
 
 ## Dependencies
@@ -77,3 +81,9 @@ To run the code on gpu
 `./run_graphsaint.sh <dataset_name> <path to train_config yml> --gpu <GPU number>`
 
 For example `--gpu 0` will run on the first GPU. 
+
+## Improved Performance
+
+We improved the GPU implementation, the new runtime are shown in the following table
+
+![table](https://github.com/GraphSAINT/GraphSAINT/blob/master/readme_table.png)
