@@ -1,7 +1,3 @@
----
-output: pdf_document
----
-
 # GraphSAINT
 
 ## Dependencies
