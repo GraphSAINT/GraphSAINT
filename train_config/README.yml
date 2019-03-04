@@ -3,12 +3,15 @@ network:
   - <dim>-<order>-<norm/bias>-<act>-<aggr>
   ...
 
-  # one line denotes one layer
+  ########################################
+  # one line specifies arch of one layer #
+  ########################################
   # <dim> dimension before concat
-  # <order> order of the GCN, 0 for NLP layer, max 2
-  # <norm/bias> n for norm; nb for norm and bias
-  # <act> activations, relu for relu; lin for no activation
-  # <aggr> concat for concat of neighbor and self; add for add
+  # <order> order of the GCN, 0 for MLP, currently we support order = 0,1,2.
+  ### NOTE ###: an order-1 layer plus an order-0 layer is equivalent to a single layer in S-GCN (Chen, ICML'18). 
+  # <norm/bias> n for batch-norm; b for bias.
+  # <act> activations, relu for relu; lin for linear activation (f(x)=x).
+  # <aggr> concat for concatenation of order i features; add for addition of order i features.
 params:
   - lr: <lr>
     weight_decay: <weight_decay>
