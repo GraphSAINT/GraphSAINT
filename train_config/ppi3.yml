@@ -1,4 +1,5 @@
 network:
+  ### NOTE ###: an order-1 layer followed by an order-0 layer is equivalent to a single layer in S-GCN (Chen, ICML'18). 
   - '100-1-n-relu-mean'
   - '512-0-n-relu-concat'
   - '1024-1-n-relu-concat'        
@@ -17,6 +18,7 @@ params:
     batch_norm: 'tf.nn'
     skip: '1-4'
 phase:
+  # We set the subgraph size to be smaller for initial phases. This speeds up convergence without affecting accuracy. 
   - end: 50
     dropout: 0.0
     sampler: 'frontier'
