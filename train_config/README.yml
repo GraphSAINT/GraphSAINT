@@ -23,7 +23,7 @@ params:
     model: <gs_mean/gsaint>       # gs_mean for graphsage_mean model of the GCN layer.
     q_threshold: <q_threshold>    # estimate the distribution of subgraph based on <q_threshold>*<fullgraph_size>/<subgraph_size> number of sampled subgraphs.
     q_offset: <q_offset>          # add <q_offset> to adjust the probability distribution estimated by the pre-processing sampling. 
-    batch_norm: <tf.nn/tf.layer>  # we provide two options to implement batch norm for GCN layers. the tf.nn based implementation is inspired by the code of S-GCN, while tf.layer is more often seen in other deep learning models.
+    batch_norm: <tf.nn/tf.layers> # we provide two options to implement batch norm for GCN layers. the tf.nn based implementation is inspired by the code of S-GCN, while tf.layer is more often seen in other deep learning models.
     skip: <noskip/x-y>            # skip connection as described in ResNet design: noskip for no skip across the layers; x-y for the output of layer x added to the input of layer y.
 phase:                            # Different phases can have different graph sampling algorithms.
   - end: <end>                    # end epoch of this phase.
