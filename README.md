@@ -1,4 +1,8 @@
-# GraphSAINT
+# GraphSAINT: Graph <u>SA</u>mpling Based <u>IN</u>ductive Learning <u>T</u>echniques for Large Scale Graphs
+
+This is the open source implementation for the "GraphSAINT" paper submitted to KDD 2019.
+
+Note: training time for the four datasets have been significantly improved after the submission. Updated performance is listed in the below section ("Improved Performance"). 
 
 ## Dependencies
 
@@ -9,7 +13,7 @@
 * scipy >= 1.1.0
 * scikit-learn >= 0.19.1
 * pyyaml >= 3.12
-* Zython (https://github.com/ZimpleX/zython)
+* zython (https://github.com/ZimpleX/zython)
 
 ## Dataset
 
