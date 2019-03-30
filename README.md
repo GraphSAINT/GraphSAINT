@@ -2,7 +2,9 @@
 
 This is the open source implementation for the "GraphSAINT" paper submitted to KDD 2019.
 
-Note: training time for the four datasets have been significantly improved after the submission. Updated performance is listed in the below section ("Improved Performance"). 
+Note: training time for the four datasets have been significantly improved after the submission (due to some simple optimization on GPU). See below:
+
+![table](https://github.com/GraphSAINT/GraphSAINT/blob/master/readme_table.png)
 
 ## Dependencies
 
@@ -81,9 +83,3 @@ To run the code on gpu
 `./run_graphsaint.sh <dataset_name> <path to train_config yml> --gpu <GPU number>`
 
 For example `--gpu 0` will run on the first GPU. 
-
-## Improved Performance
-
-We improved the GPU implementation, the new runtime are shown in the following table
-
-![table](https://github.com/GraphSAINT/GraphSAINT/blob/master/readme_table.png)
