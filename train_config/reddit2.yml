@@ -16,7 +16,7 @@ params:
     batch_norm: 'tf.nn'
     skip: 'noskip'
 phase:
-  - end: 25            
+  - end: 40            
     dropout: 0.0
     sampler: 'frontier'
     size_subgraph: 8000

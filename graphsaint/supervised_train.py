@@ -230,8 +230,8 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
                     e_best = e
                     # ---------- try saver
                     tsave=time.time()
-                    # savepath = saver.save(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
-                    savepath = saver.save(sess, './temp_model_{}_rand{}.chkpt'.format(timestamp_chkpt,model_rand_serial))
+                    savepath = saver.save(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
+                    # savepath = saver.save(sess, './temp_model_{}_rand{}.chkpt'.format(timestamp_chkpt,model_rand_serial))
                     print('saver time: {:4.2f}'.format(time.time()-tsave))
                 printf('   val loss {:.5f}\tmic {:.5f}\tmac {:.5f}',loss_val,f1mic_val,f1mac_val)
                 printf('   avg train loss {:.5f}\tmic {:.5f}\tmac {:.5f}',f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr))
@@ -251,7 +251,7 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
                     summary_writer.add_summary(_, e)
                     summary_writer.add_summary(misc_stat[0], e)
         epoch_ph_start = int(phase['end'])
-    #saver.save(sess, 'models/{data}'.format(data=FLAGS.data_prefix.split('/')[-1]),global_step=e)
+    saver.save(sess, 'models/{data}'.format(data=FLAGS.data_prefix.split('/')[-1]),global_step=e)
     #save_model_weights(weight_cur,FLAGS.data_prefix.split('/')[-1],e_best,FLAGS.train_config)
     #reload_model_weights(sess,model,weight_cur)
     printf("Optimization Finished!",type='WARN')
@@ -260,8 +260,8 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
         timelines.update_timeline(tl)
     timelines.save('timeline.json')
     # ---------- try reloading
-    # saver.restore(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
-    saver.restore(sess, './temp_model_{}_rand{}.chkpt'.format(timestamp_chkpt,model_rand_serial))
+    saver.restore(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
+    # saver.restore(sess, './temp_model_{}_rand{}.chkpt'.format(timestamp_chkpt,model_rand_serial))
     loss_val, f1mic_val, f1mac_val, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline)
     printf("Full validation stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}",loss_val,f1mic_val,f1mac_val)
     loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,is_val=False)
@@ -285,6 +285,7 @@ def train_main(argv=None,**kwargs):
     time_end = time.time()
     print('training time: ')
     print(time.strftime("%H:%M:%S",time.gmtime(time_end-time_start)))
+    print(ret)
     with open(FNAME_RET,'wb') as f:
         pickle.dump(ret,f)
     return ret
