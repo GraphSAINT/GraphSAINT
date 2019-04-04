@@ -24,6 +24,7 @@ class graph_sampler:
         self.adj_train = adj_train
         self.adj_full = adj_full
         self.node_train = np.unique(node_train).astype(np.int32)
+        self.node_all = np.arange(0,adj_full.indptr.shape[0])
         # size in terms of number of vertices in subgraph
         self.size_subgraph = size_subgraph
         self.coverage_v_train = np.array([float('inf')]*(self.adj_full.shape[0]))
@@ -152,6 +153,8 @@ class frontier_sampling(graph_sampler):
         # TODO: check, this p_dist shouldn't be normalized. 
         # TODO: check that val and test nodes are 0 for amazon
         self.p_dist = np.array([_adj_hop.data[_adj_hop.indptr[v]:_adj_hop.indptr[v+1]].sum() for v in range(_adj_hop.shape[0])], dtype=np.int32)
+        _adj_hop=self.adj_full
+        self.p_dist_test=np.array([_adj_hop.data[_adj_hop.indptr[v]:_adj_hop.indptr[v+1]].sum() for v in range(_adj_hop.shape[0])], dtype=np.int32)
 
     def double_arr_indicator(self, arr_indicator,k=2):
         a = np.zeros((k*arr_indicator.size,2),dtype=arr_indicator.dtype)
@@ -161,6 +164,12 @@ class frontier_sampling(graph_sampler):
     def par_sample(self,stage,**kwargs):
         return cy.sampler_frontier_cython(self.adj_train.indptr,self.adj_train.indices,self.p_dist,\
             self.node_train,self.max_deg,self.size_frontier,self.size_subgraph,NUM_PROC,RUN_PER_PROC)
+
+    def par_sample_for_test(self,frontiers,frontiers_split):
+        threads=frontiers_split.shape[0]-1
+        per_thread=1
+        # import pdb; pdb.set_trace()
+        return cy.sampler_frontier_fixed_cython(self.adj_full.indptr,self.adj_full.indices,self.p_dist_test,self.node_all.astype(np.int32),self.max_deg,self.size_frontier,self.size_subgraph,threads,per_thread,frontiers.astype(np.int32),frontiers_split.astype(np.int32))
 
 
     def sample(self,output_queue,tid,stage,frontier=None):

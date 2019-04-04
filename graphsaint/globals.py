@@ -45,6 +45,9 @@ flags.DEFINE_boolean('tensorboard',False,'to save data to tensorboard or not')
 # to be run with ./exp/dse.py
 flags.DEFINE_string('spreadsheet','','spreedsheet for systematic hyper-param tuning')
 
+# for inference.py
+flags.DEFINE_string('test_config','',"path to configuration of testing")
+
 
 
 #flags.DEFINE_string('restore_file', '', "path to model to be restored")

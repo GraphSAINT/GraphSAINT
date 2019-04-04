@@ -14,6 +14,8 @@ import multiprocessing as mp
 
 import pdb
 
+NUM_PROC = 20
+
 # import warnings
 # warnings.filterwarnings('error')
 # np.seterr(divide='raise')
@@ -100,6 +102,7 @@ class NodeMinibatchIterator(object):
         self.method_sample = train_phases['sampler']
         if self.method_sample == 'frontier':
             self.size_subg_budget = train_phases['size_subgraph']
+            self.size_frontier = train_phases['size_frontier']
             self.graph_sampler = frontier_sampling(self.adj_train,self.adj_full,\
                 self.node_train,self.size_subg_budget,dict(),train_phases['size_frontier'],int(train_phases['order']),int(train_phases['max_deg']))
         elif self.method_sample == 'khop':
@@ -147,8 +150,32 @@ class NodeMinibatchIterator(object):
         self.subgraphs_remaining_indices.extend(_indices)
         self.subgraphs_remaining_data.extend(_data)
         self.subgraphs_remaining_nodes.extend(_v)
+    
+    def par_graph_sample_for_test(self):
+        num_batches=np.ceil(self.node_test.shape[0]/self.size_frontier)
+        frontiers_split=np.append(np.arange(0,self.node_test.shape[0],self.size_frontier),self.node_test.shape[0])
+        # frontiers=np.split(self.node_test,np.arange(0,self.node_test.shape[0],self.size_frontier))
+        t0=time.time()
+        finished=0
+        while finished!=len(frontiers_split)-1:
+            if finished+NUM_PROC<len(frontiers_split):
+                # frontiers_curr=frontiers[finished:finished+NUM_PROC]
+                frontiers_split_curr=frontiers_split[finished:finished+NUM_PROC+1]
+                finished+=NUM_PROC 
+            else:
+                # frontiers_curr=frontiers[finished:]
+                frontiers_split_curr=frontiers_split[finished:]
+                finished=len(frontiers_split)-1
+            _indptr,_indices,_data,_v=self.graph_sampler.par_sample_for_test(self.node_test,frontiers_split_curr.astype(np.int32))
+            self.subgraphs_remaining_indptr.extend(_indptr)
+            self.subgraphs_remaining_indices.extend(_indices)
+            self.subgraphs_remaining_data.extend(_data)
+            self.subgraphs_remaining_nodes.extend(_v)
+        t1=time.time()
+        print('sampling ',num_batches,' subgraphs:   time = ',t1-t0)
 
-    def minibatch_train_feed_dict(self,dropout,is_val=False,is_test=False):
+
+    def minibatch_train_feed_dict(self,dropout,is_val=False,is_test=False,is_partial_test=False):
         """ DONE """
         if is_val or is_test:
             self.node_subgraph = np.arange(self.class_arr.shape[0])
@@ -157,6 +184,19 @@ class NodeMinibatchIterator(object):
             adj_1 = self.adj_full_norm_1
             adj_2 = self.adj_full_norm_2
             adj_3 = self.adj_full_norm_3
+        elif is_partial_test:
+            if len(self.subgraphs_remaining_nodes)==0:
+                self.par_graph_sample_for_test()
+            self.node_subgraph = self.subgraphs_remaining_nodes.pop()
+            self.size_subgraph = len(self.node_subgraph)
+            adj = sp.csr_matrix((self.subgraphs_remaining_data.pop(),self.subgraphs_remaining_indices.pop(),\
+                        self.subgraphs_remaining_indptr.pop()),shape=(self.node_subgraph.size,self.node_subgraph.size))
+            adj = adj_norm(adj,self.norm_adj)
+            adj_0 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
+            adj_1 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
+            adj_2 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
+            adj_3 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
+            self.batch_num += 1
         else:
             if len(self.subgraphs_remaining_nodes) == 0:
                 self.par_graph_sample('train')
@@ -175,7 +215,7 @@ class NodeMinibatchIterator(object):
         feed_dict.update({self.placeholders['node_subgraph']: self.node_subgraph})
         feed_dict.update({self.placeholders['labels']: self.class_arr[self.node_subgraph]})
         feed_dict.update({self.placeholders['dropout']: dropout})
-        if is_val or is_test:
+        if is_val or is_test or is_partial_test:
             feed_dict.update({self.placeholders['norm_weight']: self.norm_weight_test})
         else:
             feed_dict.update({self.placeholders['norm_weight']:self.norm_weight_train})
@@ -201,6 +241,8 @@ class NodeMinibatchIterator(object):
             feed_dict[self.placeholders['is_train']]=True
         return feed_dict, self.class_arr[self.node_subgraph]
 
+    def last_batch_nodes(self):
+        return self.node_subgraph
 
     # dont use this
     def par_graph_sample_multiprocess(self,stage,prefix,args_dict):
@@ -244,3 +286,6 @@ class NodeMinibatchIterator(object):
     def end(self):
         """ DONE """
         return (self.batch_num+1)*self.size_subg_budget >= self.node_train.shape[0]
+
+    def end_partial_test(self):
+        return (self.batch_num+1)*self.size_frontier>=self.node_test.shape[0]

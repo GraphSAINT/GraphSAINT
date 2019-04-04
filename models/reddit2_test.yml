@@ -1,0 +1,6 @@
+method: 'single vote'
+sampler: 'frontier'
+size_subgraph: 8000
+size_frontier: 1000
+order: 1
+max_deg: 10000
