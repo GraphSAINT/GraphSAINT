@@ -26,7 +26,7 @@ Currently available datasets:
 * flickr
 * yelp
   
-They are available at [gdrive](https://drive.google.com/open?id=1zycmmDES39zVlbVCYs88JTJ1Wm5FbfLz) Rename the folder to `data` at the root directory.  The root directory should be
+They are available at [gdrive](https://drive.google.com/open?id=1zycmmDES39zVlbVCYs88JTJ1Wm5FbfLz). Rename the folder to `data` at the root directory.  The root directory should be
 
 ```
 GraphSAINT
