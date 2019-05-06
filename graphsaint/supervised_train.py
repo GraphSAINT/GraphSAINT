@@ -77,7 +77,7 @@ def construct_placeholders(num_classes):
         'adj_subgraph_1' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_1'),
         'adj_subgraph_2' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_2'),
         'adj_subgraph_3' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_3'),
-        'norm_weight': tf.placeholder(DTYPE,shape=(None),name='loss_weight'),
+        'norm_loss': tf.placeholder(DTYPE,shape=(None),name='norm_loss'),
         'is_train': tf.placeholder(tf.bool, shape=(None), name='is_train')
     }
     return placeholders
@@ -167,7 +167,7 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
     many_runs_timeline=[]
     for ip,phase in enumerate(train_phases):
         tset_start = time.time()
-        minibatch.set_sampler(phase,train_params['norm_weight'])
+        minibatch.set_sampler(phase,train_params['norm_loss'],train_params['norm_aggr'])
         tset_end = time.time()
         time_qest += tset_end-tset_start
         sess.run(model.reset_optimizer_op)

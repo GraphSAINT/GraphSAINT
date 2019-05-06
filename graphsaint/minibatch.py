@@ -36,6 +36,10 @@ class NodeMinibatchIterator(object):
         class_arr: array of float (shape |V|xf)
                     storing initial feature vectors
         TODO:       adj_full_norm: normalized adj. Norm by # non-zeros per row
+
+        norm_aggr_train:        list of dict
+                                norm_aggr_train[u] gives a dict recording prob of being sampled for all u's neighbor
+                                norm_aggr_train[u][v] gives the prob of being sampled for edge (u,v). i.e. P_{sampler}(u sampled|v sampled)
         """
         self.num_proc = 1
         self.node_train = np.array(role['tr'])
@@ -53,8 +57,6 @@ class NodeMinibatchIterator(object):
         self.adj_full_norm_2=adj_full_norm[s2:s3,:]
         self.adj_full_norm_3=adj_full_norm[s3:,:]
         self.adj_train = adj_train
-        self.adj_full_rev = self.adj_full.transpose()
-        self.adj_train_rev = self.adj_train.transpose()
 
         assert self.class_arr.shape[0] == self.adj_full.shape[0]
 
@@ -66,14 +68,23 @@ class NodeMinibatchIterator(object):
         self.method_sample = None
         self.subgraphs_remaining_indptr = []
         self.subgraphs_remaining_indices = []
+        self.subgraphs_remaining_indices_orig = []
         self.subgraphs_remaining_data = []
         self.subgraphs_remaining_nodes = []
         
-        self.norm_weight_train = None
-        self.norm_weight_test = np.zeros(self.adj_full.shape[0])
-        self.norm_weight_test[self.node_train] = 1
-        self.norm_weight_test[self.node_val] = 1
-        self.norm_weight_test[self.node_test] = 1
+        self.norm_loss_train = None
+        self.norm_loss_test = np.zeros(self.adj_full.shape[0])
+        self.norm_loss_test[self.node_train] = 1
+        self.norm_loss_test[self.node_val] = 1
+        self.norm_loss_test[self.node_test] = 1
+        self.norm_aggr_train = [dict()]     # list of dict. List index: start node index. dict key: end node idx
+        #self.norm_aggr_test = dict()
+        #for u in range(self.adj_test.shape[0]):
+        #    _ind_start = self.adj_full_norm.indptr[u]
+        #    _ind_end = self.adj_full_norm.indptr[u+1]
+        #    for v in self.adj_full_norm.indices[_ind_start:_ind_end]:
+        #        self.norm_aggr_test[(u,v)] = 1
+        
         self.norm_adj = train_params['norm_adj']
         self.q_threshold = train_params['q_threshold']
         self.q_offset = train_params['q_offset']
@@ -92,9 +103,10 @@ class NodeMinibatchIterator(object):
         return _args
 
 
-    def set_sampler(self,train_phases,is_norm_weight=False):
+    def set_sampler(self,train_phases,is_norm_loss=False,is_norm_aggr=False):
         self.subgraphs_remaining_indptr = list()
         self.subgraphs_remaining_indices = list()
+        self.subgraphs_remaining_indices_orig = list()
         self.subgraphs_remaining_data = list()
         self.subgraphs_remaining_nodes = list()
         self.method_sample = train_phases['sampler']
@@ -112,39 +124,61 @@ class NodeMinibatchIterator(object):
                 self.node_train,self.size_subg_budget,dict(),int(train_phases['num_root']),int(train_phases['depth']))
         elif self.method_sample == 'edge':
             self.size_subg_budget = train_phases['size_subgraph']
-            self.graph_sampler = edge_sampling(self.adj_train,self.adj_full,self.node_train,\
-                                               self.size_subg_budget,dict())
+            self.graph_sampler = edge_sampling(self.adj_train,self.adj_full,self.node_train,self.size_subg_budget,dict())
         else:
             raise NotImplementedError
 
-        self.norm_weight_train = np.zeros(self.adj_full.shape[0])
-        if not is_norm_weight:
-            self.norm_weight_train[self.node_train] = 1
+        self.norm_loss_train = np.zeros(self.adj_full.shape[0])
+        if not is_norm_loss and not is_norm_aggr:
+            self.norm_loss_train[self.node_train] = 1
         else:
             subg_end = 0; tot_sampled_nodes = 0
+            if is_norm_aggr:
+                self.norm_aggr_train = list()
+                for u in range(self.adj_train.shape[0]):
+                    self.norm_aggr_train.append(dict())
+                    _ind_start = self.adj_train.indptr[u]
+                    _ind_end = self.adj_train.indptr[u+1]
+                    for v in self.adj_train.indices[_ind_start:_ind_end]:
+                        self.norm_aggr_train[u][v] = 0
             while True:
                 self.par_graph_sample('train')
                 for i in range(subg_end,len(self.subgraphs_remaining_nodes)):
-                    self.norm_weight_train[self.subgraphs_remaining_nodes[i]] += 1
+                    # you can check whether these subgrpahs_remaining_nodes are sorted already
+                    self.norm_loss_train[self.subgraphs_remaining_nodes[i]] += 1
+                    assert len(self.subgraphs_remaining_indptr[i]) == len(self.subgraphs_remaining_nodes[i])+1
+                    for ip in range(len(self.subgraphs_remaining_nodes[i])):
+                        _u = self.subgraphs_remaining_nodes[i][ip]
+                        for _v in self.subgraphs_remaining_indices_orig[i][self.subgraphs_remaining_indptr[i][ip]:self.subgraphs_remaining_indptr[i][ip+1]]:
+                            self.norm_aggr_train[_u][_v] += 1
                     tot_sampled_nodes += self.subgraphs_remaining_nodes[i].size
+                    # need re-map from new index to original index?
                 if tot_sampled_nodes > self.q_threshold*self.node_train.size:
                     break
                 subg_end = len(self.subgraphs_remaining_nodes)
-            self.norm_weight_train[self.node_train] += self.q_offset
-            if self.norm_weight_train[self.node_train].min() == 0:
-                self.norm_weight_train[self.node_train] += 1
-            self.norm_weight_train[self.node_train] = 1/self.norm_weight_train[self.node_train]
-            avg_subg_size = tot_sampled_nodes/len(self.subgraphs_remaining_nodes)
-            self.norm_weight_train = self.norm_weight_train\
-                        /self.norm_weight_train.sum()*self.node_train.size
+            num_subg = len(self.subgraphs_remaining_nodes)
+            # normalize count in norm_aggr_train
+            for i_d,d in enumerate(self.norm_aggr_train):
+                self.norm_aggr_train[i_d] = {k:v/max(self.norm_loss_train[i_d],0.01) for k,v in d.items()}
+            self.norm_loss_train[self.node_train] += self.q_offset
+            if self.norm_loss_train[self.node_train].min() == 0:
+                self.norm_loss_train[self.node_train] += 1
+            self.norm_loss_train[self.node_train] = 1/self.norm_loss_train[self.node_train]
+            avg_subg_size = tot_sampled_nodes/num_subg
+            self.norm_loss_train = self.norm_loss_train\
+                        /self.norm_loss_train.sum()*self.node_train.size
+           
+
 
     def par_graph_sample(self,phase):
         t0 = time.time()
-        _indptr,_indices,_data,_v = self.graph_sampler.par_sample(phase,**self._set_sampler_args())
+        # _indices_orig: subgraph with indices in the original graph
+        _indptr,_indices,_indices_orig,_data,_v = self.graph_sampler.par_sample(phase,**self._set_sampler_args())
         t1 = time.time()
         print('sampling 200 subgraphs:   time = ',t1-t0)
         self.subgraphs_remaining_indptr.extend(_indptr)
         self.subgraphs_remaining_indices.extend(_indices)
+        self.subgraphs_remaining_indices_orig.extend(_indices_orig)
         self.subgraphs_remaining_data.extend(_data)
         self.subgraphs_remaining_nodes.extend(_v)
 
@@ -165,7 +199,7 @@ class NodeMinibatchIterator(object):
             self.size_subgraph = len(self.node_subgraph)
             adj = sp.csr_matrix((self.subgraphs_remaining_data.pop(),self.subgraphs_remaining_indices.pop(),\
                         self.subgraphs_remaining_indptr.pop()),shape=(self.node_subgraph.size,self.node_subgraph.size))
-            adj = adj_norm(adj,self.norm_adj)
+            adj = adj_norm(adj,self.norm_adj)       # TODO: additional arg: is_norm_aggr, aggr_norm_vector
             adj_0 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
             adj_1 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
             adj_2 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
@@ -176,9 +210,9 @@ class NodeMinibatchIterator(object):
         feed_dict.update({self.placeholders['labels']: self.class_arr[self.node_subgraph]})
         feed_dict.update({self.placeholders['dropout']: dropout})
         if is_val or is_test:
-            feed_dict.update({self.placeholders['norm_weight']: self.norm_weight_test})
+            feed_dict.update({self.placeholders['norm_loss']: self.norm_loss_test})
         else:
-            feed_dict.update({self.placeholders['norm_weight']:self.norm_weight_train})
+            feed_dict.update({self.placeholders['norm_loss']:self.norm_loss_train})
         
         _num_edges = len(adj.nonzero()[1])
         _num_vertices = len(self.node_subgraph)
@@ -200,36 +234,6 @@ class NodeMinibatchIterator(object):
         else:
             feed_dict[self.placeholders['is_train']]=True
         return feed_dict, self.class_arr[self.node_subgraph]
-
-
-    # dont use this
-    def par_graph_sample_multiprocess(self,stage,prefix,args_dict):
-        if self.num_proc > 1:
-            printf('par sampling',type='WARN')
-            output_subgraphs = mp.Queue()
-            processes = [mp.Process(target=self.graph_sampler.sample,args=(output_subgraphs,i,stage),kwargs=args_dict) for i in range(self.num_proc)]
-            for p in processes:
-                p.start()
-            num_proc_done = 0
-            subgraph_assembler = dict()
-            for i in range(self.num_proc):
-                subgraph_assembler[i] = []
-            while True:
-                seg = output_subgraphs.get()
-                subgraph_assembler[seg[0]].extend(seg[2])
-                if seg[1] == 0:
-                    num_proc_done += 1
-                if num_proc_done == self.num_proc:
-                    break
-            for p in processes:
-                p.join()
-            for k,v in subgraph_assembler.items():
-                self.subgraphs_remaining.append(np.array(v))
-            #self.subgraphs_remaining.extend([output_subgraphs.get() for p in processes])
-        else:
-            ret = self.graph_sampler.sample(None,0,stage,**args_dict)
-            self.subgraphs_remaining.append(np.array(ret))
-
 
 
     def num_training_batches(self):
