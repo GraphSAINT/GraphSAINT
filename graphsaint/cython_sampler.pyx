@@ -112,6 +112,9 @@ cdef void _sampler_frontier(vector[int]& adj_indptr, vector[int]& adj_indices, \
 def sampler_frontier_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, np.ndarray[int,ndim=1,mode='c'] adj_indices,\
         np.ndarray[int,ndim=1,mode='c'] p_dist, np.ndarray[int,ndim=1,mode='c'] node_train,\
         int max_deg, int size_frontier, int size_subg, int num_proc, int num_sample_per_proc):
+    """
+    Done modifying this version --- keep doing for the others.
+    """
     # prepare: common to all samplers
     cdef vector[int] adj_indptr_vec
     cutils.npy2vec_int(adj_indptr, adj_indptr_vec)
@@ -134,6 +137,9 @@ def sampler_frontier_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, np.ndarr
     ret_indptr = vector[vector[int]](num_proc*num_sample_per_proc)
     cdef vector[vector[int]] ret_indices
     ret_indices = vector[vector[int]](num_proc*num_sample_per_proc)
+    # ch1
+    cdef vector[vector[int]] ret_indices_orig
+    ret_indices_orig = vector[vector[int]](num_proc*num_sample_per_proc)
     cdef vector[vector[float]] ret_data
     ret_data = vector[vector[float]](num_proc*num_sample_per_proc)
 
@@ -141,10 +147,13 @@ def sampler_frontier_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, np.ndarr
         for p in prange(num_proc,schedule='dynamic'):
             _sampler_frontier(adj_indptr_vec,adj_indices_vec,arr_deg_vec,\
                 node_train_vec,node_sampled,size_frontier,size_subg,avg_deg,p,num_sample_per_proc)
-            cutils._adj_extract_cython(adj_indptr_vec,adj_indices_vec,node_sampled,ret_indptr,ret_indices,ret_data,p,num_sample_per_proc)
+            # ch2
+            cutils._adj_extract_cython(adj_indptr_vec,adj_indices_vec,node_sampled,ret_indptr,ret_indices,ret_indices_orig,ret_data,p,num_sample_per_proc)
     # prepare return values
     l_subg_indptr = list()
     l_subg_indices = list()
+    # ch3
+    l_subg_indices_orig = list()
     l_subg_data = list()
     l_subg_nodes = list()
     offset_nodes = [0]
@@ -159,19 +168,27 @@ def sampler_frontier_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, np.ndarr
     cdef vector[int] ret_nodes_vec = vector[int]()
     cdef vector[int] ret_indptr_vec = vector[int]()
     cdef vector[int] ret_indices_vec = vector[int]()
+    # ch4
+    cdef vector[int] ret_indices_orig_vec = vector[int]()
     cdef vector[float] ret_data_vec = vector[float]()
     ret_nodes_vec.reserve(offset_nodes[num_proc*num_sample_per_proc])
     ret_indptr_vec.reserve(offset_indptr[num_proc*num_sample_per_proc])
     ret_indices_vec.reserve(offset_indices[num_proc*num_sample_per_proc])
+    # ch5
+    ret_indices_orig_vec.reserve(offset_indices[num_proc*num_sample_per_proc])
     ret_data_vec.reserve(offset_data[num_proc*num_sample_per_proc])
     for r in range(num_proc*num_sample_per_proc):
         ret_nodes_vec.insert(ret_nodes_vec.end(),node_sampled[r].begin(),node_sampled[r].end())
         ret_indptr_vec.insert(ret_indptr_vec.end(),ret_indptr[r].begin(),ret_indptr[r].end())
         ret_indices_vec.insert(ret_indices_vec.end(),ret_indices[r].begin(),ret_indices[r].end())
+        # ch6
+        ret_indices_orig_vec.insert(ret_indices_orig_vec.end(),ret_indices_orig[r].begin(),ret_indices_orig[r].end())
         ret_data_vec.insert(ret_data_vec.end(),ret_data[r].begin(),ret_data[r].end())
 
     cdef cutils.array_wrapper_int wint_indptr = cutils.array_wrapper_int()
     cdef cutils.array_wrapper_int wint_indices = cutils.array_wrapper_int()
+    # ch7
+    cdef cutils.array_wrapper_int wint_indices_orig = cutils.array_wrapper_int()
     cdef cutils.array_wrapper_int wint_nodes = cutils.array_wrapper_int()
     cdef cutils.array_wrapper_float wfloat_data = cutils.array_wrapper_float()
 
@@ -179,6 +196,9 @@ def sampler_frontier_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, np.ndarr
     ret_indptr_np = np.frombuffer(wint_indptr,dtype=np.int32)
     wint_indices.set_data(ret_indices_vec)
     ret_indices_np = np.frombuffer(wint_indices,dtype=np.int32)
+    # ch8
+    wint_indices_orig.set_data(ret_indices_orig_vec)
+    ret_indices_orig_np = np.frombuffer(wint_indices_orig,dtype=np.int32)
     wint_nodes.set_data(ret_nodes_vec)
     ret_nodes_np = np.frombuffer(wint_nodes,dtype=np.int32)
     wfloat_data.set_data(ret_data_vec)
@@ -188,8 +208,11 @@ def sampler_frontier_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, np.ndarr
         l_subg_nodes.append(ret_nodes_np[offset_nodes[r]:offset_nodes[r+1]])
         l_subg_indptr.append(ret_indptr_np[offset_indptr[r]:offset_indptr[r+1]])
         l_subg_indices.append(ret_indices_np[offset_indices[r]:offset_indices[r+1]])
+        # ch9
+        l_subg_indices_orig.append(ret_indices_orig_np[offset_indices[r]:offset_indices[r+1]])
         l_subg_data.append(ret_data_np[offset_data[r]:offset_data[r+1]])
-    return l_subg_indptr,l_subg_indices,l_subg_data,l_subg_nodes
+    # ch10
+    return l_subg_indptr,l_subg_indices,l_subg_indices_orig,l_subg_data,l_subg_nodes
 
 
 
@@ -238,6 +261,8 @@ def sampler_khop_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
     ret_indptr = vector[vector[int]](num_proc*num_sample_per_proc)
     cdef vector[vector[int]] ret_indices
     ret_indices = vector[vector[int]](num_proc*num_sample_per_proc)
+    cdef vector[vector[int]] ret_indices_orig
+    ret_indices_orig = vector[vector[int]](num_proc*num_sample_per_proc)
     cdef vector[vector[float]] ret_data
     ret_data = vector[vector[float]](num_proc*num_sample_per_proc)
     # ---- prepare end: common to all samplers ----
@@ -247,11 +272,12 @@ def sampler_khop_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
             # **** the only thing you need to change ****
             _sampler_khop(p_dist_cumsum_vec,node_train_vec,node_sampled,size_subg,p,num_sample_per_proc)
             # *******************************************
-            cutils._adj_extract_cython(adj_indptr_vec,adj_indices_vec,node_sampled,ret_indptr,ret_indices,ret_data,p,num_sample_per_proc)
+            cutils._adj_extract_cython(adj_indptr_vec,adj_indices_vec,node_sampled,ret_indptr,ret_indices,ret_indices_orig,ret_data,p,num_sample_per_proc)
     print('end para khop sample')
     # ==== return start: common to all samplers ====
     l_subg_indptr = list()
     l_subg_indices = list()
+    l_subg_indices_orig = list()
     l_subg_data = list()
     l_subg_nodes = list()
     offset_nodes = [0]
@@ -265,20 +291,24 @@ def sampler_khop_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
         offset_data.append(offset_data[r]+ret_data[r].size())
     cdef vector[int] ret_nodes_vec = vector[int]()
     cdef vector[int] ret_indptr_vec = vector[int]()
+    cdef vector[int] ret_indices_orig_vec = vector[int]()
     cdef vector[int] ret_indices_vec = vector[int]()
     cdef vector[float] ret_data_vec = vector[float]()
     ret_nodes_vec.reserve(offset_nodes[num_proc*num_sample_per_proc])
     ret_indptr_vec.reserve(offset_indptr[num_proc*num_sample_per_proc])
     ret_indices_vec.reserve(offset_indices[num_proc*num_sample_per_proc])
+    ret_indices_orig_vec.reserve(offset_indices[num_proc*num_sample_per_proc])
     ret_data_vec.reserve(offset_data[num_proc*num_sample_per_proc])
     for r in range(num_proc*num_sample_per_proc):
         ret_nodes_vec.insert(ret_nodes_vec.end(),node_sampled[r].begin(),node_sampled[r].end())
         ret_indptr_vec.insert(ret_indptr_vec.end(),ret_indptr[r].begin(),ret_indptr[r].end())
         ret_indices_vec.insert(ret_indices_vec.end(),ret_indices[r].begin(),ret_indices[r].end())
+        ret_indices_orig_vec.insert(ret_indices_orig_vec.end(),ret_indices_orig[r].begin(),ret_indices_orig[r].end())
         ret_data_vec.insert(ret_data_vec.end(),ret_data[r].begin(),ret_data[r].end())
 
     cdef cutils.array_wrapper_int wint_indptr = cutils.array_wrapper_int()
     cdef cutils.array_wrapper_int wint_indices = cutils.array_wrapper_int()
+    cdef cutils.array_wrapper_int wint_indices_orig = cutils.array_wrapper_int()
     cdef cutils.array_wrapper_int wint_nodes = cutils.array_wrapper_int()
     cdef cutils.array_wrapper_float wfloat_data = cutils.array_wrapper_float()
 
@@ -286,6 +316,9 @@ def sampler_khop_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
     ret_indptr_np = np.frombuffer(wint_indptr,dtype=np.int32)
     wint_indices.set_data(ret_indices_vec)
     ret_indices_np = np.frombuffer(wint_indices,dtype=np.int32)
+    # ch8
+    wint_indices_orig.set_data(ret_indices_orig_vec)
+    ret_indices_orig_np = np.frombuffer(wint_indices_orig,dtype=np.int32)
     wint_nodes.set_data(ret_nodes_vec)
     ret_nodes_np = np.frombuffer(wint_nodes,dtype=np.int32)
     wfloat_data.set_data(ret_data_vec)
@@ -295,8 +328,9 @@ def sampler_khop_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
         l_subg_nodes.append(ret_nodes_np[offset_nodes[r]:offset_nodes[r+1]])
         l_subg_indptr.append(ret_indptr_np[offset_indptr[r]:offset_indptr[r+1]])
         l_subg_indices.append(ret_indices_np[offset_indices[r]:offset_indices[r+1]])
+        l_subg_indices_orig.append(ret_indices_orig_np[offset_indices[r]:offset_indices[r+1]])
         l_subg_data.append(ret_data_np[offset_data[r]:offset_data[r+1]])
-    return l_subg_indptr,l_subg_indices,l_subg_data,l_subg_nodes
+    return l_subg_indptr,l_subg_indices,l_subg_indices_orig,l_subg_data,l_subg_nodes
     # ---- return end: common to all samplers ----
 
 
@@ -358,6 +392,9 @@ def sampler_rw_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
     ret_indptr = vector[vector[int]](num_proc*num_sample_per_proc)
     cdef vector[vector[int]] ret_indices
     ret_indices = vector[vector[int]](num_proc*num_sample_per_proc)
+    # ch1
+    cdef vector[vector[int]] ret_indices_orig
+    ret_indices_orig = vector[vector[int]](num_proc*num_sample_per_proc)
     cdef vector[vector[float]] ret_data
     ret_data = vector[vector[float]](num_proc*num_sample_per_proc)
     # ---- prepare end: common to all samplers ----
@@ -366,10 +403,13 @@ def sampler_rw_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
             # **** the only thing you need to change ****
             _sampler_rw(adj_indptr_vec,adj_indices_vec,node_train_vec,node_sampled,size_root,size_depth,p,num_sample_per_proc)
             # *******************************************
-            cutils._adj_extract_cython(adj_indptr_vec,adj_indices_vec,node_sampled,ret_indptr,ret_indices,ret_data,p,num_sample_per_proc)
+            # ch2
+            cutils._adj_extract_cython(adj_indptr_vec,adj_indices_vec,node_sampled,ret_indptr,ret_indices,ret_indices_orig,ret_data,p,num_sample_per_proc)
     # ==== return start: common to all samplers ====
     l_subg_indptr = list()
     l_subg_indices = list()
+    # ch3
+    l_subg_indices_orig = list()
     l_subg_data = list()
     l_subg_nodes = list()
     offset_nodes = [0]
@@ -384,19 +424,27 @@ def sampler_rw_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
     cdef vector[int] ret_nodes_vec = vector[int]()
     cdef vector[int] ret_indptr_vec = vector[int]()
     cdef vector[int] ret_indices_vec = vector[int]()
+    # ch4
+    cdef vector[int] ret_indices_orig_vec = vector[int]()
     cdef vector[float] ret_data_vec = vector[float]()
     ret_nodes_vec.reserve(offset_nodes[num_proc*num_sample_per_proc])
     ret_indptr_vec.reserve(offset_indptr[num_proc*num_sample_per_proc])
     ret_indices_vec.reserve(offset_indices[num_proc*num_sample_per_proc])
+    # ch5
+    ret_indices_orig_vec.reserve(offset_indices[num_proc*num_sample_per_proc])
     ret_data_vec.reserve(offset_data[num_proc*num_sample_per_proc])
     for r in range(num_proc*num_sample_per_proc):
         ret_nodes_vec.insert(ret_nodes_vec.end(),node_sampled[r].begin(),node_sampled[r].end())
         ret_indptr_vec.insert(ret_indptr_vec.end(),ret_indptr[r].begin(),ret_indptr[r].end())
         ret_indices_vec.insert(ret_indices_vec.end(),ret_indices[r].begin(),ret_indices[r].end())
+        # ch6
+        ret_indices_orig_vec.insert(ret_indices_orig_vec.end(),ret_indices_orig[r].begin(),ret_indices_orig[r].end())
         ret_data_vec.insert(ret_data_vec.end(),ret_data[r].begin(),ret_data[r].end())
 
     cdef cutils.array_wrapper_int wint_indptr = cutils.array_wrapper_int()
     cdef cutils.array_wrapper_int wint_indices = cutils.array_wrapper_int()
+    # ch7
+    cdef cutils.array_wrapper_int wint_indices_orig = cutils.array_wrapper_int()
     cdef cutils.array_wrapper_int wint_nodes = cutils.array_wrapper_int()
     cdef cutils.array_wrapper_float wfloat_data = cutils.array_wrapper_float()
 
@@ -404,6 +452,9 @@ def sampler_rw_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
     ret_indptr_np = np.frombuffer(wint_indptr,dtype=np.int32)
     wint_indices.set_data(ret_indices_vec)
     ret_indices_np = np.frombuffer(wint_indices,dtype=np.int32)
+    # ch8
+    wint_indices_orig.set_data(ret_indices_orig_vec)
+    ret_indices_orig_np = np.frombuffer(wint_indices_orig,dtype=np.int32)
     wint_nodes.set_data(ret_nodes_vec)
     ret_nodes_np = np.frombuffer(wint_nodes,dtype=np.int32)
     wfloat_data.set_data(ret_data_vec)
@@ -413,8 +464,11 @@ def sampler_rw_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
         l_subg_nodes.append(ret_nodes_np[offset_nodes[r]:offset_nodes[r+1]])
         l_subg_indptr.append(ret_indptr_np[offset_indptr[r]:offset_indptr[r+1]])
         l_subg_indices.append(ret_indices_np[offset_indices[r]:offset_indices[r+1]])
+        # ch9
+        l_subg_indices_orig.append(ret_indices_orig_np[offset_indices[r]:offset_indices[r+1]])
         l_subg_data.append(ret_data_np[offset_data[r]:offset_data[r+1]])
-    return l_subg_indptr,l_subg_indices,l_subg_data,l_subg_nodes
+    # ch10
+    return l_subg_indptr,l_subg_indices,l_subg_indices_orig,l_subg_data,l_subg_nodes
     # ---- return end: common to all samplers ----
 
 
@@ -466,6 +520,9 @@ def sampler_edge_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
     ret_indptr = vector[vector[int]](num_proc*num_sample_per_proc)
     cdef vector[vector[int]] ret_indices
     ret_indices = vector[vector[int]](num_proc*num_sample_per_proc)
+    # ch1
+    cdef vector[vector[int]] ret_indices_orig
+    ret_indices_orig = vector[vector[int]](num_proc*num_sample_per_proc)
     cdef vector[vector[float]] ret_data
     ret_data = vector[vector[float]](num_proc*num_sample_per_proc)
     # ---- prepare end: common to all samplers ----
@@ -474,10 +531,13 @@ def sampler_edge_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
             # **** the only thing you need to change ****
             _sampler_edge(adj_indptr_vec,adj_indices_vec,node_train_vec,node_sampled,subg_size,indices_lut_vec,p,num_sample_per_proc)
             # *******************************************
-            cutils._adj_extract_cython(adj_indptr_vec,adj_indices_vec,node_sampled,ret_indptr,ret_indices,ret_data,p,num_sample_per_proc)
+            # ch2
+            cutils._adj_extract_cython(adj_indptr_vec,adj_indices_vec,node_sampled,ret_indptr,ret_indices,ret_indices_orig,ret_data,p,num_sample_per_proc)
     # ==== return start: common to all samplers ====
     l_subg_indptr = list()
     l_subg_indices = list()
+    # ch3
+    l_subg_indices_orig = list()
     l_subg_data = list()
     l_subg_nodes = list()
     offset_nodes = [0]
@@ -492,19 +552,27 @@ def sampler_edge_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
     cdef vector[int] ret_nodes_vec = vector[int]()
     cdef vector[int] ret_indptr_vec = vector[int]()
     cdef vector[int] ret_indices_vec = vector[int]()
+    # ch4
+    cdef vector[int] ret_indices_orig_vec = vector[int]()
     cdef vector[float] ret_data_vec = vector[float]()
     ret_nodes_vec.reserve(offset_nodes[num_proc*num_sample_per_proc])
     ret_indptr_vec.reserve(offset_indptr[num_proc*num_sample_per_proc])
     ret_indices_vec.reserve(offset_indices[num_proc*num_sample_per_proc])
+    # ch5
+    ret_indices_orig_vec.reserve(offset_indices[num_proc*num_sample_per_proc])
     ret_data_vec.reserve(offset_data[num_proc*num_sample_per_proc])
     for r in range(num_proc*num_sample_per_proc):
         ret_nodes_vec.insert(ret_nodes_vec.end(),node_sampled[r].begin(),node_sampled[r].end())
         ret_indptr_vec.insert(ret_indptr_vec.end(),ret_indptr[r].begin(),ret_indptr[r].end())
         ret_indices_vec.insert(ret_indices_vec.end(),ret_indices[r].begin(),ret_indices[r].end())
+        # ch6
+        ret_indices_orig_vec.insert(ret_indices_orig_vec.end(),ret_indices_orig[r].begin(),ret_indices_orig[r].end())
         ret_data_vec.insert(ret_data_vec.end(),ret_data[r].begin(),ret_data[r].end())
 
     cdef cutils.array_wrapper_int wint_indptr = cutils.array_wrapper_int()
     cdef cutils.array_wrapper_int wint_indices = cutils.array_wrapper_int()
+    # ch7
+    cdef cutils.array_wrapper_int wint_indices_orig = cutils.array_wrapper_int()
     cdef cutils.array_wrapper_int wint_nodes = cutils.array_wrapper_int()
     cdef cutils.array_wrapper_float wfloat_data = cutils.array_wrapper_float()
 
@@ -512,6 +580,9 @@ def sampler_edge_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
     ret_indptr_np = np.frombuffer(wint_indptr,dtype=np.int32)
     wint_indices.set_data(ret_indices_vec)
     ret_indices_np = np.frombuffer(wint_indices,dtype=np.int32)
+    # ch8
+    wint_indices_orig.set_data(ret_indices_orig_vec)
+    ret_indices_orig_np = np.frombuffer(wint_indices_orig,dtype=np.int32)
     wint_nodes.set_data(ret_nodes_vec)
     ret_nodes_np = np.frombuffer(wint_nodes,dtype=np.int32)
     wfloat_data.set_data(ret_data_vec)
@@ -521,8 +592,11 @@ def sampler_edge_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
         l_subg_nodes.append(ret_nodes_np[offset_nodes[r]:offset_nodes[r+1]])
         l_subg_indptr.append(ret_indptr_np[offset_indptr[r]:offset_indptr[r+1]])
         l_subg_indices.append(ret_indices_np[offset_indices[r]:offset_indices[r+1]])
+        # ch9
+        l_subg_indices_orig.append(ret_indices_orig_np[offset_indices[r]:offset_indices[r+1]])
         l_subg_data.append(ret_data_np[offset_data[r]:offset_data[r+1]])
-    return l_subg_indptr,l_subg_indices,l_subg_data,l_subg_nodes
+    # ch10
+    return l_subg_indptr,l_subg_indices,l_subg_indices_orig,l_subg_data,l_subg_nodes
     # ---- return end: common to all samplers ----
 
 

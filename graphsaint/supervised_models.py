@@ -58,7 +58,7 @@ class Supervisedgraphsaint:
         self.reset_optimizer_op = tf.variables_initializer(self.optimizer.variables())
         self.loss = 0
         self.opt_op = None
-        self.norm_weight = placeholders['norm_weight']
+        self.norm_loss = placeholders['norm_loss']
         self.is_train = placeholders['is_train']
 
         self.build(model_pretrain=model_pretrain)
@@ -119,7 +119,7 @@ class Supervisedgraphsaint:
         self.loss_terms = f_loss(logits=self.node_preds,labels=self.placeholders['labels'])
         if len(self.loss_terms.shape) == 1:
             self.loss_terms = tf.reshape(self.loss_terms,(-1,1))
-        self._weight_loss_batch = tf.nn.embedding_lookup(self.norm_weight, self.node_subgraph)
+        self._weight_loss_batch = tf.nn.embedding_lookup(self.norm_loss, self.node_subgraph)
         self._weight_loss_batch /= tf.reduce_sum(self._weight_loss_batch)
         _loss_terms_weight = tf.linalg.matmul(tf.transpose(self.loss_terms),\
                     tf.reshape(self._weight_loss_batch,(-1,1)))

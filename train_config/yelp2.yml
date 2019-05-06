@@ -7,7 +7,8 @@ network:
 params:
   - lr: 0.01
     weight_decay: 0.0
-    norm_weight: 1
+    norm_loss: 1
+    norm_aggr: 1
     norm_adj: 'rw'
     batch_norm: 'tf.nn'
     model: 'gsaint'   
