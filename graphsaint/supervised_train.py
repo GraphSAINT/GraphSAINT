@@ -167,7 +167,7 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
     many_runs_timeline=[]
     for ip,phase in enumerate(train_phases):
         tset_start = time.time()
-        minibatch.set_sampler(phase,train_params['norm_loss'],train_params['norm_aggr'])
+        minibatch.set_sampler(phase)
         tset_end = time.time()
         time_qest += tset_end-tset_start
         sess.run(model.reset_optimizer_op)
