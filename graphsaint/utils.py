@@ -163,7 +163,7 @@ def parse_n_prepare(flags,train_config=None):
 
 def log_dir(train_params,dims,f_train_config,prefix,git_branch,git_rev,timestamp):
     import getpass
-    log_dir = "/raid/users/"+getpass.getuser()+"/tf_log/" + prefix.split("/")[-1] + '/kdd'
+    log_dir = "/raid/users/"+getpass.getuser()+"/tf_log/" + prefix.split("/")[-1] + 'NeurIPS'
     log_dir += "/{ts}-{model}-{gitrev:s}-{layer}/".format(
             model=train_params['model'],
             gitrev=git_rev.strip(),
@@ -190,10 +190,16 @@ def sess_dir(train_params,dims,train_config,prefix,git_branch,git_rev,timestamp)
 
 
 def adj_norm(adj,norm_adj='sym'):
+    """
+    Normalize adj according to two methods: symmetric normalization and rw normalization.
+    sym norm is used in the original GCN paper (kipf)
+    rw norm is used in graphsage and some other variants.
+
     # Procedure: 
     #       1. adj add self-connection --> adj'
     #       2. D' deg matrix from adj'
     #       3. norm by (D')^(-1/2) x adj' x (D')^(-1/2)
+    """
     diag_shape = (adj.shape[0],adj.shape[1])
     if norm_adj == 'sym':
         adj_I = (adj + sp.eye(adj.shape[0])).astype(np.bool)
@@ -205,3 +211,13 @@ def adj_norm(adj,norm_adj='sym'):
         norm_diag = sp.dia_matrix((1/D,0),shape=diag_shape)
         adj_norm = norm_diag.dot(adj)
     return adj_norm
+
+
+def deg_mat_inv(adj):
+    """
+    return inverse degree matrix of the subg adj.
+    -- simply sum the rows
+    """
+    diag_shape = (adj.shape[0],adj.shape[1])
+    D = adj.sum(1).flatten()
+    return sp.dia_matrix((1/D,0),shape=diag_shape)

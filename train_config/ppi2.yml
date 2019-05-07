@@ -9,7 +9,7 @@ params:
   - lr: 0.01
     weight_decay: 0.0
     norm_loss: 0
-    norm_aggr: 0
+    norm_aggr: 1
     norm_adj: 'rw'
     model: 'gsaint'
     q_threshold: 50

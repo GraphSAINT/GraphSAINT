@@ -40,7 +40,7 @@ flags.DEFINE_string('train_config', '', "path to the configuration of training (
 flags.DEFINE_string('model','','pretrained model')
 flags.DEFINE_string('dtype','s','d for double, s for single precision floating point')
 flags.DEFINE_boolean('timeline',False,'to save timeline.json or not')
-flags.DEFINE_boolean('tensorboard',False,'to save data to tensorboard or not')
+flags.DEFINE_boolean('tensorboard',True,'to save data to tensorboard or not')
 
 # to be run with ./exp/dse.py
 flags.DEFINE_string('spreadsheet','','spreedsheet for systematic hyper-param tuning')
