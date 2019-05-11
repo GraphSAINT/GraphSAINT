@@ -161,8 +161,8 @@ class NodeMinibatchIterator(object):
                 #self.norm_loss_train[self.node_train] = 1/self.norm_loss_train[self.node_train]
                 #self.norm_loss_train = self.norm_loss_train\
                 #            /self.norm_loss_train.sum()*self.node_train.size
-                self.norm_loss_train /= num_subg
-                self.norm_loss_train[self.node_train] = 1/self.norm_loss_train[self.node_train]/self.node_train.size
+                #self.norm_loss_train /= num_subg
+                self.norm_loss_train[self.node_train] = num_subg/self.norm_loss_train[self.node_train]/self.node_train.size
             else:
                 self.norm_loss_train[self.node_train] = 1
             # 4. norm_aggr based on _node_cnt and edge count
