@@ -120,10 +120,11 @@ class Supervisedgraphsaint:
         if len(self.loss_terms.shape) == 1:
             self.loss_terms = tf.reshape(self.loss_terms,(-1,1))
         self._weight_loss_batch = tf.nn.embedding_lookup(self.norm_loss, self.node_subgraph)
-        self._weight_loss_batch /= tf.reduce_sum(self._weight_loss_batch)
+        #TODO: to be confirmed -- self._weight_loss_batch /= tf.reduce_sum(self._weight_loss_batch)
         _loss_terms_weight = tf.linalg.matmul(tf.transpose(self.loss_terms),\
                     tf.reshape(self._weight_loss_batch,(-1,1)))
-        self.loss += tf.reduce_mean(_loss_terms_weight)
+        # TODO: this reduce_sum won't work for is_norm_loss = 0
+        self.loss += tf.reduce_sum(_loss_terms_weight)
         tf.summary.scalar('loss', self.loss)
 
     def predict(self):
