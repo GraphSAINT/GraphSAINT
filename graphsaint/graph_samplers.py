@@ -18,7 +18,6 @@ RUN_PER_PROC = 10
 
 class graph_sampler:
     __metaclass__ = abc.ABCMeta
-    PIPESIZE = 8000
     def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc):
         assert adj_train.shape == adj_full.shape
         self.adj_train = adj_train
@@ -71,6 +70,7 @@ class edge_sampling(graph_sampler):
             self.indices_lut[adj_train.indptr[i]:adj_train.indptr[i+1]]=i
         super().__init__(adj_train,adj_full,node_train,size_subgraph,args_preproc)
     def preproc(self,**kwargs):
+        # TODO: calculate the edge probability q_e = 1 - (1-p_e)^{1/m}
         pass
     def par_sample(self,stage,**kwargs):
         return cy.sampler_edge_cython(self.adj_train.indptr,self.adj_train.indices,\

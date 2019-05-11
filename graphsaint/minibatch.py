@@ -74,9 +74,10 @@ class NodeMinibatchIterator(object):
         
         self.norm_loss_train = None
         self.norm_loss_test = np.zeros(self.adj_full.shape[0])
-        self.norm_loss_test[self.node_train] = 1
-        self.norm_loss_test[self.node_val] = 1
-        self.norm_loss_test[self.node_test] = 1
+        _denom = len(self.node_train) + len(self.node_val) +  len(self.node_test)
+        self.norm_loss_test[self.node_train] = 1/_denom
+        self.norm_loss_test[self.node_val] = 1/_denom
+        self.norm_loss_test[self.node_test] = 1/_denom
         self.norm_aggr_train = [dict()]     # list of dict. List index: start node index. dict key: end node idx
        
         self.norm_adj = train_params['norm_adj']
@@ -136,7 +137,7 @@ class NodeMinibatchIterator(object):
 
         self.norm_loss_train = np.zeros(self.adj_full.shape[0])
         if not self.is_norm_loss and not self.is_norm_aggr:
-            self.norm_loss_train[self.node_train] = 1
+            self.norm_loss_train[self.node_train] = 1/self.size_subg_budget
             _init_norm_aggr_cnt(1)
         else:       # need at least one of the norm techniques
             tot_sampled_nodes = 0
@@ -149,7 +150,7 @@ class NodeMinibatchIterator(object):
             num_subg = len(self.subgraphs_remaining_nodes)
             # 2. update _node_cnt --> to be used by norm_loss_train/norm_aggr_train
             _node_cnt = np.zeros(self.adj_full.shape[0])
-            for i in range(len(self.subgraphs_remaining_nodes)):
+            for i in range(num_subg):
                 _node_cnt[self.subgraphs_remaining_nodes[i]] += 1
             # 3. norm_loss based on _node_cnt
             if self.is_norm_loss:
@@ -157,15 +158,17 @@ class NodeMinibatchIterator(object):
                 self.norm_loss_train[self.node_train] += self.q_offset
                 if self.norm_loss_train[self.node_train].min() == 0:
                     self.norm_loss_train[self.node_train] += 1
-                self.norm_loss_train[self.node_train] = 1/self.norm_loss_train[self.node_train]
-                self.norm_loss_train = self.norm_loss_train\
-                            /self.norm_loss_train.sum()*self.node_train.size
+                #self.norm_loss_train[self.node_train] = 1/self.norm_loss_train[self.node_train]
+                #self.norm_loss_train = self.norm_loss_train\
+                #            /self.norm_loss_train.sum()*self.node_train.size
+                self.norm_loss_train /= num_subg
+                self.norm_loss_train[self.node_train] = 1/self.norm_loss_train[self.node_train]/self.node_train.size
             else:
                 self.norm_loss_train[self.node_train] = 1
             # 4. norm_aggr based on _node_cnt and edge count
             if self.is_norm_aggr:
                 _init_norm_aggr_cnt(0)
-                for i in range(len(self.subgraphs_remaining_nodes)):
+                for i in range(num_subg):
                     for ip in range(len(self.subgraphs_remaining_nodes[i])):
                         _u = self.subgraphs_remaining_nodes[i][ip]
                         for _v in self.subgraphs_remaining_indices_orig[i][self.subgraphs_remaining_indptr[i][ip]:self.subgraphs_remaining_indptr[i][ip+1]]:
