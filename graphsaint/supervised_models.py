@@ -140,7 +140,7 @@ class Supervisedgraphsaint:
             aggregator = self.aggregator_cls(self.dims_weight[layer][0], self.dims_weight[layer][1],
                     dropout=self.placeholders['dropout'],name=name,model_pretrain=model_pretrain[layer],
                     bias=self.bias_layer[layer],act=self.act_layer[layer],order=self.order_layer[layer],\
-                    norm=self.norm_layer[layer],aggr=self.aggr_layer[layer],is_train=self.is_train,batch_norm=self.batch_norm)
+                    norm=self.norm_layer[layer],aggr=self.aggr_layer[layer],is_train=self.is_train,batch_norm=self.batch_norm,logging=FLAGS.logging)
             aggregators.append(aggregator)
         return aggregators
 

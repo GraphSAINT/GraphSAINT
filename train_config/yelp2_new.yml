@@ -8,7 +8,9 @@ params:
   - lr: 0.01
     weight_decay: 0.0
     norm_loss: 1
-    norm_aggr: 1
+    norm_aggr: 0
+    norm_beta: 1
+    split_beta: 1
     norm_adj: 'rw'
     batch_norm: 'tf.nn'
     model: 'gsaint'   
