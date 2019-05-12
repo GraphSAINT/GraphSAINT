@@ -73,6 +73,7 @@ def construct_placeholders(num_classes):
         'nnz': tf.placeholder(tf.int32, shape=(None), name='adj_nnz'),
         'dropout': tf.placeholder(DTYPE, shape=(None), name='dropout'),
         'adj_subgraph' : tf.sparse_placeholder(DTYPE,name='adj_subgraph'),
+        #'adj_subgraph_last': 
         'adj_subgraph_0' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_0'),
         'adj_subgraph_1' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_1'),
         'adj_subgraph_2' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_2'),
@@ -101,7 +102,9 @@ def prepare(train_data,train_params,dims_gcn):
     loss_type = dims_gcn[-1]
 
     placeholders = construct_placeholders(num_classes)
-    minibatch = NodeMinibatchIterator(adj_full, adj_full_norm, adj_train, role, class_arr, placeholders, train_params)
+    num_layers = [int(d.split('-')[1]) for d in dims]
+    num_layers = len([l for l in num_layers if l>0])
+    minibatch = NodeMinibatchIterator(adj_full, adj_full_norm, adj_train, role, class_arr, placeholders, train_params, num_layers)
     model = Supervisedgraphsaint(num_classes, placeholders,
                 feats, dims, train_params, loss_type, adj_full_norm, logging=True)
 

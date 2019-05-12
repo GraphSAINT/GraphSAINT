@@ -62,7 +62,11 @@ class Layer:
     def __call__(self, inputs):
         with tf.name_scope(self.name):
             if self.logging:
-                tf.summary.histogram(self.name + '/inputs', inputs)
+                if type(inputs)==type([]) or type(inputs)==type((1,2)):
+                    _ip = inputs[0]
+                else:
+                    _ip = inputs
+                tf.summary.histogram(self.name + '/inputs', _ip)
             outputs = self._call(inputs)
             if self.logging:
                 tf.summary.histogram(self.name + '/outputs', outputs)
