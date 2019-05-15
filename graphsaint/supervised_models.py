@@ -56,6 +56,10 @@ class Supervisedgraphsaint:
 
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
         self.reset_optimizer_op = tf.variables_initializer(self.optimizer.variables())
+        if 'reset_opt' in train_params:
+            if train_params['reset_opt'] == 0:
+                self.reset_optimizer_op = None
+
         self.loss = 0
         self.opt_op = None
         self.norm_loss = placeholders['norm_loss']
