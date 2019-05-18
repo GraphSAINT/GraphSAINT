@@ -73,7 +73,7 @@ def construct_placeholders(num_classes):
         'nnz': tf.placeholder(tf.int32, shape=(None), name='adj_nnz'),
         'dropout': tf.placeholder(DTYPE, shape=(None), name='dropout'),
         'adj_subgraph' : tf.sparse_placeholder(DTYPE,name='adj_subgraph'),
-        #'adj_subgraph_last': 
+        'adj_subgraph_last': tf.sparse_placeholder(DTYPE,name='adj_subgraph_last'),
         'adj_subgraph_0' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_0'),
         'adj_subgraph_1' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_1'),
         'adj_subgraph_2' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_2'),

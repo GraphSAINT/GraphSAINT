@@ -6,11 +6,12 @@ network:
   - '128-0-n-relu-concat'
   - 'softmax'
 params:
-  - lr: 0.02
+  - lr: 0.0001
     weight_decay: 0.0
     norm_loss: True
     norm_aggr: 1
-    norm_beta: 1
+    norm_beta: 0
+    norm_layer: 'all'
     norm_adj: 'rw'
     model: 'gsaint'
     q_threshold: 50
@@ -18,10 +19,14 @@ params:
     batch_norm: 'tf.layer'
     skip: 'noskip'
 phase:
-  - end: 25
-    dropout: 0.2
-    sampler: 'frontier'
-    size_subgraph: 8000
-    size_frontier: 3000
-    order: 1
-    max_deg: 10000
+  - end: 50
+    dropout: 0.4
+    #sampler: 'frontier'
+    #size_subgraph: 8000
+    #size_frontier: 3000
+    #order: 1
+    #max_deg: 10000
+    sampler: 'edge_indp'
+    size_subg_edge: 1200
+    is_induced: 0
+    level_approx: 0
