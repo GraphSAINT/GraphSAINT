@@ -46,7 +46,7 @@ phase:
     size_frontier: 1800
     order: 1
     max_deg: 10000
-  - end: 1000
+  - end: 350
     dropout: 0.0
     sampler: 'frontier'
     size_subgraph: 8000
