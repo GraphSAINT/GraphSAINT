@@ -1,0 +1,24 @@
+network:
+  - '256-1-n-lin-concat'
+  - '128-0-n-relu-mean'
+  - '128-1-n-relu-concat'
+  - '128-0-n-relu-mean'
+  - 'softmax'           
+params:
+  - lr: 0.01
+    weight_decay: 0.0   
+    norm_weight: 1
+    norm_adj: 'rw'
+    model: 'gsaint'    
+    q_threshold: 50
+    q_offset: 0
+    batch_norm: 'tf.nn'
+    skip: 'noskip'
+phase:
+  - end: 5            
+    dropout: 0.0
+    sampler: 'frontier'
+    size_subgraph: 8000
+    size_frontier: 1000
+    order: 1
+    max_deg: 10000
