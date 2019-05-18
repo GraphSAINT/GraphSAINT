@@ -346,7 +346,8 @@ cdef void _sampler_rw(vector[int]& adj_indptr,\
                       vector[int]& adj_indices,\
                       vector[int]& node_train,\
                       vector[vector[int]]& node_sampled, \
-                      int size_root, int size_depth, int p, int num_rep) nogil:
+                      int size_root, int size_depth, bool is_induced, int p, int num_rep) nogil:
+    # TODO: if no graph induction step, then just return unsorted node
     cdef int iroot = 0
     cdef int idepth = 0
     cdef int r = 0
@@ -369,6 +370,8 @@ cdef void _sampler_rw(vector[int]& adj_indptr,\
                 idepth = idepth + 1
             iroot = iroot + 1
         r = r + 1
+        if is_induced:
+            return
         sort(node_sampled[idx_subg].begin(),node_sampled[idx_subg].end())
         node_sampled[idx_subg].erase(unique(node_sampled[idx_subg].begin(),node_sampled[idx_subg].end()),node_sampled[idx_subg].end())
 
@@ -378,7 +381,7 @@ cdef void _sampler_rw(vector[int]& adj_indptr,\
 def sampler_rw_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
                       np.ndarray[int,ndim=1,mode='c'] adj_indices,\
                       np.ndarray[int,ndim=1,mode='c'] node_train,\
-                      int size_root, int size_depth, int num_proc, int num_sample_per_proc):
+                      int size_root, int size_depth, bool is_induced, int num_proc, int num_sample_per_proc):
     # ==== prepare start: common to all samplers ====
     cdef vector[int] adj_indptr_vec
     cutils.npy2vec_int(adj_indptr, adj_indptr_vec)
@@ -402,9 +405,10 @@ def sampler_rw_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
     with nogil, parallel(num_threads=num_proc):
         for p in prange(num_proc,schedule='dynamic'):
             # **** the only thing you need to change ****
-            _sampler_rw(adj_indptr_vec,adj_indices_vec,node_train_vec,node_sampled,size_root,size_depth,p,num_sample_per_proc)
+            _sampler_rw(adj_indptr_vec,adj_indices_vec,node_train_vec,node_sampled,size_root,size_depth,is_induced,p,num_sample_per_proc)
             # *******************************************
             # ch2
+            # TODO: should have a simpler extract method
             cutils._adj_extract_cython(adj_indptr_vec,adj_indices_vec,node_sampled,ret_indptr,ret_indices,ret_indices_orig,ret_data,p,num_sample_per_proc)
     # ==== return start: common to all samplers ====
     l_subg_indptr = list()

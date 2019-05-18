@@ -6,25 +6,29 @@ network:
   - '128-0-n-relu-mean'
   - 'softmax'           
 params:
-  - lr: 0.01
+  - lr: 0.002
     weight_decay: 0.0   
     norm_loss: 1
     norm_aggr: 1
-    norm_beta: 1
-    split_beta: 1
+    norm_beta: 0
     norm_adj: 'rw'
+    norm_layer: 'all'       # 'all': normalize all layers.      'last': only normalize the last layer
     model: 'gsaint'    
     q_threshold: 50
     q_offset: 0
     batch_norm: 'tf.nn'
     skip: 'noskip'
 phase:
-  - end: 40
+  - end: 50
     dropout: 0.0
-    sampler: 'frontier'
-    size_subgraph: 8000
-    size_frontier: 1000
-    order: 1
-    max_deg: 10000
+    #sampler: 'frontier'
+    #size_subgraph: 8000
+    #size_frontier: 1000
+    #order: 1
+    #max_deg: 10000
     #sampler: 'edge'
     #size_subgraph: 20000
+    sampler: 'edge_indp'
+    size_subg_edge: 2500
+    is_induced: 0
+    level_approx: 0         # 0: p_e propto a       1: p_e propto a x0      2: p_e propto sum a xl
