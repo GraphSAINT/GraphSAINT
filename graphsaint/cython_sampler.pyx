@@ -364,8 +364,9 @@ cdef void _sampler_rw(vector[int]& adj_indptr,\
             # sample random walk
             idepth = 0
             while idepth < size_depth:
-                v = adj_indices[adj_indptr[v]+rand()%(adj_indptr[v+1]-adj_indptr[v])]# neigh
-                node_sampled[idx_subg].push_back(v)
+                if (adj_indptr[v+1]-adj_indptr[v]>0):
+                    v = adj_indices[adj_indptr[v]+rand()%(adj_indptr[v+1]-adj_indptr[v])]# neigh
+                    node_sampled[idx_subg].push_back(v)
                 idepth = idepth + 1
             iroot = iroot + 1
         r = r + 1
