@@ -87,6 +87,7 @@ class NodeMinibatchIterator(object):
         self.is_norm_loss = train_params['norm_loss']
         self.is_norm_aggr = train_params['norm_aggr']
         self.is_norm_beta = train_params['norm_beta']
+        self.select_norm_layer = train_params['norm_layer']
         self.deg_train = np.array(self.adj_train.sum(1)).flatten()
 
     def _set_sampler_args(self):
@@ -123,7 +124,7 @@ class NodeMinibatchIterator(object):
         elif self.method_sample == 'rw':
             self.size_subg_budget = train_phases['num_root']*train_phases['depth']
             self.graph_sampler = rw_sampling(self.adj_train,self.adj_full,\
-                self.node_train,self.size_subg_budget,dict(),int(train_phases['num_root']),int(train_phases['depth']))
+                self.node_train,self.size_subg_budget,dict(),int(train_phases['num_root']),int(train_phases['depth']),train_phases['is_induced'])
         elif self.method_sample == 'edge':
             self.size_subg_budget = train_phases['size_subgraph']
             self.graph_sampler = edge_sampling(self.adj_train,self.adj_full,self.node_train,self.size_subg_budget,dict())
@@ -162,6 +163,9 @@ class NodeMinibatchIterator(object):
                 _node_cnt[self.subgraphs_remaining_nodes[i]] += 1
             # 3. norm_loss based on _node_cnt
             if self.is_norm_beta:
+                #if self.method_sample == 'edge_indp' and not train_phases['is_induced']:
+                #    self.norm_loss_train[self.node_train] = 1/self.node_train.size
+                #else:
                 self.norm_loss_train[self.node_train] = 1/self.node_train.size * (self.node_train.size/avg_subg_size)**self.num_layers
             elif self.is_norm_loss:
                 self.norm_loss_train[:] = _node_cnt[:]
@@ -194,6 +198,9 @@ class NodeMinibatchIterator(object):
                 #import pdb; pdb.set_trace()
                 # ------------------------------------------
                 for i_d,d in enumerate(self.norm_aggr_train):
+                    #if self.method_sample == 'edge_indp' and not train_phases['is_induced']:
+                    #    self.norm_aggr_train[i_d] = {k:num_subg/(v+0.1) for k,v in d.items()}
+                    #else:
                     self.norm_aggr_train[i_d] = {k:avg_subg_size*num_subg/(v+0.1)/self.node_train.size for k,v in d.items()}     # TODO: you shouldn't multiply by this 2.
             elif self.is_norm_aggr:
                 _init_norm_aggr_cnt(0)
