@@ -5,12 +5,13 @@ network:
   - '512-0-n-relu-mean'
   - 'sigmoid'
 params:
-  - lr: 0.01
+  - lr: 0.001
     weight_decay: 0.0
     norm_loss: 1
-    norm_aggr: 0
-    norm_beta: 1
+    norm_aggr: 1
+    norm_beta: 0
     norm_adj: 'rw'
+    norm_layer: 'all'
     batch_norm: 'tf.nn'
     model: 'gsaint'   
     q_threshold: 100
@@ -25,6 +26,6 @@ phase:
     #order: 1
     #max_deg: 10000
     sampler: 'edge_indp'
-    size_subg_edge: 20000
+    size_subg_edge: 5000
     is_induced: 0
     level_approx: 0

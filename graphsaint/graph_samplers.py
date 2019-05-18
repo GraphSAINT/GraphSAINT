@@ -51,16 +51,23 @@ class graph_sampler:
 
 
 class rw_sampling(graph_sampler):
-    def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc,size_root,size_depth):
+    def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc,size_root,size_depth,is_induced):
         self.size_root = size_root
         self.size_depth = size_depth
+        self.is_induced = is_induced
         size_subgraph = size_root*size_depth
         super().__init__(adj_train,adj_full,node_train,size_subgraph,args_preproc)
     def preproc(self,**kwargs):
         pass
     def par_sample(self,stage,**kwargs):
-        return cy.sampler_rw_cython(self.adj_train.indptr,self.adj_train.indices,\
-                self.node_train,self.size_root,self.size_depth,NUM_PROC,RUN_PER_PROC)
+        if self.is_induced:
+            return cy.sampler_rw_cython(self.adj_train.indptr,self.adj_train.indices,\
+                self.node_train,self.size_root,self.size_depth,True,NUM_PROC,RUN_PER_PROC)
+        else:
+            # maybe should also just return here
+            nodes = cy.sampler_rw_cython(self.adj_tran.indptr,self.adj_train.indices,\
+                self.node_train,self.size_root,self.size_depth,False,NUM_PROC,RUN_PER_PROC)
+            # TODO: construct adj
 
 class edge_sampling(graph_sampler):
     def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc):
@@ -88,6 +95,8 @@ class edge_indp_sampling(graph_sampler):
         self.deg_train = np.array(adj_train.sum(1)).flatten()
         self.adj_train_norm = scipy.sparse.dia_matrix((1/self.deg_train,0),shape=adj_train.shape).dot(adj_train)
         super().__init__(adj_train,adj_full,node_train,self.size_subgraph,args_preproc)
+        self.is_induced = is_induced
+        self.level_approx = level_approx
     def preproc(self,**kwargs):
         self.edge_prob = scipy.sparse.csr_matrix((np.zeros(self.adj_train.size),\
                 self.adj_train.indices,self.adj_train.indptr),shape=self.adj_train.shape)
@@ -112,6 +121,19 @@ class edge_indp_sampling(graph_sampler):
         node_subg = sorted(list(node_subg))
         _map = {v:i for i,v in enumerate(node_subg)}
         _map_rev = {i:v for i,v in enumerate(node_subg)}
+        if self.is_induced:
+            node_binmap = np.zeros(self.adj_train.shape[0]).astype(np.bool)
+            node_binmap[node_subg] = 1
+            _edge_row = list()
+            _edge_col = list()
+            for u in node_subg:
+                for iv in range(self.adj_train.indptr[u],self.adj_train.indptr[u+1],1):
+                    if not node_binmap[self.adj_train.indices[iv]]:
+                        continue
+                    _edge_row.append(u)
+                    _edge_col.append(self.adj_train.indices[iv])
+            edge_selected_row = np.array(_edge_row)
+            edge_selected_col = np.array(_edge_col)
         _fmap = lambda x: _map[x]
         _fmap_rev = lambda x: _map_rev[x]
         _col_remapped = np.fromiter((_fmap(xi) for xi in edge_selected_col),edge_selected_col.dtype)
