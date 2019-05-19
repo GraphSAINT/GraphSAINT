@@ -33,7 +33,7 @@ phase:
     #size_frontier: 1800
     #order: 1
     #max_deg: 10000
-    sampler: 'edge_indp'
-    size_subg_edge: 1000
+    sampler: 'rw'
+    num_root: 2000
+    depth: 3
     is_induced: 0
-    level_approx: 0

@@ -34,5 +34,5 @@ phase:
     #level_approx: 0         # 0: p_e propto a       1: p_e propto a x0      2: p_e propto sum a xl
     sampler: 'rw'
     num_root: 2000
-    depth: 3
-    is_induced: 1
+    depth: 4
+    is_induced: 0
