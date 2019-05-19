@@ -367,13 +367,15 @@ cdef void _sampler_rw(vector[int]& adj_indptr,\
                 if (adj_indptr[v+1]-adj_indptr[v]>0):
                     v = adj_indices[adj_indptr[v]+rand()%(adj_indptr[v+1]-adj_indptr[v])]# neigh
                     node_sampled[idx_subg].push_back(v)
+                elif not is_induced:
+                    node_sampled[idx_subg].push_back(v)
+                #   add self
                 idepth = idepth + 1
             iroot = iroot + 1
         r = r + 1
         if is_induced:
-            return
-        sort(node_sampled[idx_subg].begin(),node_sampled[idx_subg].end())
-        node_sampled[idx_subg].erase(unique(node_sampled[idx_subg].begin(),node_sampled[idx_subg].end()),node_sampled[idx_subg].end())
+            sort(node_sampled[idx_subg].begin(),node_sampled[idx_subg].end())
+            node_sampled[idx_subg].erase(unique(node_sampled[idx_subg].begin(),node_sampled[idx_subg].end()),node_sampled[idx_subg].end())
 
 
 @cython.boundscheck(False)
@@ -396,6 +398,11 @@ def sampler_rw_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
     ret_indptr = vector[vector[int]](num_proc*num_sample_per_proc)
     cdef vector[vector[int]] ret_indices
     ret_indices = vector[vector[int]](num_proc*num_sample_per_proc)
+    # for non-induced version
+    #cdef vector[vector[int]] ret_row
+    #ret_row = vector[vector[int]](num_proc*num_sample_per_proc)
+    #cdef vector[vector[int]] ret_col
+    #ret_col = vector[vector[int]](num_proc*num_sample_per_proc)
     # ch1
     cdef vector[vector[int]] ret_indices_orig
     ret_indices_orig = vector[vector[int]](num_proc*num_sample_per_proc)
@@ -409,7 +416,10 @@ def sampler_rw_cython(np.ndarray[int,ndim=1,mode='c'] adj_indptr, \
             # *******************************************
             # ch2
             # TODO: should have a simpler extract method
-            cutils._adj_extract_cython(adj_indptr_vec,adj_indices_vec,node_sampled,ret_indptr,ret_indices,ret_indices_orig,ret_data,p,num_sample_per_proc)
+            if not is_induced:
+                cutils._adj_extract_ind_cython(adj_indptr_vec,node_sampled,ret_indptr,ret_indices,ret_indices_orig,ret_data,size_depth,p,num_sample_per_proc)
+            else:
+                cutils._adj_extract_cython(adj_indptr_vec,adj_indices_vec,node_sampled,ret_indptr,ret_indices,ret_indices_orig,ret_data,p,num_sample_per_proc)
     # ==== return start: common to all samplers ====
     l_subg_indptr = list()
     l_subg_indices = list()
