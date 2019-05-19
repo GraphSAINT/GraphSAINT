@@ -59,7 +59,7 @@ class Supervisedgraphsaint:
         self.reset_optimizer_op = tf.variables_initializer(self.optimizer.variables())
         if 'reset_opt' in train_params:
             if train_params['reset_opt'] == 0:
-                self.reset_optimizer_op = None
+                self.reset_optimizer_op = tf.no_op()
 
         self.loss = 0
         self.opt_op = None
