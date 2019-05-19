@@ -186,6 +186,7 @@ class NodeMinibatchIterator(object):
                     for ip in range(len(self.subgraphs_remaining_nodes[i])):
                         _u = self.subgraphs_remaining_nodes[i][ip]
                         for _v in self.subgraphs_remaining_indices_orig[i][self.subgraphs_remaining_indptr[i][ip]:self.subgraphs_remaining_indptr[i][ip+1]]:
+                            # import pdb; pdb.set_trace()
                             self.norm_aggr_train[_u][_v] += 1
                 t2 = time.time()
                 print("time for updating counter as list of dict: {}".format(t2-t1))
@@ -229,6 +230,7 @@ class NodeMinibatchIterator(object):
         self.subgraphs_remaining_indices_orig.extend(_indices_orig)
         self.subgraphs_remaining_data.extend(_data)
         self.subgraphs_remaining_nodes.extend(_v)
+        # import pdb; pdb.set_trace()
 
     def minibatch_train_feed_dict(self,dropout,is_val=False,is_test=False):
         """ DONE """
