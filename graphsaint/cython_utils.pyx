@@ -130,7 +130,8 @@ cdef void _adj_extract_ind_cython(vector[int]& adj_indptr,vector[vector[int]]& n
     """
     cdef int r = 0
     cdef int idx_g = 0
-    cdef int i, i_end, v, j
+    cdef int i, i_end, v, j, ii
+    cdef int size_dummy
     cdef int num_v_orig, num_v_sub
     cdef int start_neigh, end_neigh
     cdef vector[int] _arr_bit
@@ -146,12 +147,17 @@ cdef void _adj_extract_ind_cython(vector[int]& adj_indptr,vector[vector[int]]& n
         ret_data[idx_g] = vector[float]()
         i_end = num_v_sub
         i = 0
+        ii = 0
         while i < i_end:
-            _arr_bit[node_sampled[idx_g][i]] = i        # setup remapper
+            if _arr_bit[node_sampled[idx_g][i]] == -1:
+                _arr_bit[node_sampled[idx_g][i]] = ii        # setup remapper
+                ii = ii + 1
             i = i + 1
         i = 0
         while i < i_end:
+            ret_indices_orig[idx_g].push_back(_arr_bit[node_sampled[idx_g][i]])
             if i % (depth_walk+1) == depth_walk:
+                i = i + 1
                 continue
             ret_row[idx_g].push_back(_arr_bit[node_sampled[idx_g][i]])
             ret_col[idx_g].push_back(_arr_bit[node_sampled[idx_g][i+1]])
@@ -159,7 +165,12 @@ cdef void _adj_extract_ind_cython(vector[int]& adj_indptr,vector[vector[int]]& n
             ret_col[idx_g].push_back(_arr_bit[node_sampled[idx_g][i]])
             ret_data[idx_g].push_back(1.)
             ret_data[idx_g].push_back(1.)
-            ret_indices_orig[idx_g].push_back(node_sampled[idx_g][i])
+            i = i + 1
+        # append dummy vals at the end of ret_indices_orig, to comply with API
+        size_dummy = ret_col[idx_g].size()
+        i = ret_indices_orig[idx_g].size()
+        while i < size_dummy:
+            ret_indices_orig[idx_g].push_back(-1)
             i = i + 1
         r = r + 1
         # for iterating node_sampled[idx_g]

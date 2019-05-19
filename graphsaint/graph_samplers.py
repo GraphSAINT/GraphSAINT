@@ -65,10 +65,33 @@ class rw_sampling(graph_sampler):
                 self.node_train,self.size_root,self.size_depth,True,NUM_PROC,RUN_PER_PROC)
         else:
             # maybe should also just return here
-            _ = cy.sampler_rw_cython(self.adj_tran.indptr,self.adj_train.indices,\
+            # indices_new and node_sampled are of the same length
+            # indices_new is the indices of the new subgraph
+            # node_sampled is the indices of the original
+            row,col,indices_new,data,node_sampled = cy.sampler_rw_cython(self.adj_train.indptr,self.adj_train.indices,\
                 self.node_train,self.size_root,self.size_depth,False,NUM_PROC,RUN_PER_PROC)
-            import pdb; pdb.set_trace()
-            # TODO: construct adj
+            ret_indptr = list()
+            ret_indices = list()
+            ret_indices_orig = list()
+            ret_data = list()
+            ret_node_sampled = list()
+            for g in range(len(row)):
+                mapper = {indices_new[g][i]:node_sampled[g][i] for i in range(len(node_sampled[g]))}
+                size_subg = max(indices_new[g])+1
+                _m = scipy.sparse.coo_matrix((data[g],(row[g],col[g])),shape=(size_subg,size_subg))
+                _m = _m.tocsr()
+                #for _i in range(size_subg):
+                #    if _m[_i,_i] != 0:
+                #        import pdb; pdb.set_trace()
+                #    _m[_i,_i] = 0
+                #import pdb; pdb.set_trace()
+                ret_indptr.append(_m.indptr)
+                ret_indices.append(_m.indices)
+                ret_data.append(_m.data)
+                ret_indices_orig.append(np.array([mapper[ip] for ip in _m.indices]))
+                ret_node_sampled.append(np.array([mapper[_i] for _i in range(size_subg)]))
+            return ret_indptr,ret_indices,ret_indices_orig,ret_data,ret_node_sampled
+
 
 class edge_sampling(graph_sampler):
     def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc):
