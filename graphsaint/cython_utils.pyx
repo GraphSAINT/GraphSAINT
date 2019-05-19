@@ -119,3 +119,52 @@ cdef void _adj_extract_cython(vector[int]& adj_indptr, vector[int]& adj_indices,
             i = i + 1
         r = r + 1
 
+
+cdef void _adj_extract_ind_cython(vector[int]& adj_indptr,vector[vector[int]]& node_sampled,\
+        vector[vector[int]]& ret_row, vector[vector[int]]& ret_col, vector[vector[int]]& ret_indices_orig, vector[vector[float]]& ret_data, \
+        int depth_walk, int p, int num_rep) nogil:
+    """
+    THIS IS ONLY TO BE USED WITH RW SAMPLER. FOR NON-INDUCTION SAMPLING
+    Extract a subg adj matrix from the original adj matrix
+    ret_indices_orig:   the indices vector corresponding to node id in original G.
+    """
+    cdef int r = 0
+    cdef int idx_g = 0
+    cdef int i, i_end, v, j
+    cdef int num_v_orig, num_v_sub
+    cdef int start_neigh, end_neigh
+    cdef vector[int] _arr_bit
+    cdef int cumsum
+    num_v_orig = adj_indptr.size()-1
+    while r < num_rep:
+        _arr_bit = vector[int](num_v_orig,-1)
+        idx_g = p*num_rep+r
+        num_v_sub = node_sampled[idx_g].size()
+        ret_row[idx_g] = vector[int]()
+        ret_col[idx_g] = vector[int]()
+        ret_indices_orig[idx_g] = vector[int]()
+        ret_data[idx_g] = vector[float]()
+        i_end = num_v_sub
+        i = 0
+        while i < i_end:
+            _arr_bit[node_sampled[idx_g][i]] = i        # setup remapper
+            i = i + 1
+        i = 0
+        while i < i_end:
+            if i % (depth_walk+1) == depth_walk:
+                continue
+            ret_row[idx_g].push_back(_arr_bit[node_sampled[idx_g][i]])
+            ret_col[idx_g].push_back(_arr_bit[node_sampled[idx_g][i+1]])
+            ret_row[idx_g].push_back(_arr_bit[node_sampled[idx_g][i+1]])
+            ret_col[idx_g].push_back(_arr_bit[node_sampled[idx_g][i]])
+            ret_data[idx_g].push_back(1.)
+            ret_data[idx_g].push_back(1.)
+            ret_indices_orig[idx_g].push_back(node_sampled[idx_g][i])
+            i = i + 1
+        r = r + 1
+        # for iterating node_sampled[idx_g]
+        #   if % (depth_walk+1) == depth_walk:
+        #       skip
+        #   else:
+        #       added to subg
+
