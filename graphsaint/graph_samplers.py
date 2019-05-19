@@ -65,8 +65,9 @@ class rw_sampling(graph_sampler):
                 self.node_train,self.size_root,self.size_depth,True,NUM_PROC,RUN_PER_PROC)
         else:
             # maybe should also just return here
-            nodes = cy.sampler_rw_cython(self.adj_tran.indptr,self.adj_train.indices,\
+            _ = cy.sampler_rw_cython(self.adj_tran.indptr,self.adj_train.indices,\
                 self.node_train,self.size_root,self.size_depth,False,NUM_PROC,RUN_PER_PROC)
+            import pdb; pdb.set_trace()
             # TODO: construct adj
 
 class edge_sampling(graph_sampler):

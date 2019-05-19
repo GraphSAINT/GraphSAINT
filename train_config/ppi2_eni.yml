@@ -26,31 +26,14 @@ params:
     reset_opt: False
 phase:
   # We set small subgraph sizes for the initial phases. This speeds up convergence without affecting accuracy.
-  - end: 50
+  - end: 300
     dropout: 0.0
-    sampler: 'frontier'
-    size_subgraph: 512
-    size_frontier: 180
-    order: 1
-    max_deg: 10000
-  - end: 80
-    dropout: 0.0
-    sampler: 'frontier'
-    size_subgraph: 1500
-    size_frontier: 500
-    order: 1
-    max_deg: 10000
-  - end: 180
-    dropout: 0.0
-    sampler: 'frontier'
-    size_subgraph: 5000
-    size_frontier: 1800
-    order: 1
-    max_deg: 10000
-  - end: 350
-    dropout: 0.0
-    sampler: 'frontier'
-    size_subgraph: 8000
-    size_frontier: 2500
-    order: 1
-    max_deg: 10000
+    #sampler: 'frontier'
+    #size_subgraph: 5000
+    #size_frontier: 1800
+    #order: 1
+    #max_deg: 10000
+    sampler: 'edge_indp'
+    size_subg_edge: 2000
+    is_induced: 0
+    level_approx: 0
