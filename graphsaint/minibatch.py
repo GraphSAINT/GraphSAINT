@@ -212,7 +212,10 @@ class NodeMinibatchIterator(object):
                 # NOTE: changed lambda norm to beta norm -- edge probability conditioned on node probability -> edge probability.
                 # TODO: check train degree for Reddit
                 for i_d,d in enumerate(self.norm_aggr_train):
-                    self.norm_aggr_train[i_d] = {k:_node_cnt[i_d]/v for k,v in d.items()}
+                    self.norm_aggr_train[i_d] = {k:_node_cnt[i_d]/(v+0.1) for k,v in d.items()}
+                # for k,v in self.norm_aggr_train[i_d].items():
+                #     if math.isnan(v) or math.isinf(v):
+                #         import pdb; pdb.set_trace()
             else:
                 _init_norm_aggr_cnt(1)
 
