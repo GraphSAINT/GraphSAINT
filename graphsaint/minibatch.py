@@ -188,7 +188,7 @@ class NodeMinibatchIterator(object):
                         for _v in self.subgraphs_remaining_indices_orig[i][self.subgraphs_remaining_indptr[i][ip]:self.subgraphs_remaining_indptr[i][ip+1]]:
                             self.norm_aggr_train[_u][_v] += 1
                 t2 = time.time()
-                print("time for updating counter as list of dict: {}".format(t2-t1))
+                #print("time for updating counter as list of dict: {}".format(t2-t1))
                 # ------------------------------------------
                 #_debug = []
                 #for d in self.norm_aggr_train:
@@ -248,7 +248,7 @@ class NodeMinibatchIterator(object):
             self.size_subgraph = len(self.node_subgraph)
             adj = sp.csr_matrix((self.subgraphs_remaining_data.pop(),self.subgraphs_remaining_indices.pop(),\
                         self.subgraphs_remaining_indptr.pop()),shape=(self.node_subgraph.size,self.node_subgraph.size))
-            print("{} nodes, {} edges, {} degree".format(self.node_subgraph.size,adj.size,adj.size/self.node_subgraph.size))
+            #print("{} nodes, {} edges, {} degree".format(self.node_subgraph.size,adj.size,adj.size/self.node_subgraph.size))
             ##adj = adj_norm(adj,self.norm_adj)       # TODO: additional arg: is_norm_aggr, aggr_norm_vector
             # TODO: for now, we may not support sym normalization
             if not self.is_norm_aggr and not self.is_norm_beta:
@@ -263,7 +263,7 @@ class NodeMinibatchIterator(object):
                         v_orig = self.node_subgraph[v]
                         adj.data[adj.indptr[u]+iv] = self.norm_aggr_train[u_orig][v_orig]
                 t2 = time.time()
-                print('    ---- time to set norm factor: ', t2-t1)
+                #print('    ---- time to set norm factor: ', t2-t1)
             adj = sp.dia_matrix((1/D,0),shape=(adj.shape[0],adj.shape[1])).dot(adj)
 
 
