@@ -6,7 +6,7 @@ network:
   - '128-0-n-relu-mean'
   - 'softmax'           
 params:
-  - lr: 0.002
+  - lr: 0.01
     weight_decay: 0.0   
     norm_loss: 1
     norm_aggr: 1
@@ -28,7 +28,7 @@ phase:
     #max_deg: 10000
     #sampler: 'edge'
     #size_subgraph: 20000
-    sampler: 'edge_indp'
-    size_subg_edge: 2500
-    is_induced: 0
-    level_approx: 0         # 0: p_e propto a       1: p_e propto a x0      2: p_e propto sum a xl
+    sampler: 'rw'
+    num_root: 4000
+    depth: 2
+    is_induced: 1
