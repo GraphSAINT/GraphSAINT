@@ -197,12 +197,20 @@ class khop_sampling(graph_sampler):
         """
         This is actually adj to the power of k
         """
-        if self.order > 1:
-            _adj_hop = '{}/adj_train_hop{}.npz'.format(FLAGS.data_prefix,self.order)
-            _adj_hop = scipy.sparse.load_npz(_adj_hop)
-        else:
-            _adj_hop = self.adj_train
-        self.p_dist_train = np.array([_adj_hop.data[_adj_hop.indptr[v]:_adj_hop.indptr[v+1]].sum() for v in self.node_train], dtype=np.int32)
+        # if self.order > 1:
+        #     _adj_hop = '{}/adj_train_hop{}.npz'.format(FLAGS.data_prefix,self.order)
+        #     _adj_hop = scipy.sparse.load_npz(_adj_hop)
+        # else:
+        #     _adj_hop = self.adj_train
+        # self.p_dist_train = np.array([_adj_hop.data[_adj_hop.indptr[v]:_adj_hop.indptr[v+1]].sum() for v in self.node_train], dtype=np.int32)
+
+        # sample accroding to porb defined in FastGCN
+        from scipy.sparse.linalg import norm as sparsenorm
+        adj_col_norm=sparsenorm(self.adj_train,axis=0)
+        adj_col_norm_sum=np.sum(adj_col_norm)
+        self.p_dist_train=adj_col_norm/adj_col_norm_sum
+        self.p_dist_train*=self.p_dist_train.shape[0]*20
+        self.p_dist_train=self.p_dist_train.astype(np.int32)
 
     def par_sample(self,stage,**kwargs):
         _p_cumsum = np.array(self.p_dist_train).astype(np.int64).cumsum()
