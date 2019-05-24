@@ -28,6 +28,6 @@ phase:
     #order: 1
     #max_deg: 100
     sampler: 'rw'
-    num_root: 500
-    depth: 10
+    num_root: 1000
+    depth: 3
     is_induced: 1
