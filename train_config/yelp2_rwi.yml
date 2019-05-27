@@ -20,7 +20,7 @@ params:
     q_offset: 1
     skip: 'noskip'
 phase:
-  - end: 35 
+  - end: 40
     dropout: 0.0
     #sampler: 'frontier'
     #size_subgraph: 4000
@@ -28,6 +28,6 @@ phase:
     #order: 1
     #max_deg: 100
     sampler: 'rw'
-    num_root: 1000
-    depth: 3
+    num_root: 1250
+    depth: 2
     is_induced: 1
