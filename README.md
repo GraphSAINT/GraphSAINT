@@ -83,3 +83,21 @@ To run the code on gpu
 `./run_graphsaint.sh <dataset_name> <path to train_config yml> --gpu <GPU number>`
 
 For example `--gpu 0` will run on the first GPU. 
+
+
+## TODO
+
+* change `epoch` to `iteration`. Remember there is no strict definition of `epoch`.
+* split the pre-proc and training procedure. Pre-proc can be pure C++ if necessary.
+* explain the minor difference in various arch (S-GCN/GraphSAGE...) in num of order 1 layers
+* change 'lin', 'relu' in yml to 'l', 'r'
+* layer 1 dim?? can config as max(1/2*inputdim,ymldim) -- ensure graph conv layers are operating on at least features of hidden dim. Also, we ensure the first conv layer don't lose much info in input feature
+* additional order 0 layer: this is only the case for reddit and ppi. so state that we add this mlp due to s-gcn. for flickr and yelp, we don't add this additional order 0 layer
+* activation is not unified: you can default to lin. so Flickr will then be missing that act field. All others will have relu. The only problem is Reddit first layer -- it cannot have relu??
+
+* add number of epochs for termination (to make the setup more clear)
+* add 2-layer convergence curve
+
+* Integrate with GAT, High-Order GCN, JK-Net
+* Solve the runtime error of AS-GCN
+* add MRW algorithm block, clarify the subgraph nodes for PPI is just a budget, but not the actual node count
