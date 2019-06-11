@@ -36,6 +36,10 @@ class Supervisedgraphsaint:
         self.adj_subgraph_1=placeholders['adj_subgraph_1']
         self.adj_subgraph_2=placeholders['adj_subgraph_2']
         self.adj_subgraph_3=placeholders['adj_subgraph_3']
+        self.adj_subgraph_4=placeholders['adj_subgraph_4']
+        self.adj_subgraph_5=placeholders['adj_subgraph_5']
+        self.adj_subgraph_6=placeholders['adj_subgraph_6']
+        self.adj_subgraph_7=placeholders['adj_subgraph_7']
         self.batch_norm = train_params['batch_norm']
         self.skip = train_params['skip']
         self.features = tf.Variable(tf.constant(features, dtype=DTYPE), trainable=False)
@@ -166,7 +170,8 @@ class Supervisedgraphsaint:
             if layer==skip_to:
                 hidden=hidden+hidden_save
             # TODO: add adj_last here
-            hidden = self.aggregators[layer]((hidden,adj,self.nnz,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,self.adj_subgraph_3))
+            hidden = self.aggregators[layer]((hidden,adj,self.nnz,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
+                    self.adj_subgraph_3,self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7))
             if layer==skip_from:
                 hidden_save=hidden
         return hidden
