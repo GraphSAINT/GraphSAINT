@@ -243,10 +243,10 @@ class HighOrderAggregator(Layer):
         return vw
 
     def _call(self, inputs):
-        vecs, adj_norm, nnz, len_feat, adj_0, adj_1, adj_2, adj_3 = inputs
+        vecs, adj_norm, nnz, len_feat, adj_0, adj_1, adj_2, adj_3, adj_4, adj_5, adj_6, adj_7 = inputs
         # TODO: where should you put dropout? here or at the end of this aggr??
-        #vecs = tf.nn.dropout(vecs, 1-self.dropout)
-        vecs_hop = [tf.nn.dropout(vecs,1-self.dropout) for i in range(self.order+1)]
+        vecs = tf.nn.dropout(vecs, 1-self.dropout)
+        vecs_hop = [tf.identity(vecs) for i in range(self.order+1)]
         for o in range(self.order):
             for a in range(o+1):
                 ans1 = tf.sparse_tensor_dense_matmul(adj_norm,vecs_hop[o+1])
@@ -254,7 +254,11 @@ class HighOrderAggregator(Layer):
                 ans2_1 = tf.sparse_tensor_dense_matmul(adj_1,vecs_hop[o+1])
                 ans2_2 = tf.sparse_tensor_dense_matmul(adj_2,vecs_hop[o+1])
                 ans2_3 = tf.sparse_tensor_dense_matmul(adj_3,vecs_hop[o+1])
-                ans2 = tf.concat([ans2_0,ans2_1,ans2_2,ans2_3],0)
+                ans2_4 = tf.sparse_tensor_dense_matmul(adj_4,vecs_hop[o+1])
+                ans2_5 = tf.sparse_tensor_dense_matmul(adj_5,vecs_hop[o+1])
+                ans2_6 = tf.sparse_tensor_dense_matmul(adj_6,vecs_hop[o+1])
+                ans2_7 = tf.sparse_tensor_dense_matmul(adj_7,vecs_hop[o+1])
+                ans2 = tf.concat([ans2_0,ans2_1,ans2_2,ans2_3,ans2_4,ans2_5,ans2_6,ans2_7],0)
                 vecs_hop[o+1] = tf.cond(self.is_train,lambda: tf.identity(ans1),lambda: tf.identity(ans2))
         
         for o in range(self.order+1):

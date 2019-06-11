@@ -78,6 +78,10 @@ def construct_placeholders(num_classes):
         'adj_subgraph_1' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_1'),
         'adj_subgraph_2' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_2'),
         'adj_subgraph_3' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_3'),
+        'adj_subgraph_4' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_4'),
+        'adj_subgraph_5' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_5'),
+        'adj_subgraph_6' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_6'),
+        'adj_subgraph_7' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_7'),
         'norm_loss': tf.placeholder(DTYPE,shape=(None),name='norm_loss'),
         'is_train': tf.placeholder(tf.bool, shape=(None), name='is_train')
     }
