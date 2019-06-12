@@ -192,6 +192,7 @@ class HighOrderAggregator(Layer):
         super(HighOrderAggregator,self).__init__(**kwargs)
         self.dropout = dropout
         self.bias = bias
+        self.bias = True
         self.act = act
         self.order = order
         self.norm = norm
@@ -231,6 +232,8 @@ class HighOrderAggregator(Layer):
         vw = tf.matmul(vecs,self.vars['order{}_weights'.format(order)])
         if self.bias and not self.norm:
             vw += self.vars['order{}_bias'.format(order)]
+        vw += self.vars['order{}_bias'.format(order)]
+        vw = self.act(vw)
         if self.norm:
             if self.batch_norm == 'tf.nn':
                 mean,variance = tf.nn.moments(vw,axes=[1],keep_dims=True)
@@ -239,7 +242,7 @@ class HighOrderAggregator(Layer):
                 vw = tf.nn.batch_normalization(vw,mean,variance,self.vars[_off],self.vars[_sca],1e-9)
             elif self.batch_norm == 'tf.layers':
                 vw=tf.layers.batch_normalization(vw,training=self.is_train,renorm=False)
-        vw = self.act(vw)
+        #vw = self.act(vw)
         return vw
 
     def _call(self, inputs):
