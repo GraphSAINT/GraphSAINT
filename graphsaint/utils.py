@@ -74,6 +74,7 @@ def parse_layer_yml(arch_gcn,dim_input):
             dims_layer[0]=int(dim_input/2)
             bias_layer[0]=arch_gcn['bias']
             aggr_layer[0]=arch_gcn['aggr']
+            act_layer[0]=arch_gcn['act']
         else:
             dims_layer[l]=arch_gcn['dim']
             bias_layer[l]=arch_gcn['bias']
