@@ -29,7 +29,7 @@ class NodeMinibatchIterator(object):
     This minibatch iterator iterates over nodes for supervised learning.
     """
 
-    def __init__(self, adj_full, adj_full_norm, adj_train, role, class_arr, placeholders, train_params, num_layers, **kwargs):
+    def __init__(self, adj_full, adj_full_norm, adj_train, role, class_arr, placeholders, train_params, **kwargs):
         """
         role:       array of string (length |V|)
                     storing role of the node ('tr'/'va'/'te')
@@ -65,7 +65,6 @@ class NodeMinibatchIterator(object):
         self.adj_full_norm_6=adj_full_norm[s6:s7,:]
         self.adj_full_norm_7=adj_full_norm[s7:,:]
         self.adj_train = adj_train
-        self.num_layers = num_layers
 
         assert self.class_arr.shape[0] == self.adj_full.shape[0]
 
@@ -89,13 +88,10 @@ class NodeMinibatchIterator(object):
         self.norm_loss_test[self.node_test] = 1/_denom
         self.norm_aggr_train = [dict()]     # list of dict. List index: start node index. dict key: end node idx
        
-        self.norm_adj = train_params['norm_adj']
         self.q_threshold = train_params['q_threshold']
         self.q_offset = train_params['q_offset']
         self.is_norm_loss = train_params['norm_loss']
         self.is_norm_aggr = train_params['norm_aggr']
-        self.is_norm_beta = train_params['norm_beta']
-        self.select_norm_layer = train_params['norm_layer']
         self.deg_train = np.array(self.adj_train.sum(1)).flatten()
 
     def _set_sampler_args(self):
@@ -132,13 +128,13 @@ class NodeMinibatchIterator(object):
         elif self.method_sample == 'rw':
             self.size_subg_budget = train_phases['num_root']*train_phases['depth']
             self.graph_sampler = rw_sampling(self.adj_train,self.adj_full,\
-                self.node_train,self.size_subg_budget,dict(),int(train_phases['num_root']),int(train_phases['depth']),train_phases['is_induced'])
+                self.node_train,self.size_subg_budget,dict(),int(train_phases['num_root']),int(train_phases['depth']))
         elif self.method_sample == 'edge':
             self.size_subg_budget = train_phases['size_subgraph']
             self.graph_sampler = edge_sampling(self.adj_train,self.adj_full,self.node_train,self.size_subg_budget,dict())
         elif self.method_sample == 'edge_indp':
             self.size_subg_budget = train_phases['size_subg_edge']*2
-            self.graph_sampler = edge_indp_sampling(self.adj_train,self.adj_full,self.node_train,train_phases['size_subg_edge'],dict(),train_phases['level_approx'],train_phases['is_induced'])
+            self.graph_sampler = edge_indp_sampling(self.adj_train,self.adj_full,self.node_train,train_phases['size_subg_edge'],dict(),train_phases['level_approx'])
         else:
             raise NotImplementedError
 
@@ -152,7 +148,7 @@ class NodeMinibatchIterator(object):
                     self.norm_aggr_train[u][v] = val_init
 
         self.norm_loss_train = np.zeros(self.adj_full.shape[0])
-        if not self.is_norm_loss and not self.is_norm_aggr and not self.is_norm_beta:
+        if not self.is_norm_loss and not self.is_norm_aggr:
             self.norm_loss_train[self.node_train] = 1/self.size_subg_budget
             _init_norm_aggr_cnt(1)
         else:       # need at least one of the norm techniques
@@ -170,12 +166,7 @@ class NodeMinibatchIterator(object):
             for i in range(num_subg):
                 _node_cnt[self.subgraphs_remaining_nodes[i]] += 1
             # 3. norm_loss based on _node_cnt
-            if self.is_norm_beta:
-                #if self.method_sample == 'edge_indp' and not train_phases['is_induced']:
-                #    self.norm_loss_train[self.node_train] = 1/self.node_train.size
-                #else:
-                self.norm_loss_train[self.node_train] = 1/self.node_train.size * (self.node_train.size/avg_subg_size)**self.num_layers
-            elif self.is_norm_loss:
+            if self.is_norm_loss:
                 self.norm_loss_train[:] = _node_cnt[:]
                 self.norm_loss_train[self.node_train] += self.q_offset
                 if self.norm_loss_train[self.node_train].min() == 0:
@@ -187,43 +178,16 @@ class NodeMinibatchIterator(object):
             else:
                 self.norm_loss_train[self.node_train] = 1
             # 4. norm_aggr based on _node_cnt and edge count
-            if self.is_norm_beta:
-                _init_norm_aggr_cnt(0)
-                t1 = time.time()
-                for i in range(num_subg):
-                    for ip in range(len(self.subgraphs_remaining_nodes[i])):
-                        _u = self.subgraphs_remaining_nodes[i][ip]
-                        for _v in self.subgraphs_remaining_indices_orig[i][self.subgraphs_remaining_indptr[i][ip]:self.subgraphs_remaining_indptr[i][ip+1]]:
-                            self.norm_aggr_train[_u][_v] += 1
-                t2 = time.time()
-                #print("time for updating counter as list of dict: {}".format(t2-t1))
-                # ------------------------------------------
-                #_debug = []
-                #for d in self.norm_aggr_train:
-                #    for k,v in d.items():
-                #        _debug.append(v)
-                #_debug = np.array(_debug)
-                #import pdb; pdb.set_trace()
-                # ------------------------------------------
-                for i_d,d in enumerate(self.norm_aggr_train):
-                    #if self.method_sample == 'edge_indp' and not train_phases['is_induced']:
-                    #    self.norm_aggr_train[i_d] = {k:num_subg/(v+0.1) for k,v in d.items()}
-                    #else:
-                    self.norm_aggr_train[i_d] = {k:avg_subg_size*num_subg/(v+0.1)/self.node_train.size for k,v in d.items()}     # TODO: you shouldn't multiply by this 2.
-            elif self.is_norm_aggr:
+            if self.is_norm_aggr:
                 _init_norm_aggr_cnt(0)
                 for i in range(num_subg):
                     for ip in range(len(self.subgraphs_remaining_nodes[i])):
                         _u = self.subgraphs_remaining_nodes[i][ip]
                         for _v in self.subgraphs_remaining_indices_orig[i][self.subgraphs_remaining_indptr[i][ip]:self.subgraphs_remaining_indptr[i][ip+1]]:
                             self.norm_aggr_train[_u][_v] += 1
-                # NOTE: changed lambda norm to beta norm -- edge probability conditioned on node probability -> edge probability.
                 # TODO: check train degree for Reddit
                 for i_d,d in enumerate(self.norm_aggr_train):
                     self.norm_aggr_train[i_d] = {k:_node_cnt[i_d]/(v+0.1) for k,v in d.items()}
-                # for k,v in self.norm_aggr_train[i_d].items():
-                #     if math.isnan(v) or math.isinf(v):
-                #         import pdb; pdb.set_trace()
             else:
                 _init_norm_aggr_cnt(1)
 
@@ -240,7 +204,6 @@ class NodeMinibatchIterator(object):
         self.subgraphs_remaining_indices_orig.extend(_indices_orig)
         self.subgraphs_remaining_data.extend(_data)
         self.subgraphs_remaining_nodes.extend(_v)
-        # import pdb; pdb.set_trace()
 
     def minibatch_train_feed_dict(self,dropout,is_val=False,is_test=False):
         """ DONE """
@@ -264,9 +227,7 @@ class NodeMinibatchIterator(object):
             adj = sp.csr_matrix((self.subgraphs_remaining_data.pop(),self.subgraphs_remaining_indices.pop(),\
                         self.subgraphs_remaining_indptr.pop()),shape=(self.node_subgraph.size,self.node_subgraph.size))
             #print("{} nodes, {} edges, {} degree".format(self.node_subgraph.size,adj.size,adj.size/self.node_subgraph.size))
-            ##adj = adj_norm(adj,self.norm_adj)       # TODO: additional arg: is_norm_aggr, aggr_norm_vector
-            # TODO: for now, we may not support sym normalization
-            if not self.is_norm_aggr and not self.is_norm_beta:
+            if not self.is_norm_aggr:
                 D = adj.sum(1).flatten()
             else:
                 D = self.deg_train[self.node_subgraph]

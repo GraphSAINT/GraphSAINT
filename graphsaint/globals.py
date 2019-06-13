@@ -78,8 +78,9 @@ else:
 
 f_mean = lambda l: sum(l)/len(l)
 
-_ACT = {'lin': lambda x:x,
-        'relu': tf.nn.relu}#tf.nn.relu}
+F_ACT = {'I': lambda x:x,
+        'relu': tf.nn.relu,
+        'leaky_relu': tf.nn.leaky_relu}
 
 
 DTYPE = tf.float32 if FLAGS.dtype=='s' else tf.float64
