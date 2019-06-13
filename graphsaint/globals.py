@@ -10,6 +10,12 @@ ZYTHON_PATH = "{}/Projects/".format(home)
 sys.path.insert(0, ZYTHON_PATH)
 
 
+# -----------------------------------------
+NUM_PAR_SAMPLER = 20
+SAMPLES_PER_PROC = 10
+# -----------------------------------------
+
+
 import subprocess
 git_rev = subprocess.Popen("git rev-parse --short HEAD", shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()[0]
 git_branch = subprocess.Popen("git symbolic-ref --short -q HEAD", shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()[0]
@@ -43,13 +49,6 @@ flags.DEFINE_boolean('timeline',False,'to save timeline.json or not')
 flags.DEFINE_boolean('tensorboard',True,'to save data to tensorboard or not')
 flags.DEFINE_boolean('logging',False,'log input and output histogram of each layer')
 
-# to be run with ./exp/dse.py
-flags.DEFINE_string('spreadsheet','','spreedsheet for systematic hyper-param tuning')
-
-
-
-#flags.DEFINE_string('restore_file', '', "path to model to be restored")
-#flags.DEFINE_string('db_name', 'data.db', 'name of the database which stores the training log')
 
 
 
@@ -78,9 +77,9 @@ else:
 
 f_mean = lambda l: sum(l)/len(l)
 
-_ACT = {'lin': lambda x:x,
-        'relu': tf.nn.relu}
+F_ACT = {'I': lambda x:x,
+         'relu': tf.nn.relu,
+         'leaky_relu': tf.nn.leaky_relu}
 
 
 DTYPE = tf.float32 if FLAGS.dtype=='s' else tf.float64
-FNAME_RET = '__ret.pickle'

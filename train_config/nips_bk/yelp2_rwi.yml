@@ -12,6 +12,7 @@ params:
     batch_norm: 'tf.nn'
     norm_loss: 1
     norm_aggr: 1
+    norm_layer: 'all'
     norm_beta: 0
     norm_layer: 'all'
     split_beta: 1
@@ -20,7 +21,7 @@ params:
     q_offset: 1
     skip: 'noskip'
 phase:
-  - end: 40
+  - end: 35 
     dropout: 0.0
     #sampler: 'frontier'
     #size_subgraph: 4000
@@ -28,6 +29,6 @@ phase:
     #order: 1
     #max_deg: 100
     sampler: 'rw'
-    num_root: 1250
-    depth: 2
+    num_root: 500
+    depth: 10
     is_induced: 1

@@ -7,7 +7,6 @@ from graphsaint.metric import *
 from tensorflow.python.client import timeline
 
 import sys, os, random
-import yaml
 import cProfile
 import pickle
 import tensorflow as tf
@@ -78,6 +77,10 @@ def construct_placeholders(num_classes):
         'adj_subgraph_1' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_1'),
         'adj_subgraph_2' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_2'),
         'adj_subgraph_3' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_3'),
+        'adj_subgraph_4' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_4'),
+        'adj_subgraph_5' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_5'),
+        'adj_subgraph_6' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_6'),
+        'adj_subgraph_7' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_7'),
         'norm_loss': tf.placeholder(DTYPE,shape=(None),name='norm_loss'),
         'is_train': tf.placeholder(tf.bool, shape=(None), name='is_train')
     }
@@ -91,22 +94,17 @@ pr = cProfile.Profile()
 #########
 # TRAIN #
 #########
-def prepare(train_data,train_params,dims_gcn):
+def prepare(train_data,train_params,arch_gcn):
     adj_full,adj_train,feats,class_arr,role = train_data
     adj_full = adj_full.astype(np.int32)
     adj_train = adj_train.astype(np.int32)
-    adj_full_norm = adj_norm(adj_full,train_params['norm_adj'])
+    adj_full_norm = adj_norm(adj_full)
     num_classes = class_arr.shape[1]
 
-    dims = dims_gcn[:-1]
-    loss_type = dims_gcn[-1]
-
     placeholders = construct_placeholders(num_classes)
-    num_layers = [int(d.split('-')[1]) for d in dims]
-    num_layers = len([l for l in num_layers if l>0])
-    minibatch = NodeMinibatchIterator(adj_full, adj_full_norm, adj_train, role, class_arr, placeholders, train_params, num_layers)
+    minibatch = NodeMinibatchIterator(adj_full, adj_full_norm, adj_train, role, class_arr, placeholders, train_params)
     model = Supervisedgraphsaint(num_classes, placeholders,
-                feats, dims, train_params, loss_type, adj_full_norm, logging=True)
+                feats, arch_gcn, train_params, adj_full_norm, logging=True)
 
     # config.gpu_options.allow_growth = True
     # config.allow_soft_placement = True
@@ -138,7 +136,7 @@ def prepare(train_data,train_params,dims_gcn):
 
     misc_stats = tf.summary.merge([_misc_val_f1_micro,_misc_val_f1_macro,_misc_train_f1_micro,_misc_train_f1_macro,
                     _misc_time_per_batch,_misc_time_per_epoch,_misc_size_subgraph,_misc_learning_rate,_misc_sample_time])
-    summary_writer = tf.summary.FileWriter(log_dir(train_params,dims,FLAGS.train_config,FLAGS.data_prefix,git_branch,git_rev,timestamp), sess.graph)
+    summary_writer = tf.summary.FileWriter(log_dir(FLAGS.train_config,FLAGS.data_prefix,git_branch,git_rev,timestamp), sess.graph)
     # Init variables
     sess.run(tf.global_variables_initializer())
     #sess = tf_debug.LocalCLIDebugWrapperSession(sess)
@@ -146,7 +144,7 @@ def prepare(train_data,train_params,dims_gcn):
 
 
 
-def train(train_phases,train_params,dims_gcn,model,minibatch,\
+def train(train_phases,train_params,arch_gcn,model,minibatch,\
             sess,train_stat,ph_misc_stat,summary_writer):
     import time
     avg_time = 0.0
@@ -210,7 +208,7 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
                 time_prepare_ep += t1-t0
                 if not minibatch.batch_num % FLAGS.print_every:
                     t3 = time.time()
-                    f1_mic,f1_mac = calc_f1(labels,pred_train,dims_gcn[-1])
+                    f1_mic,f1_mac = calc_f1(labels,pred_train,arch_gcn['loss'])
                     printf("Iter {:4d}\ttrain loss {:.5f}\tmic {:5f}\tmac {:5f}",\
                         minibatch.batch_num,loss_train,f1_mic,f1_mac,type=None)
                     l_loss_tr.append(loss_train)
@@ -255,8 +253,6 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
                     summary_writer.add_summary(misc_stat[0], e)
         epoch_ph_start = int(phase['end'])
     #saver.save(sess, 'models/{data}'.format(data=FLAGS.data_prefix.split('/')[-1]),global_step=e)
-    #save_model_weights(weight_cur,FLAGS.data_prefix.split('/')[-1],e_best,FLAGS.train_config)
-    #reload_model_weights(sess,model,weight_cur)
     printf("Optimization Finished!",type='WARN')
     timelines = TimeLiner()
     for tl in many_runs_timeline:
@@ -279,18 +275,13 @@ def train(train_phases,train_params,dims_gcn,model,minibatch,\
 # MAIN #
 ########
 
-def train_main(argv=None,**kwargs):
-    train_config = None if 'train_config' not in kwargs.keys() else kwargs['train_config']
-    train_params,train_phases,train_data,dims_gcn = parse_n_prepare(FLAGS,train_config=train_config)
-    model,minibatch,sess,train_stat,ph_misc_stat,summary_writer = prepare(train_data,train_params,dims_gcn)
+def train_main(argv=None):
+    train_params,train_phases,train_data,arch_gcn = parse_n_prepare(FLAGS)
+    model,minibatch,sess,train_stat,ph_misc_stat,summary_writer = prepare(train_data,train_params,arch_gcn)
     time_start = time.time()
-    ret = train(train_phases,train_params,dims_gcn,model,minibatch,sess,train_stat,ph_misc_stat,summary_writer)
+    ret = train(train_phases,train_params,arch_gcn,model,minibatch,sess,train_stat,ph_misc_stat,summary_writer)
     time_end = time.time()
-    # print('training time: ')
-    # print(time.strftime("%H:%M:%S",time.gmtime(time_end-time_start)))
     print('see this!!! acc: ',ret['f1mic_test_opt'],'\ttime: ',ret['time_train'])
-    with open(FNAME_RET,'wb') as f:
-        pickle.dump(ret,f)
     return ret
 
 

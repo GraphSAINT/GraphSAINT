@@ -89,7 +89,7 @@ class Dense(Layer):
         """
         super(Dense, self).__init__(**kwargs)
         self.dropout = dropout
-        self.act = act
+        self.act = F_ACT[act]
         self.bias = bias
         self.dim_in = dim_in
         self.dim_out = dim_out
@@ -119,86 +119,17 @@ class Dense(Layer):
 
 
 
-class MeanAggregator(Layer):
-    """
-    Aggregates via mean followed by matmul and non-linearity.
-    """
-
-    def __init__(self, dim_in, dim_out,
-            dropout=0., bias=True, act=tf.nn.relu, order=1, norm=True, model_pretrain=None, aggr='concat', is_train=True, batch_norm='tf.nn', **kwargs):
-        """
-        model_pretrain is not None if you want to load the trained model
-        model_pretrain[0] is neigh_weights
-        model_pretrain[1] is self_weights
-        """
-        super(MeanAggregator, self).__init__(**kwargs)
-
-        self.dropout = dropout
-        self.bias = bias
-        self.act = act
-        assert order == 1
-        self.order = order
-        self.norm = norm
-        self.is_train=is_train
-        self.norm=norm
-
-        with tf.variable_scope(self.name + '_vars'):
-            if model_pretrain is None:
-                self.vars['neigh_weights'] = glorot([dim_in,dim_out], name='neigh_weights')
-                self.vars['self_weights'] = glorot([dim_in,dim_out], name='self_weights')
-            else:
-                self.vars['neigh_weights'] = trained(model_pretrain[0], name='neigh_weights')
-                self.vars['self_weights'] = trained(model_pretrain[1], name='self_weights')
-            if self.bias:
-                self.vars['bias'] = zeros([2*dim_out], name='bias')     # TODO: 2 due to concat of self and neigh vecs
-            if self.norm:
-                self.vars['offset'] = zeros([1,2*dim_out],name='offset')
-                self.vars['scale'] = ones([1,2*dim_out],name='scale')
-
-        if self.logging:
-            self._log_vars()
-
-        self.dim_in = dim_in
-        self.dim_out = dim_out
-
-    def _call(self, inputs):
-        vecs,adj_norm,nnz,len_feat = inputs
-        # TODO: introduce input dropout as a separate param of dropout
-        vecs = tf.nn.dropout(vecs, 1-self.dropout)
-        stride = 2**31//nnz     # this is to tackle the GPU limitation
-        f_cond = lambda i,r: i<len_feat
-        f_body = lambda i,r: (i+stride,tf.concat(\
-            [r,tf.sparse_tensor_dense_matmul(adj_norm,vecs[:,i:i+stride])],axis=1))
-        neigh_means = tf.while_loop(f_cond,f_body,\
-            (stride,tf.sparse_tensor_dense_matmul(adj_norm,vecs[:,:stride])))[1]
-        from_neighs = tf.matmul(neigh_means, self.vars['neigh_weights'])
-        from_self = tf.matmul(vecs, self.vars["self_weights"])
-        output = tf.concat([from_self, from_neighs], axis=1)
-        if self.bias and not self.norm:
-            output += self.vars['bias']
-        with tf.variable_scope(self.name + '_vars'):
-            if self.norm:
-                if self.norm == 'tf.nn':
-                    mean,variance = tf.nn.moments(output,axes=[1],keep_dims=True)
-                    output = tf.nn.batch_normalization(output,mean,variance,self.vars['offset'],self.vars['scale'],1e-9)
-                elif self.norm == 'tf.layers':
-                    output=tf.layers.batch_normalization(output,training=self.is_train,renorm=False)
-        return self.act(output)
-
 
 class HighOrderAggregator(Layer):
     def __init__(self, dim_in, dim_out,
-            dropout=0., bias=True, act=tf.nn.relu, order=2, norm=True, aggr='mean', model_pretrain=None, is_train=True, batch_norm='tf.nn', **kwargs):
+            dropout=0., act='relu', order=1, aggr='mean', model_pretrain=None, is_train=True, bias='norm', **kwargs):
         super(HighOrderAggregator,self).__init__(**kwargs)
         self.dropout = dropout
         self.bias = bias
-        self.act = act
+        self.act = F_ACT[act]
         self.order = order
-        self.norm = norm
         self.aggr = aggr
         self.is_train = is_train
-        self.batch_norm = batch_norm
-        # TODO: enable the first layer to skip weight application, by, say, setting dim_in or dim_out=0
         if dim_out > 0:
             with tf.variable_scope(self.name + '_vars'):
                 if model_pretrain is None:
@@ -209,11 +140,11 @@ class HighOrderAggregator(Layer):
                     for o in range(self.order+1):
                         _k = 'order{}_weights'.format(o)
                         self.vars[_k] = trained(model_pretrain[0], name=_k)
-                if self.bias:
+                if self.bias == 'bias':
                     for o in range(self.order+1):
                         _k = 'order{}_bias'.format(o)
                         self.vars[_k] = zeros([dim_out],name=_k)
-                if self.norm:
+                elif self.bias == 'norm':
                     for o in range(self.order+1):
                         _k1 = 'order{}_offset'.format(o)
                         _k2 = 'order{}_scale'.format(o)
@@ -229,59 +160,46 @@ class HighOrderAggregator(Layer):
 
     def _F_nonlinear(self,vecs,order):
         vw = tf.matmul(vecs,self.vars['order{}_weights'.format(order)])
-        if self.bias and not self.norm:
+        # ---------------------------
+        #vw = self.act(vw)
+        if self.bias == 'bias':
             vw += self.vars['order{}_bias'.format(order)]
-        if self.norm:
-            if self.batch_norm == 'tf.nn':
-                mean,variance = tf.nn.moments(vw,axes=[1],keep_dims=True)
-                _off = 'order{}_offset'.format(order)
-                _sca = 'order{}_scale'.format(order)
-                vw = tf.nn.batch_normalization(vw,mean,variance,self.vars[_off],self.vars[_sca],1e-9)
-            elif self.batch_norm == 'tf.layers':
-                vw=tf.layers.batch_normalization(vw,training=self.is_train,renorm=False)
+        elif self.bias == 'norm':   # batch norm realized by tf.nn.batch_norm
+            mean,variance = tf.nn.moments(vw,axes=[1],keep_dims=True)
+            _off = 'order{}_offset'.format(order)
+            _sca = 'order{}_scale'.format(order)
+            vw = tf.nn.batch_normalization(vw,mean,variance,self.vars[_off],self.vars[_sca],1e-9)
+        else:                       # otherwise, batch norm realized by tf.layer.batch_norm
+            vw=tf.layers.batch_normalization(vw,training=self.is_train,renorm=False)
+        # ---------------------------
         vw = self.act(vw)
         return vw
 
     def _call(self, inputs):
-        vecs, adj_norm, nnz, len_feat, adj_0, adj_1, adj_2, adj_3 = inputs
-        # TODO: where should you put dropout? here or at the end of this aggr??
+        vecs, adj_norm, nnz, len_feat, adj_0, adj_1, adj_2, adj_3, adj_4, adj_5, adj_6, adj_7 = inputs
         vecs = tf.nn.dropout(vecs, 1-self.dropout)
-        vecs_hop = []
-        for o in range(self.order+1):
-            if self.dim_out > 0:
-                vecs_hop.append(self._F_nonlinear(vecs,o))
-            else:
-                vecs_hop.append(vecs)
+        # ---------------------------
+        #vecs_hop = []
+        #for o in range(self.order+1):
+        #    vecs_hop.append(self._F_nonlinear(vecs,o))
+        vecs_hop = [tf.identity(vecs) for o in range(self.order+1)]
+        # ---------------------------
         for o in range(self.order):
             for a in range(o+1):
-                # v1
-                # vecs_hop[o+1] = tf.sparse_tensor_dense_matmul(adj_norm,vecs_hop[o+1])
-
-                # v2
-                # _exceed_gpu_memory_space=tf.greater(tf.size(adj_norm),50000*50000)
-                # vecs_hop[o+1]=tf.cond(_exceed_gpu_memory_space,lambda:sparse_tensor_dense_matmul_cpu(adj_norm,vecs_hop[o+1]),lambda:tf.sparse_tensor_dense_matmul(adj_norm,vecs_hop[o+1]))
-
                 ans1=tf.sparse_tensor_dense_matmul(adj_norm,vecs_hop[o+1])
                 ans2_0=tf.sparse_tensor_dense_matmul(adj_0,vecs_hop[o+1])
                 ans2_1=tf.sparse_tensor_dense_matmul(adj_1,vecs_hop[o+1])
                 ans2_2=tf.sparse_tensor_dense_matmul(adj_2,vecs_hop[o+1])
                 ans2_3=tf.sparse_tensor_dense_matmul(adj_3,vecs_hop[o+1])
-                ans2=tf.concat([ans2_0,ans2_1,ans2_2,ans2_3],0)
+                ans2_4=tf.sparse_tensor_dense_matmul(adj_4,vecs_hop[o+1])
+                ans2_5=tf.sparse_tensor_dense_matmul(adj_5,vecs_hop[o+1])
+                ans2_6=tf.sparse_tensor_dense_matmul(adj_6,vecs_hop[o+1])
+                ans2_7=tf.sparse_tensor_dense_matmul(adj_7,vecs_hop[o+1])
+                ans2=tf.concat([ans2_0,ans2_1,ans2_2,ans2_3,ans2_4,ans2_5,ans2_6,ans2_7],0)
                 vecs_hop[o+1]=tf.cond(self.is_train,lambda: tf.identity(ans1),lambda: tf.identity(ans2))
-        """
-        stride = 2**31//nnz
-        f_cond = lambda i,r: i<len_feat
-        f_body1 = lambda i,r: (i+stride,tf.concat(\
-            [r,tf.sparse_tensor_dense_matmul(adj_norm,vecs_hop1[:,i:i+stride])],axis=1))
-        vecs_hop1 = tf.while_loop(f_cond,f_body1,\
-            (stride,tf.sparse_tensor_dense_matmul(adj_norm,vecs_hop1[:,:stride])))[1]
-        f_body2 = lambda i,r: (i+stride,tf.concat(\
-            [r,tf.sparse_tensor_dense_matmul(adj_norm,\
-             tf.sparse_tensor_dense_matmul(adj_norm,vecs_hop2[:,i:i+stride]))],axis=1))
-        vecs_hop2 = tf.while_loop(f_cond,f_body2,\
-            (stride,tf.sparse_tensor_dense_matmul(adj_norm,\
-             tf.sparse_tensor_dense_matmul(adj_norm,vecs_hop2[:,:stride]))))[1]
-        """
+        # ---------------------------
+        vecs_hop = [self._F_nonlinear(v,o) for o,v in enumerate(vecs_hop)]        
+        # ---------------------------
         if self.aggr == 'mean':
             ret = vecs_hop[0]
             for o in range(len(vecs_hop)-1):
