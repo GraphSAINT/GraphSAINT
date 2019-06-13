@@ -13,8 +13,6 @@ from math import ceil
 import concurrent.futures as cuf
 import graphsaint.cython_sampler as cy
 
-NUM_PROC = 20
-RUN_PER_PROC = 10
 
 class graph_sampler:
     __metaclass__ = abc.ABCMeta
@@ -60,26 +58,11 @@ class rw_sampling(graph_sampler):
         pass
     def par_sample(self,stage,**kwargs):
         return cy.sampler_rw_cython(self.adj_train.indptr,self.adj_train.indices,\
-                self.node_train,self.size_root,self.size_depth,True,NUM_PROC,RUN_PER_PROC)
-
-class edge_sampling(graph_sampler):
-    def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc):
-        self.size_subgraph=size_subgraph
-        self.indices_lut=np.zeros(adj_train.indices.shape[0],dtype=np.int32)
-        for i in range(adj_train.indptr.shape[0]-1):
-            self.indices_lut[adj_train.indptr[i]:adj_train.indptr[i+1]]=i
-        super().__init__(adj_train,adj_full,node_train,size_subgraph,args_preproc)
-    def preproc(self,**kwargs):
-        # TODO: calculate the edge probability q_e = 1 - (1-p_e)^{1/m}
-        pass
-    def par_sample(self,stage,**kwargs):
-        return cy.sampler_edge_cython(self.adj_train.indptr,self.adj_train.indices,\
-                self.node_train,self.size_subgraph,self.indices_lut,NUM_PROC,RUN_PER_PROC)
+                self.node_train,self.size_root,self.size_depth,True,NUM_PAR_SAMPLER,SAMPLES_PER_PROC)
 
 class edge_indp_sampling(graph_sampler):
-    def __init__(self,adj_train,adj_full,node_train,num_edges_subgraph,args_preproc,level_approx):
+    def __init__(self,adj_train,adj_full,node_train,num_edges_subgraph,args_preproc):
         """
-        level_approx:       level of approximation for deriving the optimal edge sampling probability
         num_edges_subgraph: specify the size of subgraph by the edge budget. NOTE: other samplers specify node budget.
         """
         self.num_edges_subgraph = num_edges_subgraph
@@ -100,7 +83,7 @@ class edge_indp_sampling(graph_sampler):
         self.edge_prob.data *= 2*self.num_edges_subgraph/self.edge_prob.data.sum()
         # now edge_prob is a symmetric matrix, we only keep the upper triangle part, since adj is assumed to be undirected.
         self.edge_prob_tri = scipy.sparse.triu(self.edge_prob)  # NOTE: in coo format
-        #import pdb; pdb.set_trace()
+
     def _sample(self):
         num_gen = np.random.uniform(size=self.edge_prob_tri.data.size)
         edge_idx_selected = np.where(self.edge_prob_tri.data - num_gen >= 0)[0]
@@ -139,7 +122,7 @@ class edge_indp_sampling(graph_sampler):
         ret_indices_orig = list()
         ret_data = list()
         ret_node_subg = list()
-        for r in range(NUM_PROC*RUN_PER_PROC):
+        for r in range(NUM_PAR_SAMPLER*SAMPLES_PER_PROC):
             _indptr,_indices,_indices_orig,_data,_node_subg = self._sample()
             ret_indptr.append(_indptr)
             ret_indices.append(_indices)
@@ -151,51 +134,9 @@ class edge_indp_sampling(graph_sampler):
 
 
 
-class khop_sampling(graph_sampler):
-    
-    def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc,order):
-        self.num_proc = 5
-        self.p_dist_train = np.zeros(len(node_train))
-        self.order = order
-        super().__init__(adj_train,adj_full,node_train,size_subgraph,args_preproc)
-
-    def preproc(self,**kwargs):
-        """
-        This is actually adj to the power of k
-        """
-        # if self.order > 1:
-        #     _adj_hop = '{}/adj_train_hop{}.npz'.format(FLAGS.data_prefix,self.order)
-        #     _adj_hop = scipy.sparse.load_npz(_adj_hop)
-        # else:
-        #     _adj_hop = self.adj_train
-        # self.p_dist_train = np.array([_adj_hop.data[_adj_hop.indptr[v]:_adj_hop.indptr[v+1]].sum() for v in self.node_train], dtype=np.int32)
-
-        # sample accroding to porb defined in FastGCN
-        from scipy.sparse.linalg import norm as sparsenorm
-        adj_col_norm=sparsenorm(self.adj_train,axis=0)
-        adj_col_norm_sum=np.sum(adj_col_norm)
-        self.p_dist_train=adj_col_norm/adj_col_norm_sum
-        self.p_dist_train*=self.p_dist_train.shape[0]*20
-        self.p_dist_train=self.p_dist_train.astype(np.int32)
-
-    def par_sample(self,stage,**kwargs):
-        _p_cumsum = np.array(self.p_dist_train).astype(np.int64).cumsum()
-        if _p_cumsum[-1] > 2**31-1:
-            print('warning: total deg exceeds 2**31')
-            _p_cumsum = _p_cumsum.astype(np.float64)
-            _p_cumsum /= _p_cumsum[-1]/(2**31-1)
-            _p_cumsum = _p_cumsum.astype(np.int32)
-        _p_cumsum = _p_cumsum.astype(np.int32)
-        return cy.sampler_khop_cython(self.adj_train.indptr,self.adj_train.indices,_p_cumsum,\
-            self.node_train,self.size_subgraph,NUM_PROC,RUN_PER_PROC)
-
-       
-
-
 class frontier_sampling(graph_sampler):
 
-    def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc,size_frontier,order,max_deg=10000):
-        self.order = order
+    def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc,size_frontier,max_deg=10000):
         self.p_dist = None
         super().__init__(adj_train,adj_full,node_train,size_subgraph,args_preproc)
         self.size_frontier = size_frontier
@@ -205,19 +146,11 @@ class frontier_sampling(graph_sampler):
         self.max_deg = int(max_deg)
 
     def preproc(self,**kwargs):
-        if self.order > 1:
-            f_data = '{}/adj_train_hop{}.npz'.format(FLAGS.data_prefix,self.order)
-            _adj_hop = scipy.sparse.load_npz(f_data)
-            print('order > 1')
-        else:
-            _adj_hop = self.adj_train
-            print('order == 1')
-        # TODO: check, this p_dist shouldn't be normalized. 
-        # TODO: check that val and test nodes are 0 for amazon
+        _adj_hop = self.adj_train
         self.p_dist = np.array([_adj_hop.data[_adj_hop.indptr[v]:_adj_hop.indptr[v+1]].sum() for v in range(_adj_hop.shape[0])], dtype=np.int32)
 
     def par_sample(self,stage,**kwargs):
         return cy.sampler_frontier_cython(self.adj_train.indptr,self.adj_train.indices,self.p_dist,\
-            self.node_train,self.max_deg,self.size_frontier,self.size_subgraph,NUM_PROC,RUN_PER_PROC)
+            self.node_train,self.max_deg,self.size_frontier,self.size_subgraph,NUM_PAR_SAMPLER,SAMPLES_PER_PROC)
 
 

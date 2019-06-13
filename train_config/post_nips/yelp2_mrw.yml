@@ -1,0 +1,22 @@
+network:
+  - dim: 512
+    aggr: 'concat'
+    loss: 'sigmoid'
+    arch: '1-1-0'
+    act: 'relu'
+    bias: 'norm'
+params:
+  - lr: 0.01
+    weight_decay: 0.0
+    norm_loss: 1
+    norm_aggr: 1
+    q_threshold: 100
+    q_offset: 1
+phase:
+  - end: 35 
+    dropout: 0.0
+    sampler: 'frontier'
+    size_subgraph: 4000
+    size_frontier: 2000
+    order: 1
+    max_deg: 100

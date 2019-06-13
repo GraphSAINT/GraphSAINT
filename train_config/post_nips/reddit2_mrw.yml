@@ -12,8 +12,6 @@ params:
     norm_aggr: 1
     norm_beta: 0
     norm_adj: 'rw'
-    norm_layer: 'all'       # 'all': normalize all layers.      'last': only normalize the last layer
-    model: 'gsaint'    
     q_threshold: 50
     q_offset: 0
     batch_norm: 'tf.nn'
