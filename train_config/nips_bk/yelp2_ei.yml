@@ -1,6 +1,6 @@
 network:
   ### NOTE ###: an order-1 layer followed by an order-0 layer is equivalent to a single layer in S-GCN (Chen, ICML'18). 
-  - '512-1-n-relu-concat'
+  - '512-1-n-lin-concat'
   - '512-1-n-relu-concat'
   - '512-0-n-relu-mean'
   - 'sigmoid'
@@ -20,14 +20,20 @@ params:
     q_offset: 1
     skip: 'noskip'
 phase:
-  - end: 40
+  - end: 35 
     dropout: 0.0
     #sampler: 'frontier'
     #size_subgraph: 4000
     #size_frontier: 2000
     #order: 1
     #max_deg: 100
-    sampler: 'rw'
-    num_root: 1250
-    depth: 2
+    # sampler: 'khop'
+    # size_subgraph: 5000
+    # order: 1
+    # num_root: 500
+    # depth: 10
+    # is_induced: 1
+    sampler: 'edge_indp'
+    size_subg_edge: 2500
     is_induced: 1
+    level_approx: 0

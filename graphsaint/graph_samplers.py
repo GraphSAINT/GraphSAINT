@@ -13,8 +13,6 @@ from math import ceil
 import concurrent.futures as cuf
 import graphsaint.cython_sampler as cy
 
-NUM_PROC = 20
-RUN_PER_PROC = 10
 
 class graph_sampler:
     __metaclass__ = abc.ABCMeta
@@ -51,67 +49,20 @@ class graph_sampler:
 
 
 class rw_sampling(graph_sampler):
-    def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc,size_root,size_depth,is_induced):
+    def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc,size_root,size_depth):
         self.size_root = size_root
         self.size_depth = size_depth
-        self.is_induced = is_induced
         size_subgraph = size_root*size_depth
         super().__init__(adj_train,adj_full,node_train,size_subgraph,args_preproc)
     def preproc(self,**kwargs):
         pass
     def par_sample(self,stage,**kwargs):
-        if self.is_induced:
-            return cy.sampler_rw_cython(self.adj_train.indptr,self.adj_train.indices,\
-                self.node_train,self.size_root,self.size_depth,True,NUM_PROC,RUN_PER_PROC)
-        else:
-            # maybe should also just return here
-            # indices_new and node_sampled are of the same length
-            # indices_new is the indices of the new subgraph
-            # node_sampled is the indices of the original
-            row,col,indices_new,data,node_sampled = cy.sampler_rw_cython(self.adj_train.indptr,self.adj_train.indices,\
-                self.node_train,self.size_root,self.size_depth,False,NUM_PROC,RUN_PER_PROC)
-            ret_indptr = list()
-            ret_indices = list()
-            ret_indices_orig = list()
-            ret_data = list()
-            ret_node_sampled = list()
-            for g in range(len(row)):
-                mapper = {indices_new[g][i]:node_sampled[g][i] for i in range(len(node_sampled[g]))}
-                size_subg = max(indices_new[g])+1
-                _m = scipy.sparse.coo_matrix((data[g],(row[g],col[g])),shape=(size_subg,size_subg))
-                _m = _m.tocsr()
-                #for _i in range(size_subg):
-                #    if _m[_i,_i] != 0:
-                #        import pdb; pdb.set_trace()
-                #    _m[_i,_i] = 0
-                #import pdb; pdb.set_trace()
-                ret_indptr.append(_m.indptr)
-                ret_indices.append(_m.indices)
-                ret_data.append(_m.data)
-                ret_indices_orig.append(np.array([mapper[ip] for ip in _m.indices]))
-                ret_node_sampled.append(np.array([mapper[_i] for _i in range(size_subg)]))
-            return ret_indptr,ret_indices,ret_indices_orig,ret_data,ret_node_sampled
-
-
-class edge_sampling(graph_sampler):
-    def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc):
-        self.size_subgraph=size_subgraph
-        self.indices_lut=np.zeros(adj_train.indices.shape[0],dtype=np.int32)
-        for i in range(adj_train.indptr.shape[0]-1):
-            self.indices_lut[adj_train.indptr[i]:adj_train.indptr[i+1]]=i
-        super().__init__(adj_train,adj_full,node_train,size_subgraph,args_preproc)
-    def preproc(self,**kwargs):
-        # TODO: calculate the edge probability q_e = 1 - (1-p_e)^{1/m}
-        pass
-    def par_sample(self,stage,**kwargs):
-        return cy.sampler_edge_cython(self.adj_train.indptr,self.adj_train.indices,\
-                self.node_train,self.size_subgraph,self.indices_lut,NUM_PROC,RUN_PER_PROC)
+        return cy.sampler_rw_cython(self.adj_train.indptr,self.adj_train.indices,\
+                self.node_train,self.size_root,self.size_depth,True,NUM_PAR_SAMPLER,SAMPLES_PER_PROC)
 
 class edge_indp_sampling(graph_sampler):
-    def __init__(self,adj_train,adj_full,node_train,num_edges_subgraph,args_preproc,level_approx,is_induced):
+    def __init__(self,adj_train,adj_full,node_train,num_edges_subgraph,args_preproc):
         """
-        level_approx:       level of approximation for deriving the optimal edge sampling probability
-        is_induced:         whether you have an induced step at the end of sampling
         num_edges_subgraph: specify the size of subgraph by the edge budget. NOTE: other samplers specify node budget.
         """
         self.num_edges_subgraph = num_edges_subgraph
@@ -119,7 +70,6 @@ class edge_indp_sampling(graph_sampler):
         self.deg_train = np.array(adj_train.sum(1)).flatten()
         self.adj_train_norm = scipy.sparse.dia_matrix((1/self.deg_train,0),shape=adj_train.shape).dot(adj_train)
         super().__init__(adj_train,adj_full,node_train,self.size_subgraph,args_preproc)
-        self.is_induced = is_induced
         self.level_approx = level_approx
     def preproc(self,**kwargs):
         self.edge_prob = scipy.sparse.csr_matrix((np.zeros(self.adj_train.size),\
@@ -133,7 +83,7 @@ class edge_indp_sampling(graph_sampler):
         self.edge_prob.data *= 2*self.num_edges_subgraph/self.edge_prob.data.sum()
         # now edge_prob is a symmetric matrix, we only keep the upper triangle part, since adj is assumed to be undirected.
         self.edge_prob_tri = scipy.sparse.triu(self.edge_prob)  # NOTE: in coo format
-        #import pdb; pdb.set_trace()
+
     def _sample(self):
         num_gen = np.random.uniform(size=self.edge_prob_tri.data.size)
         edge_idx_selected = np.where(self.edge_prob_tri.data - num_gen >= 0)[0]
@@ -145,19 +95,18 @@ class edge_indp_sampling(graph_sampler):
         node_subg = sorted(list(node_subg))
         _map = {v:i for i,v in enumerate(node_subg)}
         _map_rev = {i:v for i,v in enumerate(node_subg)}
-        if self.is_induced:
-            node_binmap = np.zeros(self.adj_train.shape[0]).astype(np.bool)
-            node_binmap[node_subg] = 1
-            _edge_row = list()
-            _edge_col = list()
-            for u in node_subg:
-                for iv in range(self.adj_train.indptr[u],self.adj_train.indptr[u+1],1):
-                    if not node_binmap[self.adj_train.indices[iv]]:
-                        continue
-                    _edge_row.append(u)
-                    _edge_col.append(self.adj_train.indices[iv])
-            edge_selected_row = np.array(_edge_row)
-            edge_selected_col = np.array(_edge_col)
+        node_binmap = np.zeros(self.adj_train.shape[0]).astype(np.bool)
+        node_binmap[node_subg] = 1
+        _edge_row = list()
+        _edge_col = list()
+        for u in node_subg:
+            for iv in range(self.adj_train.indptr[u],self.adj_train.indptr[u+1],1):
+                if not node_binmap[self.adj_train.indices[iv]]:
+                    continue
+                _edge_row.append(u)
+                _edge_col.append(self.adj_train.indices[iv])
+        edge_selected_row = np.array(_edge_row)
+        edge_selected_col = np.array(_edge_col)
         _fmap = lambda x: _map[x]
         _fmap_rev = lambda x: _map_rev[x]
         _col_remapped = np.fromiter((_fmap(xi) for xi in edge_selected_col),edge_selected_col.dtype)
@@ -173,7 +122,7 @@ class edge_indp_sampling(graph_sampler):
         ret_indices_orig = list()
         ret_data = list()
         ret_node_subg = list()
-        for r in range(NUM_PROC*RUN_PER_PROC):
+        for r in range(NUM_PAR_SAMPLER*SAMPLES_PER_PROC):
             _indptr,_indices,_indices_orig,_data,_node_subg = self._sample()
             ret_indptr.append(_indptr)
             ret_indices.append(_indices)
@@ -185,51 +134,9 @@ class edge_indp_sampling(graph_sampler):
 
 
 
-class khop_sampling(graph_sampler):
-    
-    def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc,order):
-        self.num_proc = 5
-        self.p_dist_train = np.zeros(len(node_train))
-        self.order = order
-        super().__init__(adj_train,adj_full,node_train,size_subgraph,args_preproc)
-
-    def preproc(self,**kwargs):
-        """
-        This is actually adj to the power of k
-        """
-        # if self.order > 1:
-        #     _adj_hop = '{}/adj_train_hop{}.npz'.format(FLAGS.data_prefix,self.order)
-        #     _adj_hop = scipy.sparse.load_npz(_adj_hop)
-        # else:
-        #     _adj_hop = self.adj_train
-        # self.p_dist_train = np.array([_adj_hop.data[_adj_hop.indptr[v]:_adj_hop.indptr[v+1]].sum() for v in self.node_train], dtype=np.int32)
-
-        # sample accroding to porb defined in FastGCN
-        from scipy.sparse.linalg import norm as sparsenorm
-        adj_col_norm=sparsenorm(self.adj_train,axis=0)
-        adj_col_norm_sum=np.sum(adj_col_norm)
-        self.p_dist_train=adj_col_norm/adj_col_norm_sum
-        self.p_dist_train*=self.p_dist_train.shape[0]*20
-        self.p_dist_train=self.p_dist_train.astype(np.int32)
-
-    def par_sample(self,stage,**kwargs):
-        _p_cumsum = np.array(self.p_dist_train).astype(np.int64).cumsum()
-        if _p_cumsum[-1] > 2**31-1:
-            print('warning: total deg exceeds 2**31')
-            _p_cumsum = _p_cumsum.astype(np.float64)
-            _p_cumsum /= _p_cumsum[-1]/(2**31-1)
-            _p_cumsum = _p_cumsum.astype(np.int32)
-        _p_cumsum = _p_cumsum.astype(np.int32)
-        return cy.sampler_khop_cython(self.adj_train.indptr,self.adj_train.indices,_p_cumsum,\
-            self.node_train,self.size_subgraph,NUM_PROC,RUN_PER_PROC)
-
-       
-
-
 class frontier_sampling(graph_sampler):
 
-    def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc,size_frontier,order,max_deg=10000):
-        self.order = order
+    def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc,size_frontier,max_deg=10000):
         self.p_dist = None
         super().__init__(adj_train,adj_full,node_train,size_subgraph,args_preproc)
         self.size_frontier = size_frontier
@@ -239,19 +146,11 @@ class frontier_sampling(graph_sampler):
         self.max_deg = int(max_deg)
 
     def preproc(self,**kwargs):
-        if self.order > 1:
-            f_data = '{}/adj_train_hop{}.npz'.format(FLAGS.data_prefix,self.order)
-            _adj_hop = scipy.sparse.load_npz(f_data)
-            print('order > 1')
-        else:
-            _adj_hop = self.adj_train
-            print('order == 1')
-        # TODO: check, this p_dist shouldn't be normalized. 
-        # TODO: check that val and test nodes are 0 for amazon
+        _adj_hop = self.adj_train
         self.p_dist = np.array([_adj_hop.data[_adj_hop.indptr[v]:_adj_hop.indptr[v+1]].sum() for v in range(_adj_hop.shape[0])], dtype=np.int32)
 
     def par_sample(self,stage,**kwargs):
         return cy.sampler_frontier_cython(self.adj_train.indptr,self.adj_train.indices,self.p_dist,\
-            self.node_train,self.max_deg,self.size_frontier,self.size_subgraph,NUM_PROC,RUN_PER_PROC)
+            self.node_train,self.max_deg,self.size_frontier,self.size_subgraph,NUM_PAR_SAMPLER,SAMPLES_PER_PROC)
 
 
