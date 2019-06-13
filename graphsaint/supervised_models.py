@@ -3,14 +3,14 @@ from collections import namedtuple
 from graphsaint.globals import *
 from graphsaint.inits import *
 import graphsaint.layers as layers
-import graphsaint.utils as utils
+from graphsaint.utils import *
 import pdb
 
 
 class Supervisedgraphsaint:
 
     def __init__(self, num_classes, placeholders, features,
-            dims, train_params, type_loss, adj_full_norm, model_pretrain=None, **kwargs):
+            arch_gcn, train_params, adj_full_norm, model_pretrain=None, **kwargs):
         '''
         Args:
             - placeholders: TensorFlow placeholder object.
@@ -20,17 +20,13 @@ class Supervisedgraphsaint:
             - sigmoid_loss: Set to true if nodes can belong to multiple classes
             - model_pretrain: contains pre-trained weights, if you are doing inferencing
         '''
-        if train_params['model'] == 'gs_mean':
-            self.aggregator_cls = layers.MeanAggregator
-        elif train_params['model'] == 'gsaint':
-            self.aggregator_cls = layers.HighOrderAggregator
-        self.gcn_model = train_params['model']
+        self.aggregator_cls = layers.HighOrderAggregator
         self.lr = train_params['lr']
         self.node_subgraph = placeholders['node_subgraph']
         self.nnz = placeholders['nnz']
-        self.num_layers = len(dims)
+        self.num_layers = len(arch_gcn['arch'].split('-'))
         self.weight_decay = train_params['weight_decay']
-        self.adj_subgraph  = placeholders['adj_subgraph']
+        self.adj_subgraph = placeholders['adj_subgraph']
         self.adj_subgraph_last = placeholders['adj_subgraph_last']
         self.adj_subgraph_0=placeholders['adj_subgraph_0']
         self.adj_subgraph_1=placeholders['adj_subgraph_1']
@@ -40,8 +36,6 @@ class Supervisedgraphsaint:
         self.adj_subgraph_5=placeholders['adj_subgraph_5']
         self.adj_subgraph_6=placeholders['adj_subgraph_6']
         self.adj_subgraph_7=placeholders['adj_subgraph_7']
-        self.batch_norm = train_params['batch_norm']
-        self.skip = train_params['skip']
         self.features = tf.Variable(tf.constant(features, dtype=DTYPE), trainable=False)
         _indices = np.column_stack(adj_full_norm.nonzero())
         _data = adj_full_norm.data
@@ -49,14 +43,9 @@ class Supervisedgraphsaint:
         with tf.device('/cpu:0'):
             self.adj_full_norm = tf.SparseTensorValue(_indices,_data,_shape)
         self.num_classes = num_classes
-        self.sigmoid_loss = (type_loss=='sigmoid')
-        _dims,_order,_act,_bias,_norm,_aggr = utils.parse_layer_yml(dims)
-        self.order_layer = _order
-        self.act_layer = _act
-        self.bias_layer = _bias
-        self.norm_layer = _norm
-        self.aggr_layer = _aggr
-        self.set_dims([features.shape[1]]+_dims)
+        self.sigmoid_loss = (arch_gcn['loss']=='sigmoid')
+        _dims,self.order_layer,self.act_layer,self.bias_layer,self.aggr_layer = parse_layer_yml(arch_gcn,features.shape[1])
+        self.set_dims(_dims)
         self.placeholders = placeholders
 
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
@@ -73,12 +62,7 @@ class Supervisedgraphsaint:
         self.build(model_pretrain=model_pretrain)
 
     def set_dims(self,dims):
-        if self.gcn_model == 'gs_mean':
-            self.dims_feat = [dims[0]] + [2*d for d in dims[1:]]
-        elif self.gcn_model == 'gsaint':
-            self.dims_feat = [dims[0]] + [((self.aggr_layer[l]=='concat')*self.order_layer[l]+1)*dims[l+1] for l in range(len(dims)-1)]
-        else:
-            raise NotImplementedError
+        self.dims_feat = [dims[0]] + [((self.aggr_layer[l]=='concat')*self.order_layer[l]+1)*dims[l+1] for l in range(len(dims)-1)]
         self.dims_weight = [(self.dims_feat[l],dims[l+1]) for l in range(len(dims)-1)]
 
 
@@ -96,7 +80,7 @@ class Supervisedgraphsaint:
         ################
         self.outputs = tf.nn.l2_normalize(self.outputs, 1)
         self.node_pred = layers.Dense(self.dims_feat[-1], self.num_classes, self.weight_decay,
-                dropout=self.placeholders['dropout'], act=lambda x:x, model_pretrain=model_pretrain_dense)
+                dropout=self.placeholders['dropout'], act='I', model_pretrain=model_pretrain_dense)
         self.node_preds = self.node_pred(self.outputs)
 
         #############
@@ -148,8 +132,8 @@ class Supervisedgraphsaint:
         for layer in range(self.num_layers):
             aggregator = self.aggregator_cls(self.dims_weight[layer][0], self.dims_weight[layer][1],
                     dropout=self.placeholders['dropout'],name=name,model_pretrain=model_pretrain[layer],
-                    bias=self.bias_layer[layer],act=self.act_layer[layer],order=self.order_layer[layer],\
-                    norm=self.norm_layer[layer],aggr=self.aggr_layer[layer],is_train=self.is_train,batch_norm=self.batch_norm,logging=FLAGS.logging)
+                    act=self.act_layer[layer],order=self.order_layer[layer],aggr=self.aggr_layer[layer],\
+                    is_train=self.is_train,bias=self.bias_layer[layer],logging=FLAGS.logging)
             aggregators.append(aggregator)
         return aggregators
 
@@ -161,21 +145,8 @@ class Supervisedgraphsaint:
         else:
             hidden = self.features
             adj = self.adj_full_norm
-        skip_from=-1
-        skip_to=-1
-        if self.skip!='noskip':
-            skip_from=int(self.skip.split('-')[0])
-            skip_to=int(self.skip.split('-')[1])
         for layer in range(self.num_layers):
-            if layer==skip_to:
-                hidden=hidden+hidden_save
-            # TODO: add adj_last here
             hidden = self.aggregators[layer]((hidden,adj,self.nnz,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
                     self.adj_subgraph_3,self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7))
-            if layer==skip_from:
-                hidden_save=hidden
         return hidden
 
-    def aggregate_fullgraph(self):
-        pass
-            
