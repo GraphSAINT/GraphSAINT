@@ -6,6 +6,7 @@ from graphsaint.graph_samplers import *
 from graphsaint.adj_misc import *
 import tensorflow as tf
 import scipy.sparse as sp
+import scipy
 import pandas as pd
 
 import numpy as np
@@ -216,6 +217,17 @@ class NodeMinibatchIterator(object):
                 # for k,v in self.norm_aggr_train[i_d].items():
                 #     if math.isnan(v) or math.isinf(v):
                 #         import pdb; pdb.set_trace()
+
+                # try other data structure
+                # self.norm_aggr_train_dok=sp.dok_matrix(self.adj_train.shape,dtype=scipy.float32)
+                # for i_d in range(len(self.norm_aggr_train)):
+                #     for k,v in self.norm_aggr_train[i_d].items():
+                #         self.norm_aggr_train_dok[i_d,k]=v
+                self.norm_aggr_train_dok=sp.dok_matrix(self.adj_train.shape,dtype=scipy.float32)
+                self.norm_aggr_train_dict={}
+                for i_d in range(len(self.norm_aggr_train)):
+                    for k,v in self.norm_aggr_train[i_d].items():
+                        self.norm_aggr_train_dict[str(i_d)+str(k)]=v
             else:
                 _init_norm_aggr_cnt(1)
 
@@ -264,11 +276,11 @@ class NodeMinibatchIterator(object):
                     u_orig = self.node_subgraph[u]
                     for iv,v in enumerate(adj.indices[adj.indptr[u]:adj.indptr[u+1]]):
                         v_orig = self.node_subgraph[v]
-                        adj.data[adj.indptr[u]+iv] = self.norm_aggr_train[u_orig][v_orig]
+                        # adj.data[adj.indptr[u]+iv] = self.norm_aggr_train[u_orig][v_orig]
+                        adj.data[adj.indptr[u]+iv]=self.norm_aggr_train_dict[str(u_orig)+str(v_orig)]
                 t2 = time.time()
-                #print('    ---- time to set norm factor: ', t2-t1)
+                print('    ---- time to set norm factor: ', t2-t1)
             adj = sp.dia_matrix((1/D,0),shape=(adj.shape[0],adj.shape[1])).dot(adj)
-
 
             adj_0 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
             adj_1 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
