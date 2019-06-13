@@ -97,11 +97,7 @@ class NodeMinibatchIterator(object):
     def _set_sampler_args(self):
         if self.method_sample == 'frontier':
             _args = {'frontier':None}
-        elif self.method_sample == 'khop':
-            _args = dict()
         elif self.method_sample == 'rw':
-            _args = dict()
-        elif self.method_sample == 'edge':
             _args = dict()
         elif self.method_sample == 'edge_indp':
             _args = dict()
@@ -120,21 +116,14 @@ class NodeMinibatchIterator(object):
         if self.method_sample == 'frontier':
             self.size_subg_budget = train_phases['size_subgraph']
             self.graph_sampler = frontier_sampling(self.adj_train,self.adj_full,\
-                self.node_train,self.size_subg_budget,dict(),train_phases['size_frontier'],int(train_phases['order']),int(train_phases['max_deg']))
-        elif self.method_sample == 'khop':
-            self.size_subg_budget = train_phases['size_subgraph']
-            self.graph_sampler = khop_sampling(self.adj_train,self.adj_full,\
-                self.node_train,self.size_subg_budget,dict(),int(train_phases['order']))
+                self.node_train,self.size_subg_budget,dict(),train_phases['size_frontier'],int(train_phases['max_deg']))
         elif self.method_sample == 'rw':
             self.size_subg_budget = train_phases['num_root']*train_phases['depth']
             self.graph_sampler = rw_sampling(self.adj_train,self.adj_full,\
                 self.node_train,self.size_subg_budget,dict(),int(train_phases['num_root']),int(train_phases['depth']))
-        elif self.method_sample == 'edge':
-            self.size_subg_budget = train_phases['size_subgraph']
-            self.graph_sampler = edge_sampling(self.adj_train,self.adj_full,self.node_train,self.size_subg_budget,dict())
         elif self.method_sample == 'edge_indp':
             self.size_subg_budget = train_phases['size_subg_edge']*2
-            self.graph_sampler = edge_indp_sampling(self.adj_train,self.adj_full,self.node_train,train_phases['size_subg_edge'],dict(),train_phases['level_approx'])
+            self.graph_sampler = edge_indp_sampling(self.adj_train,self.adj_full,self.node_train,train_phases['size_subg_edge'],dict())
         else:
             raise NotImplementedError
 

@@ -282,8 +282,6 @@ def train_main(argv=None):
     ret = train(train_phases,train_params,arch_gcn,model,minibatch,sess,train_stat,ph_misc_stat,summary_writer)
     time_end = time.time()
     print('see this!!! acc: ',ret['f1mic_test_opt'],'\ttime: ',ret['time_train'])
-    with open(FNAME_RET,'wb') as f:
-        pickle.dump(ret,f)
     return ret
 
 
