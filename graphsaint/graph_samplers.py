@@ -1,16 +1,11 @@
 from graphsaint.globals import *
 import numpy as np
-import json
-import random
-from scipy.stats import rv_discrete
 import scipy.sparse
-from zython.logf.printf import printf
 import abc
 import time
 import math
 import pdb
 from math import ceil
-import concurrent.futures as cuf
 import graphsaint.cython_sampler as cy
 
 
@@ -23,8 +18,6 @@ class graph_sampler:
         self.node_train = np.unique(node_train).astype(np.int32)
         # size in terms of number of vertices in subgraph
         self.size_subgraph = size_subgraph
-        self.coverage_v_train = np.array([float('inf')]*(self.adj_full.shape[0]))
-        self.coverage_v_train[self.node_train] = 0.
         self.name_sampler = 'None'
         self.node_subgraph = None
         # =======================
@@ -60,7 +53,7 @@ class rw_sampling(graph_sampler):
         return cy.sampler_rw_cython(self.adj_train.indptr,self.adj_train.indices,\
                 self.node_train,self.size_root,self.size_depth,True,NUM_PAR_SAMPLER,SAMPLES_PER_PROC)
 
-class edge_indp_sampling(graph_sampler):
+class edge_sampling(graph_sampler):
     def __init__(self,adj_train,adj_full,node_train,num_edges_subgraph,args_preproc):
         """
         num_edges_subgraph: specify the size of subgraph by the edge budget. NOTE: other samplers specify node budget.
@@ -70,7 +63,6 @@ class edge_indp_sampling(graph_sampler):
         self.deg_train = np.array(adj_train.sum(1)).flatten()
         self.adj_train_norm = scipy.sparse.dia_matrix((1/self.deg_train,0),shape=adj_train.shape).dot(adj_train)
         super().__init__(adj_train,adj_full,node_train,self.size_subgraph,args_preproc)
-        self.level_approx = level_approx
     def preproc(self,**kwargs):
         self.edge_prob = scipy.sparse.csr_matrix((np.zeros(self.adj_train.size),\
                 self.adj_train.indices,self.adj_train.indptr),shape=self.adj_train.shape)
@@ -134,7 +126,7 @@ class edge_indp_sampling(graph_sampler):
 
 
 
-class frontier_sampling(graph_sampler):
+class mrw_sampling(graph_sampler):
 
     def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc,size_frontier,max_deg=10000):
         self.p_dist = None
@@ -142,7 +134,7 @@ class frontier_sampling(graph_sampler):
         self.size_frontier = size_frontier
         self.deg_full = np.bincount(self.adj_full.nonzero()[0])
         self.deg_train = np.bincount(self.adj_train.nonzero()[0])
-        self.name_sampler = 'FRONTIER'
+        self.name_sampler = 'MRW'
         self.max_deg = int(max_deg)
 
     def preproc(self,**kwargs):

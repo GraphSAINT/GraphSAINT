@@ -177,7 +177,7 @@ class HighOrderAggregator(Layer):
         return vw
 
     def _call(self, inputs):
-        vecs, adj_norm, nnz, len_feat, adj_0, adj_1, adj_2, adj_3, adj_4, adj_5, adj_6, adj_7 = inputs
+        vecs, adj_norm, len_feat, adj_0, adj_1, adj_2, adj_3, adj_4, adj_5, adj_6, adj_7 = inputs
         vecs = tf.nn.dropout(vecs, 1-self.dropout)
         # ---------------------------
         #vecs_hop = []

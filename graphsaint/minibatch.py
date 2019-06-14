@@ -88,17 +88,6 @@ class NodeMinibatchIterator:
         self.is_norm_aggr = train_params['norm_aggr']
         self.deg_train = np.array(self.adj_train.sum(1)).flatten()
 
-    def _set_sampler_args(self):
-        if self.method_sample == 'frontier':
-            _args = {'frontier':None}
-        elif self.method_sample == 'rw':
-            _args = dict()
-        elif self.method_sample == 'edge_indp':
-            _args = dict()
-        else:
-            raise NotImplementedError
-        return _args
-
 
     def set_sampler(self,train_phases):
         self.subgraphs_remaining_indptr = list()
@@ -107,17 +96,17 @@ class NodeMinibatchIterator:
         self.subgraphs_remaining_data = list()
         self.subgraphs_remaining_nodes = list()
         self.method_sample = train_phases['sampler']
-        if self.method_sample == 'frontier':
+        if self.method_sample == 'mrw':
             self.size_subg_budget = train_phases['size_subgraph']
-            self.graph_sampler = frontier_sampling(self.adj_train,self.adj_full,\
+            self.graph_sampler = mrw_sampling(self.adj_train,self.adj_full,\
                 self.node_train,self.size_subg_budget,dict(),train_phases['size_frontier'],int(train_phases['max_deg']))
         elif self.method_sample == 'rw':
             self.size_subg_budget = train_phases['num_root']*train_phases['depth']
             self.graph_sampler = rw_sampling(self.adj_train,self.adj_full,\
                 self.node_train,self.size_subg_budget,dict(),int(train_phases['num_root']),int(train_phases['depth']))
-        elif self.method_sample == 'edge_indp':
+        elif self.method_sample == 'edge':
             self.size_subg_budget = train_phases['size_subg_edge']*2
-            self.graph_sampler = edge_indp_sampling(self.adj_train,self.adj_full,self.node_train,train_phases['size_subg_edge'],dict())
+            self.graph_sampler = edge_sampling(self.adj_train,self.adj_full,self.node_train,train_phases['size_subg_edge'],dict())
         else:
             raise NotImplementedError
 
@@ -193,7 +182,7 @@ class NodeMinibatchIterator:
     def par_graph_sample(self,phase):
         t0 = time.time()
         # _indices_orig: subgraph with indices in the original graph
-        _indptr,_indices,_indices_orig,_data,_v = self.graph_sampler.par_sample(phase,**self._set_sampler_args())
+        _indptr,_indices,_indices_orig,_data,_v = self.graph_sampler.par_sample(phase)
         t1 = time.time()
         print('sampling 200 subgraphs:   time = ',t1-t0)
         self.subgraphs_remaining_indptr.extend(_indptr)

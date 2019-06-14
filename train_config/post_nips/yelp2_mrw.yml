@@ -16,7 +16,7 @@ params:
 phase:
   - end: 35 
     dropout: 0.0
-    sampler: 'frontier'
+    sampler: 'mrw'
     size_subgraph: 2500
     size_frontier: 1000
     order: 1
