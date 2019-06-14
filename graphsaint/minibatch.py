@@ -184,7 +184,7 @@ class NodeMinibatchIterator:
                 self.norm_aggr_train_dict={}
                 for i_d in range(len(self.norm_aggr_train)):
                     for k,v in self.norm_aggr_train[i_d].items():
-                        self.norm_aggr_train_dict[str(i_d)+str(k)]=v
+                        self.norm_aggr_train_dict[str(i_d)+' '+str(k)]=v
             else:
                 _init_norm_aggr_cnt(1)
 
@@ -236,7 +236,7 @@ class NodeMinibatchIterator:
                     for iv,v in enumerate(adj.indices[adj.indptr[u]:adj.indptr[u+1]]):
                         v_orig = self.node_subgraph[v]
                         # adj.data[adj.indptr[u]+iv] = self.norm_aggr_train[u_orig][v_orig]
-                        adj.data[adj.indptr[u]+iv]=self.norm_aggr_train_dict[str(u_orig)+str(v_orig)]
+                        adj.data[adj.indptr[u]+iv]=self.norm_aggr_train_dict[str(u_orig)+' '+str(v_orig)]
                 t2 = time.time()
                 #print('    ---- time to set norm factor: ', t2-t1)
             adj = sp.dia_matrix((1/D,0),shape=(adj.shape[0],adj.shape[1])).dot(adj)
