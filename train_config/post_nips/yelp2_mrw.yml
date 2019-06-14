@@ -1,3 +1,4 @@
+# A*W; ReLU-Norm
 network:
   - dim: 512
     aggr: 'concat'
@@ -16,7 +17,7 @@ phase:
   - end: 35 
     dropout: 0.0
     sampler: 'frontier'
-    size_subgraph: 4000
-    size_frontier: 2000
+    size_subgraph: 2500
+    size_frontier: 1000
     order: 1
     max_deg: 100

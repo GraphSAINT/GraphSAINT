@@ -39,7 +39,7 @@ class TimeLiner:
         with open(f_name, 'w') as f:
             json.dump(self._timeline_dict, f)
 
-def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,is_val=True,is_valtest=False):
+def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,mode):
     """
     Full batch evaluation
     """
@@ -47,7 +47,7 @@ def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,is_val=True
     run_metadata = tf.RunMetadata()
     t1 = time.time()
     num_cls = minibatch_iter.class_arr.shape[-1]
-    feed_dict, labels = minibatch_iter.minibatch_train_feed_dict(0.,is_val=True,is_test=True)
+    feed_dict, labels = minibatch_iter.feed_dict(0.,mode)
     if FLAGS.timeline:
         preds,loss = sess.run([model.preds, model.loss], feed_dict=feed_dict, options=options, run_metadata=run_metadata)
         fetched_timeline = timeline.Timeline(run_metadata.step_stats)
@@ -55,10 +55,7 @@ def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,is_val=True
         many_runs_timeline.append(chrome_trace)
     else:
         preds,loss = sess.run([model.preds, model.loss], feed_dict=feed_dict)
-    if is_valtest:
-        node_val_test = np.concatenate((minibatch_iter.node_val,minibatch_iter.node_test))
-    else:
-        node_val_test = minibatch_iter.node_val if is_val else minibatch_iter.node_test
+    node_val_test = minibatch_iter.node_val if mode=='val' else minibatch_iter.node_test
     t2 = time.time()
     f1_scores = calc_f1(labels[node_val_test],preds[node_val_test],model.sigmoid_loss)
     return loss, f1_scores[0], f1_scores[1], (t2-t1)
@@ -188,7 +185,7 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
             time_list = 0
             while not minibatch.end():
                 t0 = time.time()
-                feed_dict, labels = minibatch.minibatch_train_feed_dict(phase['dropout'],is_val=False,is_test=False)
+                feed_dict, labels = minibatch.feed_dict(phase['dropout'],mode='train')
                 t1 = time.time()
                 if FLAGS.timeline:
                     _,__,loss_train,pred_train = sess.run([train_stat[0], \
@@ -225,7 +222,7 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
             time_prepare += time_prepare_ep
             if e % 1 == 0:
                 loss_val,f1mic_val,f1mac_val,time_eval = \
-                        evaluate_full_batch(sess,model,minibatch,many_runs_timeline,is_val=True)
+                        evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='val')
                 if f1mic_val > f1mic_best:
                     f1mic_best = f1mic_val
                     e_best = e
@@ -261,9 +258,9 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
     # ---------- try reloading
     saver.restore(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
     #saver.restore(sess, './temp_model_{}_rand{}.chkpt'.format(timestamp_chkpt,model_rand_serial))
-    loss_val, f1mic_val, f1mac_val, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline)
+    loss_val, f1mic_val, f1mac_val, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='val')
     printf("Full validation stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}",loss_val,f1mic_val,f1mac_val)
-    loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,is_val=False)
+    loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='test')
     printf("Full test stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}",loss_test,f1mic_test,f1mac_test)
     return {'loss_val_opt':loss_val,'f1mic_val_opt':f1mic_val,'f1mac_val_opt':f1mac_val,\
             'loss_test_opt':loss_test,'f1mic_test_opt':f1mic_test,'f1mac_test_opt':f1mac_test,\

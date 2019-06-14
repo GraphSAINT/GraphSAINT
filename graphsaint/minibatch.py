@@ -15,17 +15,10 @@ import multiprocessing as mp
 
 import pdb
 
-# import warnings
-# warnings.filterwarnings('error')
-# np.seterr(divide='raise')
-
-#np.random.seed(123)
 
 
-############################
-# FOR SUPERVISED MINIBATCH #
-############################
-class NodeMinibatchIterator(object):
+
+class NodeMinibatchIterator:
     """
     This minibatch iterator iterates over nodes for supervised learning.
     """
@@ -166,7 +159,7 @@ class NodeMinibatchIterator(object):
                 #            /self.norm_loss_train.sum()*self.node_train.size
                 self.norm_loss_train[self.node_train] = num_subg/self.norm_loss_train[self.node_train]/self.node_train.size
             else:
-                self.norm_loss_train[self.node_train] = 1
+                self.norm_loss_train[self.node_train] = 1/avg_subg_size
             # 4. norm_aggr based on _node_cnt and edge count
             if self.is_norm_aggr:
                 _init_norm_aggr_cnt(0)
@@ -209,9 +202,9 @@ class NodeMinibatchIterator(object):
         self.subgraphs_remaining_data.extend(_data)
         self.subgraphs_remaining_nodes.extend(_v)
 
-    def minibatch_train_feed_dict(self,dropout,is_val=False,is_test=False):
+    def feed_dict(self,dropout,mode='train'):
         """ DONE """
-        if is_val or is_test:
+        if mode in ['val','test']:
             self.node_subgraph = np.arange(self.class_arr.shape[0])
             adj = sp.csr_matrix(([],[],np.zeros(2)), shape=(1,self.node_subgraph.shape[0]))
             adj_0 = self.adj_full_norm_0
@@ -223,6 +216,7 @@ class NodeMinibatchIterator(object):
             adj_6 = self.adj_full_norm_6
             adj_7 = self.adj_full_norm_7
         else:
+            assert mode == 'train'
             if len(self.subgraphs_remaining_nodes) == 0:
                 self.par_graph_sample('train')
 
@@ -244,7 +238,7 @@ class NodeMinibatchIterator(object):
                         # adj.data[adj.indptr[u]+iv] = self.norm_aggr_train[u_orig][v_orig]
                         adj.data[adj.indptr[u]+iv]=self.norm_aggr_train_dict[str(u_orig)+str(v_orig)]
                 t2 = time.time()
-                print('    ---- time to set norm factor: ', t2-t1)
+                #print('    ---- time to set norm factor: ', t2-t1)
             adj = sp.dia_matrix((1/D,0),shape=(adj.shape[0],adj.shape[1])).dot(adj)
 
             adj_0 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
@@ -260,11 +254,10 @@ class NodeMinibatchIterator(object):
         feed_dict.update({self.placeholders['node_subgraph']: self.node_subgraph})
         feed_dict.update({self.placeholders['labels']: self.class_arr[self.node_subgraph]})
         feed_dict.update({self.placeholders['dropout']: dropout})
-        if is_val or is_test:
+        if mode in ['val','test']:
             feed_dict.update({self.placeholders['norm_loss']: self.norm_loss_test})
-            #import pdb; pdb.set_trace()
         else:
-            feed_dict.update({self.placeholders['norm_loss']:self.norm_loss_train})
+            feed_dict.update({self.placeholders['norm_loss']: self.norm_loss_train})
         
         _num_edges = len(adj.nonzero()[1])
         _num_vertices = len(self.node_subgraph)
@@ -289,7 +282,7 @@ class NodeMinibatchIterator(object):
         feed_dict.update({self.placeholders['adj_subgraph_7']: \
             tf.SparseTensorValue(np.column_stack(adj_7.nonzero()),adj_7.data,adj_7.shape)})
         feed_dict.update({self.placeholders['nnz']: adj.size})
-        if is_val or is_test:
+        if mode in ['val','test']:
             feed_dict[self.placeholders['is_train']]=False
         else:
             feed_dict[self.placeholders['is_train']]=True
