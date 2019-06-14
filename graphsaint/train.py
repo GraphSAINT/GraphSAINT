@@ -1,6 +1,6 @@
 from graphsaint.globals import *
 from graphsaint.inits import *
-from graphsaint.supervised_models import Supervisedgraphsaint
+from graphsaint.model import GraphSAINT
 from graphsaint.minibatch import NodeMinibatchIterator
 from graphsaint.utils import *
 from graphsaint.metric import *
@@ -12,7 +12,6 @@ import pickle
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug
 import numpy as np
-from zython.logf.printf import printf
 import time
 import datetime
 import pdb
@@ -66,7 +65,6 @@ def construct_placeholders(num_classes):
     placeholders = {
         'labels': tf.placeholder(DTYPE, shape=(None, num_classes), name='labels'),
         'node_subgraph': tf.placeholder(tf.int32, shape=(None), name='node_subgraph'),
-        'nnz': tf.placeholder(tf.int32, shape=(None), name='adj_nnz'),
         'dropout': tf.placeholder(DTYPE, shape=(None), name='dropout'),
         'adj_subgraph' : tf.sparse_placeholder(DTYPE,name='adj_subgraph'),
         'adj_subgraph_last': tf.sparse_placeholder(DTYPE,name='adj_subgraph_last'),
@@ -100,7 +98,7 @@ def prepare(train_data,train_params,arch_gcn):
 
     placeholders = construct_placeholders(num_classes)
     minibatch = NodeMinibatchIterator(adj_full, adj_full_norm, adj_train, role, class_arr, placeholders, train_params)
-    model = Supervisedgraphsaint(num_classes, placeholders,
+    model = GraphSAINT(num_classes, placeholders,
                 feats, arch_gcn, train_params, adj_full_norm, logging=True)
 
     # config.gpu_options.allow_growth = True
@@ -170,9 +168,9 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
         time_qest += tset_end-tset_start
         sess.run(model.reset_optimizer_op)
         num_batches = minibatch.num_training_batches()
-        printf('START PHASE {:4d}',ip)
+        printf('START PHASE {:4d}'.format(ip),style='underline')
         for e in range(epoch_ph_start,int(phase['end'])):
-            printf('Epoch {:4d}',e)
+            printf('Epoch {:4d}'.format(e),style='bold')
             minibatch.shuffle()
             l_loss_tr = list()
             l_f1mic_tr = list()
@@ -206,8 +204,8 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
                 if not minibatch.batch_num % FLAGS.print_every:
                     t3 = time.time()
                     f1_mic,f1_mac = calc_f1(labels,pred_train,arch_gcn['loss'])
-                    printf("Iter {:4d}\ttrain loss {:.5f}\tmic {:5f}\tmac {:5f}",\
-                        minibatch.batch_num,loss_train,f1_mic,f1_mac,type=None)
+                    printf("Iter {:4d}\ttrain loss {:.5f}\tmic {:5f}\tmac {:5f}".format(
+                        minibatch.batch_num,loss_train,f1_mic,f1_mac))
                     l_loss_tr.append(loss_train)
                     l_f1mic_tr.append(f1_mic)
                     l_f1mac_tr.append(f1_mac)
@@ -231,8 +229,8 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
                     savepath = saver.save(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
                     #savepath = saver.save(sess, './temp_model_{}_rand{}.chkpt'.format(timestamp_chkpt,model_rand_serial))
                     print('saver time: {:4.2f}'.format(time.time()-tsave))
-                printf('   val loss {:.5f}\tmic {:.5f}\tmac {:.5f}',loss_val,f1mic_val,f1mac_val)
-                printf('   avg train loss {:.5f}\tmic {:.5f}\tmac {:.5f}',f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr))
+                printf('   val loss {:.5f}\tmic {:.5f}\tmac {:.5f}'.format(loss_val,f1mic_val,f1mac_val))
+                printf('   avg train loss {:.5f}\tmic {:.5f}\tmac {:.5f}'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr)))
                 
                 if FLAGS.tensorboard:
                     misc_stat = sess.run([train_stat[1]],feed_dict={\
@@ -250,7 +248,7 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
                     summary_writer.add_summary(misc_stat[0], e)
         epoch_ph_start = int(phase['end'])
     #saver.save(sess, 'models/{data}'.format(data=FLAGS.data_prefix.split('/')[-1]),global_step=e)
-    printf("Optimization Finished!",type='WARN')
+    printf("Optimization Finished!",style='yellow')
     timelines = TimeLiner()
     for tl in many_runs_timeline:
         timelines.update_timeline(tl)
@@ -259,9 +257,9 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
     saver.restore(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
     #saver.restore(sess, './temp_model_{}_rand{}.chkpt'.format(timestamp_chkpt,model_rand_serial))
     loss_val, f1mic_val, f1mac_val, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='val')
-    printf("Full validation stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}",loss_val,f1mic_val,f1mac_val)
+    printf("Full validation stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}".format(loss_val,f1mic_val,f1mac_val))
     loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='test')
-    printf("Full test stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}",loss_test,f1mic_test,f1mac_test)
+    printf("Full test stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}".format(loss_test,f1mic_test,f1mac_test))
     return {'loss_val_opt':loss_val,'f1mic_val_opt':f1mic_val,'f1mac_val_opt':f1mac_val,\
             'loss_test_opt':loss_test,'f1mic_test_opt':f1mic_test,'f1mac_test_opt':f1mac_test,\
             'epoch_best':e_best,

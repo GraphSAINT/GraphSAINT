@@ -1,1 +1,1 @@
-python -m graphsaint.supervised_train --data_prefix ./data/$1 --train_config $2 "$@"
+python -m graphsaint.train --data_prefix ./data/$1 --train_config $2 "$@"

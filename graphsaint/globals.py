@@ -4,10 +4,6 @@ import numpy as np
 import os,sys,time,datetime
 from os.path import expanduser
 import pdb
-home = expanduser("~")
-
-ZYTHON_PATH = "{}/Projects/".format(home)
-sys.path.insert(0, ZYTHON_PATH)
 
 
 # -----------------------------------------
@@ -51,7 +47,7 @@ flags.DEFINE_boolean('logging',False,'log input and output histogram of each lay
 
 
 
-
+# auto choosing available NVIDIA GPU
 gpu_selected = FLAGS.gpu
 if gpu_selected == -1234:
     # auto detect gpu by filtering on the nvidia-smi command output
@@ -75,11 +71,13 @@ if int(gpu_selected) >= 0:
 else:
     os.environ["CUDA_VISIBLE_DEVICES"]="-1"
 
+
+# global vars
+
 f_mean = lambda l: sum(l)/len(l)
 
 F_ACT = {'I': lambda x:x,
          'relu': tf.nn.relu,
          'leaky_relu': tf.nn.leaky_relu}
-
 
 DTYPE = tf.float32 if FLAGS.dtype=='s' else tf.float64

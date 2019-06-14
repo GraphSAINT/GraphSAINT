@@ -9,13 +9,11 @@ params:
   - lr: 0.01
     weight_decay: 0.0   
     norm_loss: 1
-    norm_aggr: 0
-    q_threshold: 100
+    norm_aggr: 1 # 0
+    q_threshold: 50 # 100
     q_offset: 0
 phase:
   - end: 40
     dropout: 0.0
-    sampler: 'edge_indp'
+    sampler: 'edge'
     size_subg_edge: 4000
-    is_induced: 1
-    level_approx: 0

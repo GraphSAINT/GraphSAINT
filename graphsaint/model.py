@@ -7,7 +7,7 @@ from graphsaint.utils import *
 import pdb
 
 
-class Supervisedgraphsaint:
+class GraphSAINT:
 
     def __init__(self, num_classes, placeholders, features,
             arch_gcn, train_params, adj_full_norm, model_pretrain=None, **kwargs):
@@ -23,7 +23,6 @@ class Supervisedgraphsaint:
         self.aggregator_cls = layers.HighOrderAggregator
         self.lr = train_params['lr']
         self.node_subgraph = placeholders['node_subgraph']
-        self.nnz = placeholders['nnz']
         self.num_layers = len(arch_gcn['arch'].split('-'))
         self.weight_decay = train_params['weight_decay']
         self.adj_subgraph = placeholders['adj_subgraph']
@@ -75,17 +74,13 @@ class Supervisedgraphsaint:
         model_pretrain_dense = model_pretrain['dense'] if model_pretrain else None
         self.aggregators = self.get_aggregators(model_pretrain=model_pretrain_aggr)
         self.outputs = self.aggregate_subgraph()
-        ################
-        # OUPTUT LAYER #
-        ################
+        # OUPTUT LAYER
         self.outputs = tf.nn.l2_normalize(self.outputs, 1)
         self.node_pred = layers.Dense(self.dims_feat[-1], self.num_classes, self.weight_decay,
                 dropout=self.placeholders['dropout'], act='I', model_pretrain=model_pretrain_dense)
         self.node_preds = self.node_pred(self.outputs)
 
-        #############
-        # BACK PROP #
-        #############
+        # BACK PROP
         self._loss()
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
@@ -113,10 +108,8 @@ class Supervisedgraphsaint:
         if len(self.loss_terms.shape) == 1:
             self.loss_terms = tf.reshape(self.loss_terms,(-1,1))
         self._weight_loss_batch = tf.nn.embedding_lookup(self.norm_loss, self.node_subgraph)
-        #TODO: to be confirmed -- self._weight_loss_batch /= tf.reduce_sum(self._weight_loss_batch)
         _loss_terms_weight = tf.linalg.matmul(tf.transpose(self.loss_terms),\
                     tf.reshape(self._weight_loss_batch,(-1,1)))
-        # TODO: this reduce_sum won't work for is_norm_loss = 0
         self.loss += tf.reduce_sum(_loss_terms_weight)
         tf.summary.scalar('loss', self.loss)
 
@@ -146,7 +139,7 @@ class Supervisedgraphsaint:
             hidden = self.features
             adj = self.adj_full_norm
         for layer in range(self.num_layers):
-            hidden = self.aggregators[layer]((hidden,adj,self.nnz,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
+            hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
                     self.adj_subgraph_3,self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7))
         return hidden
 

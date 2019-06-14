@@ -59,30 +59,18 @@ def process_graph_data(adj_full, adj_train, feats, class_map, role):
 def parse_layer_yml(arch_gcn,dim_input):
     num_layers = len(arch_gcn['arch'].split('-'))
     # set default values, then update by arch_gcn
-    bias_layer = ['bias']*num_layers
-    act_layer = ['I']*num_layers
-    aggr_layer = ['concat']*num_layers
-    dims_layer = [-1]*num_layers
-    for l in range(num_layers):
-        if l==0 and arch_gcn['dim'] < dim_input/2:
-            # This is an empirical rule (useful when exploring small hidden dim designs):
-            # - don't make the 1st layer hidden dim very small: otherwise too much information loss on raw features.
-            # - hidden dim of deeper layers can be very small: i.e., high level features can be compressed.
-            # - divide by 2 due to 2 branches (self aggr and neighbor aggr)
-            # => this rule is also enforced on ALL BASELINES in Table 2.
-            # => with this rule, Reddit with dim=64 can reach [TODO] F1-mic.
-            dims_layer[0]=int(dim_input/2)
-            bias_layer[0]=arch_gcn['bias']
-            aggr_layer[0]=arch_gcn['aggr']
-            act_layer[0]=arch_gcn['act']
-        else:
-            dims_layer[l]=arch_gcn['dim']
-            bias_layer[l]=arch_gcn['bias']
-            aggr_layer[l]=arch_gcn['aggr']
-            act_layer[l]=arch_gcn['act']
-    #act_layer[0] = 'I'
-    order_layer = arch_gcn['arch'].split('-')
-    order_layer = [int(o) for o in order_layer]
+    bias_layer = [arch_gcn['bias']]*num_layers
+    act_layer = [arch_gcn['act']]*num_layers
+    aggr_layer = [arch_gcn['aggr']]*num_layers
+    dims_layer = [arch_gcn['dim']]*num_layers
+    # This is an empirical rule (useful when exploring small hidden dim designs):
+    # - don't make the 1st layer hidden dim very small: otherwise too much information loss on raw features.
+    # - hidden dim of deeper layers can be very small: i.e., high level features can be compressed.
+    # - factor of 2 in the threshold due to 2 branches (self aggr and neighbor aggr)
+    # => this rule is also enforced on ALL BASELINES in Table 2.
+    # => with this rule, Reddit with dim=64 can reach 0.962 F1-mic.
+    dims_layer[0] = int(max(dims_layer[0],dim_input/2))
+    order_layer = [int(o) for o in arch_gcn['arch'].split('-')]
     return [dim_input]+dims_layer,order_layer,act_layer,bias_layer,aggr_layer
 
 
@@ -92,7 +80,6 @@ def parse_layer_yml(arch_gcn,dim_input):
 def parse_n_prepare(flags):
     with open(flags.train_config) as f_train_config:
         train_config = yaml.load(f_train_config)
-    # setup default value, then update
     arch_gcn = {'dim':-1,'aggr':'concat','loss':'softmax','arch':'1','act':'I','bias':'norm'}
     arch_gcn.update(train_config['network'][0])
     train_params = {'lr':0.01,'weight_decay':0.,'norm_loss':True,'norm_aggr':True,'q_threshold':50,'q_offset':0}
@@ -157,11 +144,25 @@ def adj_norm(adj):
     return adj_norm
 
 
-def deg_mat_inv(adj):
-    """
-    return inverse degree matrix of the subg adj.
-    -- simply sum the rows
-    """
-    diag_shape = (adj.shape[0],adj.shape[1])
-    D = adj.sum(1).flatten()
-    return sp.dia_matrix((1/D,0),shape=diag_shape)
+
+
+##################
+# PRINTING UTILS #
+#----------------#
+
+_bcolors = {'header': '\033[95m',
+            'blue': '\033[94m',
+            'green': '\033[92m',
+            'yellow': '\033[93m',
+            'red': '\033[91m',
+            'bold': '\033[1m',
+            'underline': '\033[4m'}
+
+
+def printf(msg,style=''):
+    if not style or style == 'black':
+        print(msg)
+    else:
+        print("{color1}{msg}{color2}".format(color1=_bcolors[style],msg=msg,color2='\033[0m'))
+
+

@@ -1,5 +1,5 @@
 network:
-  - dim: 128
+  - dim: 64
     aggr: 'concat'
     loss: 'softmax'
     arch: '1-0-1-0'
@@ -15,7 +15,7 @@ params:
 phase:
   - end: 30
     dropout: 0.0
-    sampler: 'mrw'
+    sampler: 'frontier'
     size_subgraph: 8000
     size_frontier: 1000
     order: 1
