@@ -1,0 +1,27 @@
+# A*W; ReLU-norm
+network:
+  ### NOTE ###: an order-1 layer followed by an order-0 layer is equivalent to a single layer in S-GCN (Chen, ICML'18). 
+  - dim: 256
+    aggr: 'concat'
+    loss: 'softmax'
+    arch: '1-1-0-0'
+    act: 'relu'
+    bias: 'norm'
+params:
+  - lr: 0.01
+    weight_decay: 0.0
+    norm_loss: 1
+    norm_aggr: 0
+    q_threshold: 25
+    q_offset: 2
+phase:
+  - end: 20
+    dropout: 0.2
+    # sampler: 'frontier'
+    # size_subgraph: 8000
+    # size_frontier: 2000
+    # order: 1
+    # max_deg: 10000
+    sampler: 'rw'
+    num_root: 6000
+    depth: 2

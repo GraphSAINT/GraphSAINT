@@ -140,11 +140,10 @@ class HighOrderAggregator(Layer):
                     for o in range(self.order+1):
                         _k = 'order{}_weights'.format(o)
                         self.vars[_k] = trained(model_pretrain[0], name=_k)
-                if self.bias == 'bias':
-                    for o in range(self.order+1):
-                        _k = 'order{}_bias'.format(o)
-                        self.vars[_k] = zeros([dim_out],name=_k)
-                elif self.bias == 'norm':
+                for o in range(self.order+1):
+                    _k = 'order{}_bias'.format(o)
+                    self.vars[_k] = zeros([dim_out],name=_k)
+                if self.bias == 'norm':
                     for o in range(self.order+1):
                         _k1 = 'order{}_offset'.format(o)
                         _k2 = 'order{}_scale'.format(o)
@@ -161,7 +160,8 @@ class HighOrderAggregator(Layer):
     def _F_nonlinear(self,vecs,order):
         vw = tf.matmul(vecs,self.vars['order{}_weights'.format(order)])
         # ---------------------------
-        #vw = self.act(vw)
+        vw += self.vars['order{}_bias'.format(order)]
+        vw = self.act(vw)
         if self.bias == 'bias':
             vw += self.vars['order{}_bias'.format(order)]
         elif self.bias == 'norm':   # batch norm realized by tf.nn.batch_norm
@@ -172,7 +172,8 @@ class HighOrderAggregator(Layer):
         else:                       # otherwise, batch norm realized by tf.layer.batch_norm
             vw=tf.layers.batch_normalization(vw,training=self.is_train,renorm=False)
         # ---------------------------
-        vw = self.act(vw)
+        #vw += self.vars['order{}_bias'.format(order)]
+        #vw = self.act(vw)
         return vw
 
     def _call(self, inputs):

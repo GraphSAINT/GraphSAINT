@@ -1,0 +1,40 @@
+# A*W; RelU-norm
+network:
+  - dim: 512
+    aggr: 'concat'
+    loss: 'sigmoid'
+    arch: '1-0-1-0'
+    act: 'relu'
+    bias: 'Norm'
+params:
+  - lr: 0.01
+    weight_decay: 0.0
+    norm_loss: 0
+    norm_aggr: 1
+    q_threshold: 50
+    q_offset: 0
+phase:
+  # We set small subgraph sizes for the initial phases. This speeds up convergence without affecting accuracy.
+  #- end: 50
+  #  dropout: 0.0
+  #  sampler: 'rw'
+  #  depth: 2
+  #  is_induced: 1
+  #  num_root: 180
+  #- end: 80
+  #  dropout: 0.0
+  #  sampler: 'rw'
+  #  depth: 2
+  #  is_induced: 1
+  #  num_root: 500
+  #- end: 400 #180
+  #  dropout: 0.0
+  #  sampler: 'rw'
+  #  depth: 2
+  #  num_root: 1800
+  - end: 500
+    dropout: 0.0
+    sampler: 'rw'
+    depth: 2
+  #  is_induced: 1
+    num_root: 2500

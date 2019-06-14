@@ -80,6 +80,7 @@ def parse_layer_yml(arch_gcn,dim_input):
             bias_layer[l]=arch_gcn['bias']
             aggr_layer[l]=arch_gcn['aggr']
             act_layer[l]=arch_gcn['act']
+    #act_layer[0] = 'I'
     order_layer = arch_gcn['arch'].split('-')
     order_layer = [int(o) for o in order_layer]
     return [dim_input]+dims_layer,order_layer,act_layer,bias_layer,aggr_layer
