@@ -15,7 +15,7 @@ params:
     q_threshold: 25
     q_offset: 2
 phase:
-  - end: 20
+  - end: 15
     dropout: 0.2
     # sampler: 'frontier'
     # size_subgraph: 8000

@@ -11,14 +11,13 @@ import pandas as pd
 
 import numpy as np
 import time
-import multiprocessing as mp
 
 import pdb
 
 
 
 
-class NodeMinibatchIterator:
+class Minibatch:
     """
     This minibatch iterator iterates over nodes for supervised learning.
     """
@@ -98,15 +97,15 @@ class NodeMinibatchIterator:
         self.method_sample = train_phases['sampler']
         if self.method_sample == 'mrw':
             self.size_subg_budget = train_phases['size_subgraph']
-            self.graph_sampler = mrw_sampling(self.adj_train,self.adj_full,\
-                self.node_train,self.size_subg_budget,dict(),train_phases['size_frontier'],int(train_phases['max_deg']))
+            self.graph_sampler = mrw_sampling(self.adj_train,\
+                self.node_train,self.size_subg_budget,train_phases['size_frontier'],int(train_phases['max_deg']))
         elif self.method_sample == 'rw':
             self.size_subg_budget = train_phases['num_root']*train_phases['depth']
-            self.graph_sampler = rw_sampling(self.adj_train,self.adj_full,\
-                self.node_train,self.size_subg_budget,dict(),int(train_phases['num_root']),int(train_phases['depth']))
+            self.graph_sampler = rw_sampling(self.adj_train,\
+                self.node_train,self.size_subg_budget,int(train_phases['num_root']),int(train_phases['depth']))
         elif self.method_sample == 'edge':
             self.size_subg_budget = train_phases['size_subg_edge']*2
-            self.graph_sampler = edge_sampling(self.adj_train,self.adj_full,self.node_train,train_phases['size_subg_edge'],dict())
+            self.graph_sampler = edge_sampling(self.adj_train,self.node_train,train_phases['size_subg_edge'])
         else:
             raise NotImplementedError
 
@@ -270,7 +269,6 @@ class NodeMinibatchIterator:
             tf.SparseTensorValue(np.column_stack(adj_6.nonzero()),adj_6.data,adj_6.shape)})
         feed_dict.update({self.placeholders['adj_subgraph_7']: \
             tf.SparseTensorValue(np.column_stack(adj_7.nonzero()),adj_7.data,adj_7.shape)})
-        feed_dict.update({self.placeholders['nnz']: adj.size})
         if mode in ['val','test']:
             feed_dict[self.placeholders['is_train']]=False
         else:
