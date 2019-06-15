@@ -17,5 +17,5 @@ phase:
   - end: 25
     dropout: 0.0
     sampler: 'rw'
-    num_root: 4000
+    num_root: 4500
     depth: 2
