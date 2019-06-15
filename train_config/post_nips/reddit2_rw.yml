@@ -11,12 +11,11 @@ params:
     weight_decay: 0.0   
     norm_loss: 1
     norm_aggr: 1
-    q_threshold: 50
+    q_threshold: 100
     q_offset: 0
 phase:
   - end: 25
     dropout: 0.0
     sampler: 'rw'
-    num_root: 2500
+    num_root: 4000
     depth: 2
-    is_induced: 1
