@@ -1,14 +1,12 @@
 from graphsaint.globals import *
 from graphsaint.inits import *
 from graphsaint.model import GraphSAINT
-from graphsaint.minibatch import NodeMinibatchIterator
+from graphsaint.minibatch import Minibatch
 from graphsaint.utils import *
 from graphsaint.metric import *
 from tensorflow.python.client import timeline
 
 import sys, os, random
-import cProfile
-import pickle
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug
 import numpy as np
@@ -82,7 +80,6 @@ def construct_placeholders(num_classes):
     return placeholders
 
 
-pr = cProfile.Profile()
 
 
 
@@ -97,7 +94,7 @@ def prepare(train_data,train_params,arch_gcn):
     num_classes = class_arr.shape[1]
 
     placeholders = construct_placeholders(num_classes)
-    minibatch = NodeMinibatchIterator(adj_full, adj_full_norm, adj_train, role, class_arr, placeholders, train_params)
+    minibatch = Minibatch(adj_full, adj_full_norm, adj_train, role, class_arr, placeholders, train_params)
     model = GraphSAINT(num_classes, placeholders,
                 feats, arch_gcn, train_params, adj_full_norm, logging=True)
 
@@ -218,42 +215,38 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
                 print('train time: {:4.2f}\tprepare time: {:4.2f}'.format(time_train_ep,time_prepare_ep))
             time_train += time_train_ep
             time_prepare += time_prepare_ep
-            if e % 1 == 0:
-                loss_val,f1mic_val,f1mac_val,time_eval = \
-                        evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='val')
-                if f1mic_val > f1mic_best:
-                    f1mic_best = f1mic_val
-                    e_best = e
-                    # ---------- try saver
-                    tsave=time.time()
-                    savepath = saver.save(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
-                    #savepath = saver.save(sess, './temp_model_{}_rand{}.chkpt'.format(timestamp_chkpt,model_rand_serial))
-                    print('saver time: {:4.2f}'.format(time.time()-tsave))
-                printf('   val loss {:.5f}\tmic {:.5f}\tmac {:.5f}'.format(loss_val,f1mic_val,f1mac_val))
-                printf('   avg train loss {:.5f}\tmic {:.5f}\tmac {:.5f}'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr)))
-                
-                if FLAGS.tensorboard:
-                    misc_stat = sess.run([train_stat[1]],feed_dict={\
-                                            ph_misc_stat['val_f1_micro']: f1mic_val,
-                                            ph_misc_stat['val_f1_macro']: f1mac_val,
-                                            ph_misc_stat['train_f1_micro']: f_mean(l_f1mic_tr),
-                                            ph_misc_stat['train_f1_macro']: f_mean(l_f1mac_tr),
-                                            ph_misc_stat['time_per_batch']: 0,#t_epoch/num_batches,
-                                            ph_misc_stat['time_per_epoch']: time_train_ep+time_prepare_ep,#t_epoch,
-                                            ph_misc_stat['size_subgraph']: f_mean(l_size_subg),
-                                            ph_misc_stat['learning_rate']: 0,#curr_learning_rate,
-                                            ph_misc_stat['epoch_sample_time']: 0})#t_epoch_sampling})
-                    # tensorboard visualization
-                    summary_writer.add_summary(_, e)
-                    summary_writer.add_summary(misc_stat[0], e)
+            loss_val,f1mic_val,f1mac_val,time_eval = \
+                    evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='val')
+            if f1mic_val > f1mic_best:
+                f1mic_best = f1mic_val
+                e_best = e
+                tsave=time.time()
+                savepath = saver.save(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
+                #savepath = saver.save(sess, './temp_model_{}_rand{}.chkpt'.format(timestamp_chkpt,model_rand_serial))
+                print('saver time: {:4.2f}'.format(time.time()-tsave))
+            printf('   val loss {:.5f}\tmic {:.5f}\tmac {:.5f}'.format(loss_val,f1mic_val,f1mac_val))
+            printf('   avg train loss {:.5f}\tmic {:.5f}\tmac {:.5f}'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr)))
+            
+            if FLAGS.tensorboard:
+                misc_stat = sess.run([train_stat[1]],feed_dict={\
+                                        ph_misc_stat['val_f1_micro']: f1mic_val,
+                                        ph_misc_stat['val_f1_macro']: f1mac_val,
+                                        ph_misc_stat['train_f1_micro']: f_mean(l_f1mic_tr),
+                                        ph_misc_stat['train_f1_macro']: f_mean(l_f1mac_tr),
+                                        ph_misc_stat['time_per_batch']: 0,#t_epoch/num_batches,
+                                        ph_misc_stat['time_per_epoch']: time_train_ep+time_prepare_ep,#t_epoch,
+                                        ph_misc_stat['size_subgraph']: f_mean(l_size_subg),
+                                        ph_misc_stat['learning_rate']: 0,#curr_learning_rate,
+                                        ph_misc_stat['epoch_sample_time']: 0})#t_epoch_sampling})
+                # tensorboard visualization
+                summary_writer.add_summary(_, e)
+                summary_writer.add_summary(misc_stat[0], e)
         epoch_ph_start = int(phase['end'])
-    #saver.save(sess, 'models/{data}'.format(data=FLAGS.data_prefix.split('/')[-1]),global_step=e)
     printf("Optimization Finished!",style='yellow')
     timelines = TimeLiner()
     for tl in many_runs_timeline:
         timelines.update_timeline(tl)
     timelines.save('timeline.json')
-    # ---------- try reloading
     saver.restore(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
     #saver.restore(sess, './temp_model_{}_rand{}.chkpt'.format(timestamp_chkpt,model_rand_serial))
     loss_val, f1mic_val, f1mac_val, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='val')
@@ -276,7 +269,7 @@ def train_main(argv=None):
     time_start = time.time()
     ret = train(train_phases,train_params,arch_gcn,model,minibatch,sess,train_stat,ph_misc_stat,summary_writer)
     time_end = time.time()
-    print('see this!!! acc: ',ret['f1mic_test_opt'],'\ttime: ',ret['time_train'])
+    printf('see this!!! acc: {:5.4f}\ttime: {:6.2f}'.format(ret['f1mic_test_opt'],ret['time_train']),style='red')
     return ret
 
 

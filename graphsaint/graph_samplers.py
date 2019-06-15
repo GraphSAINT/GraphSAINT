@@ -11,25 +11,13 @@ import graphsaint.cython_sampler as cy
 
 class graph_sampler:
     __metaclass__ = abc.ABCMeta
-    def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc):
-        assert adj_train.shape == adj_full.shape
+    def __init__(self,adj_train,node_train,size_subgraph,args_preproc):
         self.adj_train = adj_train
-        self.adj_full = adj_full
         self.node_train = np.unique(node_train).astype(np.int32)
         # size in terms of number of vertices in subgraph
         self.size_subgraph = size_subgraph
         self.name_sampler = 'None'
         self.node_subgraph = None
-        # =======================
-        self.arr_deg_train = np.zeros(self.adj_train.shape[0])
-        self.arr_deg_full = np.zeros(self.adj_full.shape[0])
-        _1 = np.unique(self.adj_train.nonzero()[0],return_counts=True)
-        _2 = np.unique(self.adj_full.nonzero()[0],return_counts=True)
-        self.arr_deg_train[_1[0]] = _1[1]
-        self.arr_deg_full[_2[0]] = _2[1]
-        self.avg_deg_train = self.arr_deg_train.mean()
-        self.avg_deg_full = self.arr_deg_full.mean()
-        # ========================
         self.preproc(**args_preproc)
 
     @abc.abstractmethod
@@ -42,11 +30,11 @@ class graph_sampler:
 
 
 class rw_sampling(graph_sampler):
-    def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc,size_root,size_depth):
+    def __init__(self,adj_train,node_train,size_subgraph,size_root,size_depth):
         self.size_root = size_root
         self.size_depth = size_depth
         size_subgraph = size_root*size_depth
-        super().__init__(adj_train,adj_full,node_train,size_subgraph,args_preproc)
+        super().__init__(adj_train,node_train,size_subgraph,dict())
     def preproc(self,**kwargs):
         pass
     def par_sample(self,stage,**kwargs):
@@ -54,7 +42,7 @@ class rw_sampling(graph_sampler):
                 self.node_train,self.size_root,self.size_depth,True,NUM_PAR_SAMPLER,SAMPLES_PER_PROC)
 
 class edge_sampling(graph_sampler):
-    def __init__(self,adj_train,adj_full,node_train,num_edges_subgraph,args_preproc):
+    def __init__(self,adj_train,node_train,num_edges_subgraph):
         """
         num_edges_subgraph: specify the size of subgraph by the edge budget. NOTE: other samplers specify node budget.
         """
@@ -62,7 +50,7 @@ class edge_sampling(graph_sampler):
         self.size_subgraph = num_edges_subgraph*2       # this may not be true in many cases. But for now just use this.
         self.deg_train = np.array(adj_train.sum(1)).flatten()
         self.adj_train_norm = scipy.sparse.dia_matrix((1/self.deg_train,0),shape=adj_train.shape).dot(adj_train)
-        super().__init__(adj_train,adj_full,node_train,self.size_subgraph,args_preproc)
+        super().__init__(adj_train,node_train,self.size_subgraph,dict())
     def preproc(self,**kwargs):
         self.edge_prob = scipy.sparse.csr_matrix((np.zeros(self.adj_train.size),\
                 self.adj_train.indices,self.adj_train.indptr),shape=self.adj_train.shape)
@@ -128,11 +116,10 @@ class edge_sampling(graph_sampler):
 
 class mrw_sampling(graph_sampler):
 
-    def __init__(self,adj_train,adj_full,node_train,size_subgraph,args_preproc,size_frontier,max_deg=10000):
+    def __init__(self,adj_train,node_train,size_subgraph,size_frontier,max_deg=10000):
         self.p_dist = None
-        super().__init__(adj_train,adj_full,node_train,size_subgraph,args_preproc)
+        super().__init__(adj_train,node_train,size_subgraph,dict())
         self.size_frontier = size_frontier
-        self.deg_full = np.bincount(self.adj_full.nonzero()[0])
         self.deg_train = np.bincount(self.adj_train.nonzero()[0])
         self.name_sampler = 'MRW'
         self.max_deg = int(max_deg)
