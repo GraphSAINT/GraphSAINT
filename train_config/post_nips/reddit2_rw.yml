@@ -11,7 +11,7 @@ params:
     weight_decay: 0.0   
     norm_loss: 1
     norm_aggr: 1
-    q_threshold: 100
+    q_threshold: 50
     q_offset: 0
 phase:
   - end: 25
