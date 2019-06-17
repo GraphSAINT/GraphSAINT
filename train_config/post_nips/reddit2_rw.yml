@@ -14,8 +14,8 @@ params:
     q_threshold: 50
     q_offset: 0
 phase:
-  - end: 25
+  - end: 20
     dropout: 0.0
     sampler: 'rw'
-    num_root: 4500
-    depth: 2
+    num_root: 2000
+    depth: 4
