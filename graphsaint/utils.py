@@ -69,7 +69,7 @@ def parse_layer_yml(arch_gcn,dim_input):
     # - factor of 2 in the threshold due to 2 branches (self aggr and neighbor aggr)
     # => this rule is also enforced on ALL BASELINES in Table 2.
     # => with this rule, Reddit with dim=64 can reach 0.962 F1-mic.
-    dims_layer[0] = int(max(dims_layer[0],dim_input/2))
+    ###dims_layer[0] = int(max(dims_layer[0],dim_input/2))
     order_layer = [int(o) for o in arch_gcn['arch'].split('-')]
     return [dim_input]+dims_layer,order_layer,act_layer,bias_layer,aggr_layer
 
