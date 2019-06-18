@@ -1,4 +1,3 @@
-# A*W; ReLU-Norm
 network:
   - dim: 512
     aggr: 'concat'
