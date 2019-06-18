@@ -108,6 +108,9 @@ class Minibatch:
         elif self.method_sample == 'edge':
             self.size_subg_budget = train_phases['size_subg_edge']*2
             self.graph_sampler = edge_sampling(self.adj_train,self.node_train,train_phases['size_subg_edge'])
+        elif self.method_sample == 'node':
+            self.size_subg_budget = train_phases['size_subgraph']
+            self.graph_sampler = node_sampling(self.adj_train,self.node_train,self.size_subg_budget)
         else:
             raise NotImplementedError
 
@@ -142,8 +145,12 @@ class Minibatch:
             if self.is_norm_loss:
                 self.norm_loss_train[:] = _node_cnt[:]
                 self.norm_loss_train[self.node_train] += self.q_offset
-                if self.norm_loss_train[self.node_train].min() == 0:
-                    self.norm_loss_train[self.node_train] += 1
+                ##if self.norm_loss_train[self.node_train].min() == 0:
+                ##    self.norm_loss_train[self.node_train] += 1
+                assert self.norm_loss_train[self.node_val].sum() + self.norm_loss_train[self.node_test].sum() == 0
+                self.norm_loss_train[np.where(self.norm_loss_train==0)[0]] = 0.1
+                self.norm_loss_train[self.node_val] = 0
+                self.norm_loss_train[self.node_test] = 0
                 #self.norm_loss_train[self.node_train] = 1/self.norm_loss_train[self.node_train]
                 #self.norm_loss_train = self.norm_loss_train\
                 #            /self.norm_loss_train.sum()*self.node_train.size
