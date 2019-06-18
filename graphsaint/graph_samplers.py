@@ -35,11 +35,14 @@ class rw_sampling(graph_sampler):
         self.size_depth = size_depth
         size_subgraph = size_root*size_depth
         super().__init__(adj_train,node_train,size_subgraph,dict())
+        self.cy_sampler = cy.RW(self.adj_train.indptr,self.adj_train.indices,self.node_train,\
+            NUM_PAR_SAMPLER,SAMPLES_PER_PROC,self.size_root,self.size_depth)
     def preproc(self,**kwargs):
         pass
     def par_sample(self,stage,**kwargs):
-        return cy.sampler_rw_cython(self.adj_train.indptr,self.adj_train.indices,\
-                self.node_train,self.size_root,self.size_depth,True,NUM_PAR_SAMPLER,SAMPLES_PER_PROC)
+        #return cy.sampler_rw_cython(self.adj_train.indptr,self.adj_train.indices,\
+        #        self.node_train,self.size_root,self.size_depth,True,NUM_PAR_SAMPLER,SAMPLES_PER_PROC)
+        return self.cy_sampler.par_sample()
 
 class edge_sampling(graph_sampler):
     def __init__(self,adj_train,node_train,num_edges_subgraph):
@@ -123,13 +126,14 @@ class mrw_sampling(graph_sampler):
         self.deg_train = np.bincount(self.adj_train.nonzero()[0])
         self.name_sampler = 'MRW'
         self.max_deg = int(max_deg)
+        self.cy_sampler = cy.MRW(self.adj_train.indptr,self.adj_train.indices,self.node_train,\
+            NUM_PAR_SAMPLER,SAMPLES_PER_PROC,self.p_dist,self.max_deg,self.size_frontier,self.size_subgraph)
 
     def preproc(self,**kwargs):
         _adj_hop = self.adj_train
         self.p_dist = np.array([_adj_hop.data[_adj_hop.indptr[v]:_adj_hop.indptr[v+1]].sum() for v in range(_adj_hop.shape[0])], dtype=np.int32)
 
     def par_sample(self,stage,**kwargs):
-        return cy.sampler_frontier_cython(self.adj_train.indptr,self.adj_train.indices,self.p_dist,\
-            self.node_train,self.max_deg,self.size_frontier,self.size_subgraph,NUM_PAR_SAMPLER,SAMPLES_PER_PROC)
+        return self.cy_sampler.par_sample()
 
 
