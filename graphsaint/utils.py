@@ -63,13 +63,6 @@ def parse_layer_yml(arch_gcn,dim_input):
     act_layer = [arch_gcn['act']]*num_layers
     aggr_layer = [arch_gcn['aggr']]*num_layers
     dims_layer = [arch_gcn['dim']]*num_layers
-    # This is an empirical rule (useful when exploring small hidden dim designs):
-    # - don't make the 1st layer hidden dim very small: otherwise too much information loss on raw features.
-    # - hidden dim of deeper layers can be very small: i.e., high level features can be compressed.
-    # - factor of 2 in the threshold due to 2 branches (self aggr and neighbor aggr)
-    # => this rule is also enforced on ALL BASELINES in Table 2.
-    # => with this rule, Reddit with dim=64 can reach 0.962 F1-mic.
-    ###dims_layer[0] = int(max(dims_layer[0],dim_input/2))
     order_layer = [int(o) for o in arch_gcn['arch'].split('-')]
     return [dim_input]+dims_layer,order_layer,act_layer,bias_layer,aggr_layer
 

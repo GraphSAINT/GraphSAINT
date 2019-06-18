@@ -15,8 +15,6 @@ params:
 phase:
   - end: 30
     dropout: 0.0
-    sampler: 'mrw'
-    size_subgraph: 2500
-    size_frontier: 1000
-    order: 1
-    max_deg: 100
+    sampler: 'rw'
+    num_root: 1250
+    depth: 2

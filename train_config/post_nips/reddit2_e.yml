@@ -16,4 +16,4 @@ phase:
   - end: 40
     dropout: 0.0
     sampler: 'edge'
-    size_subg_edge: 4000
+    size_subg_edge: 3000
