@@ -1,20 +1,19 @@
 network:
-  - dim: 512
+  - dim: 256
     aggr: 'concat'
-    loss: 'sigmoid'
+    loss: 'softmax'
     arch: '1-1-0'
-    act: 'relu'
     bias: 'norm'
+    act: 'relu'
 params:
   - lr: 0.01
     weight_decay: 0.0
     norm_loss: 1
     norm_aggr: 1
-    q_threshold: 100
+    q_threshold: 25
     q_offset: 0
 phase:
   - end: 30
-    dropout: 0.0
-    sampler: 'rw'
-    num_root: 1250
-    depth: 2
+    dropout: 0.2
+    sampler: 'node'
+    size_subgraph: 4000
