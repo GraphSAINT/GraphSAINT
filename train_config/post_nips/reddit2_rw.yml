@@ -1,4 +1,3 @@
-# A*W; ReLU-norm
 network:
   - dim: 128
     aggr: 'concat'
@@ -12,7 +11,7 @@ params:
     norm_loss: 1
     norm_aggr: 1
     q_threshold: 50
-    q_offset: 0
+    q_offset: 1
 phase:
   - end: 20
     dropout: 0.0
