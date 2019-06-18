@@ -24,9 +24,8 @@ class graph_sampler:
     def preproc(self,**kwargs):
         pass
 
-    @abc.abstractmethod
     def par_sample(self,stage,**kwargs):
-        pass
+        return self.cy_sampler.par_sample()
 
 
 class rw_sampling(graph_sampler):
@@ -39,10 +38,6 @@ class rw_sampling(graph_sampler):
             NUM_PAR_SAMPLER,SAMPLES_PER_PROC,self.size_root,self.size_depth)
     def preproc(self,**kwargs):
         pass
-    def par_sample(self,stage,**kwargs):
-        #return cy.sampler_rw_cython(self.adj_train.indptr,self.adj_train.indices,\
-        #        self.node_train,self.size_root,self.size_depth,True,NUM_PAR_SAMPLER,SAMPLES_PER_PROC)
-        return self.cy_sampler.par_sample()
 
 class edge_sampling(graph_sampler):
     def __init__(self,adj_train,node_train,num_edges_subgraph):
@@ -133,7 +128,23 @@ class mrw_sampling(graph_sampler):
         _adj_hop = self.adj_train
         self.p_dist = np.array([_adj_hop.data[_adj_hop.indptr[v]:_adj_hop.indptr[v+1]].sum() for v in range(_adj_hop.shape[0])], dtype=np.int32)
 
-    def par_sample(self,stage,**kwargs):
-        return self.cy_sampler.par_sample()
 
+
+
+class node_sampling(graph_sampler):
+    
+    def __init__(self,adj_train,node_train,size_subgraph):
+        self.p_dist = np.zeros(len(node_train))
+        super().__init__(adj_train,node_train,size_subgraph,dict())
+        self.cy_sampler = cy.Node(self.adj_train.indptr,self.adj_train.indices,self.node_train,\
+            NUM_PAR_SAMPLER,SAMPLES_PER_PROC,self.p_dist,self.size_subgraph)
+
+    def preproc(self,**kwargs):
+        _p_dist = np.array([self.adj_train.data[self.adj_train.indptr[v]:self.adj_train.indptr[v+1]].sum() for v in self.node_train], dtype=np.int64)
+        self.p_dist = _p_dist.cumsum()
+        if self.p_dist[-1] > 2**31-1:
+            print('warning: total deg exceeds 2**31')
+            self.p_dist = self.p_dist.astype(np.float64)
+            self.p_dist /= self.p_dist[-1]/(2**31-1)
+        self.p_dist = self.p_dist.astype(np.int32)
 

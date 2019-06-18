@@ -106,6 +106,9 @@ class Minibatch:
         elif self.method_sample == 'edge':
             self.size_subg_budget = train_phases['size_subg_edge']*2
             self.graph_sampler = edge_sampling(self.adj_train,self.node_train,train_phases['size_subg_edge'])
+        elif self.method_sample == 'node':
+            self.size_subg_budget = train_phases['size_subgraph']
+            self.graph_sampler = node_sampling(self.adj_train,self.node_train,self.size_subg_budget)
         else:
             raise NotImplementedError
 
@@ -186,6 +189,7 @@ class Minibatch:
         t0 = time.time()
         # _indices_orig: subgraph with indices in the original graph
         _indptr,_indices,_indices_orig,_data,_v = self.graph_sampler.par_sample(phase)
+        #import pdb; pdb.set_trace()
         t1 = time.time()
         print('sampling 200 subgraphs:   time = ',t1-t0)
         self.subgraphs_remaining_indptr.extend(_indptr)
