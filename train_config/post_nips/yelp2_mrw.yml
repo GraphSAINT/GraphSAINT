@@ -12,9 +12,9 @@ params:
     norm_loss: 1
     norm_aggr: 1
     q_threshold: 100
-    q_offset: 1
+    q_offset: 0
 phase:
-  - end: 35 
+  - end: 30
     dropout: 0.0
     sampler: 'mrw'
     size_subgraph: 2500
