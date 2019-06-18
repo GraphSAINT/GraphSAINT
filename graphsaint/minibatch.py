@@ -8,6 +8,7 @@ import tensorflow as tf
 import scipy.sparse as sp
 import scipy
 import pandas as pd
+import norm_aggr
 
 import numpy as np
 import time
@@ -72,6 +73,7 @@ class Minibatch:
         self.subgraphs_remaining_indices_orig = []
         self.subgraphs_remaining_data = []
         self.subgraphs_remaining_nodes = []
+        self.subgraphs_remaining_edge_index = []
         
         self.norm_loss_train = None
         self.norm_loss_test = np.zeros(self.adj_full.shape[0])
@@ -164,15 +166,16 @@ class Minibatch:
                 #         import pdb; pdb.set_trace()
 
                 # try other data structure
-                # self.norm_aggr_train_dok=sp.dok_matrix(self.adj_train.shape,dtype=scipy.float32)
-                # for i_d in range(len(self.norm_aggr_train)):
-                #     for k,v in self.norm_aggr_train[i_d].items():
-                #         self.norm_aggr_train_dok[i_d,k]=v
                 self.norm_aggr_train_dok=sp.dok_matrix(self.adj_train.shape,dtype=scipy.float32)
-                self.norm_aggr_train_dict={}
                 for i_d in range(len(self.norm_aggr_train)):
                     for k,v in self.norm_aggr_train[i_d].items():
-                        self.norm_aggr_train_dict[str(i_d)+' '+str(k)]=v
+                        self.norm_aggr_train_dok[i_d,k]=v
+                self.norm_aggr_train_csr=self.norm_aggr_train_dok.tocsr()
+                # self.norm_aggr_train_dict={}
+                # for i_d in range(len(self.norm_aggr_train)):
+                #     for k,v in self.norm_aggr_train[i_d].items():
+                #         self.norm_aggr_train_dict[str.encode(str(i_d)+'10000000'+str(k))]=v
+                # norm_aggr.init(self.norm_aggr_train_dict)
             else:
                 _init_norm_aggr_cnt(1)
 
@@ -181,7 +184,7 @@ class Minibatch:
     def par_graph_sample(self,phase):
         t0 = time.time()
         # _indices_orig: subgraph with indices in the original graph
-        _indptr,_indices,_indices_orig,_data,_v = self.graph_sampler.par_sample(phase)
+        _indptr,_indices,_indices_orig,_data,_v,_edge_index= self.graph_sampler.par_sample(phase)
         t1 = time.time()
         print('sampling 200 subgraphs:   time = ',t1-t0)
         self.subgraphs_remaining_indptr.extend(_indptr)
@@ -189,6 +192,7 @@ class Minibatch:
         self.subgraphs_remaining_indices_orig.extend(_indices_orig)
         self.subgraphs_remaining_data.extend(_data)
         self.subgraphs_remaining_nodes.extend(_v)
+        self.subgraphs_remaining_edge_index.extend(_edge_index)
 
     def feed_dict(self,dropout,mode='train'):
         """ DONE """
@@ -212,6 +216,7 @@ class Minibatch:
             self.size_subgraph = len(self.node_subgraph)
             adj = sp.csr_matrix((self.subgraphs_remaining_data.pop(),self.subgraphs_remaining_indices.pop(),\
                         self.subgraphs_remaining_indptr.pop()),shape=(self.node_subgraph.size,self.node_subgraph.size))
+            adj_edge_index=self.subgraphs_remaining_edge_index.pop()
             #print("{} nodes, {} edges, {} degree".format(self.node_subgraph.size,adj.size,adj.size/self.node_subgraph.size))
             if not self.is_norm_aggr:
                 D = adj.sum(1).flatten()
@@ -219,14 +224,22 @@ class Minibatch:
                 D = self.deg_train[self.node_subgraph]
                 t1 = time.time()
                 assert len(self.node_subgraph) == adj.shape[0]
-                for u in range(adj.shape[0]):
-                    u_orig = self.node_subgraph[u]
-                    for iv,v in enumerate(adj.indices[adj.indptr[u]:adj.indptr[u+1]]):
-                        v_orig = self.node_subgraph[v]
-                        # adj.data[adj.indptr[u]+iv] = self.norm_aggr_train[u_orig][v_orig]
-                        adj.data[adj.indptr[u]+iv]=self.norm_aggr_train_dict[str(u_orig)+' '+str(v_orig)]
+                # orig method
+                # for u in range(adj.shape[0]):
+                #     u_orig = self.node_subgraph[u]
+                #     for iv,v in enumerate(adj.indices[adj.indptr[u]:adj.indptr[u+1]]):
+                #         v_orig = self.node_subgraph[v]
+                #         # adj.data[adj.indptr[u]+iv] = self.norm_aggr_train[u_orig][v_orig]
+                #         adj.data[adj.indptr[u]+iv]=self.norm_aggr_train_dict[str(u_orig)+' '+str(v_orig)]
+
+                # cython version
+                # norm_aggr.norm_aggr(adj.indptr,adj.indices,adj.data,self.node_subgraph,20)
+
+                # from subg_adj
+                adj.data=self.norm_aggr_train_csr.data[adj_edge_index]
+
                 t2 = time.time()
-                #print('    ---- time to set norm factor: ', t2-t1)
+                print('    ---- time to set norm factor: ', t2-t1)
             adj = sp.dia_matrix((1/D,0),shape=(adj.shape[0],adj.shape[1])).dot(adj)
 
             adj_0 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))

@@ -71,6 +71,59 @@ cdef class array_wrapper_int:
 
 cdef void _adj_extract_cython(vector[int]& adj_indptr, vector[int]& adj_indices,vector[vector[int]]& node_sampled,\
         vector[vector[int]]& ret_indptr, vector[vector[int]]& ret_indices, vector[vector[int]]& ret_indices_orig,\
+        vector[vector[float]]& ret_data, int p, int num_rep, vector[vector[int]]& ret_edge_index) nogil:
+    """
+    Extract a subg adj matrix from the original adj matrix
+    ret_indices_orig:   the indices vector corresponding to node id in original G.
+    """
+    cdef int r = 0
+    cdef int idx_g = 0
+    cdef int i, i_end, v, j
+    cdef int num_v_orig, num_v_sub
+    cdef int start_neigh, end_neigh
+    cdef vector[int] _arr_bit
+    cdef int cumsum
+    num_v_orig = adj_indptr.size()-1
+    while r < num_rep:
+        _arr_bit = vector[int](num_v_orig,-1)
+        idx_g = p*num_rep+r
+        num_v_sub = node_sampled[idx_g].size()
+        ret_indptr[idx_g] = vector[int](num_v_sub+1,0)
+        ret_indices[idx_g] = vector[int]()
+        ret_indices_orig[idx_g] = vector[int]()
+        ret_data[idx_g] = vector[float]()
+        ret_edge_index[idx_g] = vector[int]()
+        i_end = num_v_sub
+        i = 0
+        while i < i_end:
+            _arr_bit[node_sampled[idx_g][i]] = i
+            i = i + 1
+        i = 0
+        while i < i_end:
+            v = node_sampled[idx_g][i]
+            start_neigh = adj_indptr[v]
+            end_neigh = adj_indptr[v+1]
+            j = start_neigh
+            while j < end_neigh:
+                if _arr_bit[adj_indices[j]] > -1:
+                    ret_indices[idx_g].push_back(_arr_bit[adj_indices[j]])
+                    ret_indices_orig[idx_g].push_back(adj_indices[j])
+                    ret_edge_index[idx_g].push_back(j)
+                    ret_indptr[idx_g][_arr_bit[v]+1] = ret_indptr[idx_g][_arr_bit[v]+1] + 1
+                    ret_data[idx_g].push_back(1.)
+                j = j + 1
+            i = i + 1
+        cumsum = ret_indptr[idx_g][0]
+        i = 0
+        while i < i_end:
+            cumsum = cumsum + ret_indptr[idx_g][i+1]
+            ret_indptr[idx_g][i+1] = cumsum
+            i = i + 1
+        r = r + 1
+
+# temp for test
+cdef void _adj_extract_cython_old(vector[int]& adj_indptr, vector[int]& adj_indices,vector[vector[int]]& node_sampled,\
+        vector[vector[int]]& ret_indptr, vector[vector[int]]& ret_indices, vector[vector[int]]& ret_indices_orig,\
         vector[vector[float]]& ret_data, int p, int num_rep) nogil:
     """
     Extract a subg adj matrix from the original adj matrix
