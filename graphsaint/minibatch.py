@@ -140,8 +140,12 @@ class Minibatch:
             if self.is_norm_loss:
                 self.norm_loss_train[:] = _node_cnt[:]
                 self.norm_loss_train[self.node_train] += self.q_offset
-                if self.norm_loss_train[self.node_train].min() == 0:
-                    self.norm_loss_train[self.node_train] += 1
+                ##if self.norm_loss_train[self.node_train].min() == 0:
+                ##    self.norm_loss_train[self.node_train] += 1
+                assert self.norm_loss_train[self.node_val].sum() + self.norm_loss_train[self.node_test].sum() == 0
+                self.norm_loss_train[np.where(self.norm_loss_train==0)[0]] = 0.1
+                self.norm_loss_train[self.node_val] = 0
+                self.norm_loss_train[self.node_test] = 0
                 #self.norm_loss_train[self.node_train] = 1/self.norm_loss_train[self.node_train]
                 #self.norm_loss_train = self.norm_loss_train\
                 #            /self.norm_loss_train.sum()*self.node_train.size
