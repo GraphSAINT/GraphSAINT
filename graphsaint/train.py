@@ -133,7 +133,7 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
     avg_time = 0.0
     timing_steps = 0
 
-    saver = tf.train.Saver(var_list=tf.global_variables())
+    saver = tf.train.Saver(var_list=tf.trainable_variables())#global_variables())
 
     epoch_ph_start = 0
     f1mic_best = 0
