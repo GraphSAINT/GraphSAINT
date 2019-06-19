@@ -189,7 +189,6 @@ class Minibatch:
         t0 = time.time()
         # _indices_orig: subgraph with indices in the original graph
         _indptr,_indices,_indices_orig,_data,_v = self.graph_sampler.par_sample(phase)
-        #import pdb; pdb.set_trace()
         t1 = time.time()
         print('sampling 200 subgraphs:   time = ',t1-t0)
         self.subgraphs_remaining_indptr.extend(_indptr)
