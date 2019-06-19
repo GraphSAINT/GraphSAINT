@@ -37,6 +37,10 @@ cdef inline void npy2vec_float(np.ndarray[float,ndim=1,mode='c'] nda, vector[flo
 
 cdef void _adj_extract_cython(vector[int]& adj_indptr, vector[int]& adj_indices, vector[vector[int]]& node_sampled,\
         vector[vector[int]]& ret_indptr, vector[vector[int]]& ret_indices, vector[vector[int]]& ret_indices_orig,\
+        vector[vector[float]]& ret_data, int p, int num_rep, vector[vector[int]]& ret_edge_index) nogil
+
+cdef void _adj_extract_cython_old(vector[int]& adj_indptr, vector[int]& adj_indices, vector[vector[int]]& node_sampled,\
+        vector[vector[int]]& ret_indptr, vector[vector[int]]& ret_indices, vector[vector[int]]& ret_indices_orig,\
         vector[vector[float]]& ret_data, int p, int num_rep) nogil
 
 cdef void _adj_extract_ind_cython(vector[int]& adj_indptr,vector[vector[int]]& node_sampled,\
