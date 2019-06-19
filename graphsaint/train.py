@@ -212,8 +212,9 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
                 f1mic_best = f1mic_val
                 e_best = e
                 tsave=time.time()
-                savepath = saver.save(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
-                #savepath = saver.save(sess, './temp_model_{}_rand{}.chkpt'.format(timestamp_chkpt,model_rand_serial))
+                if not os.path.exists(FLAGS.log_dir+'/models'):
+                    os.makedirs(FLAGS.log_dir+'/models')
+                savepath = saver.save(sess, '{}/models/saved_model_{}_rand{}.chkpt'.format(FLAGS.log_dir,timestamp_chkpt,model_rand_serial))
                 print('saver time: {:4.2f}'.format(time.time()-tsave))
             printf('   val loss {:.5f}\tmic {:.5f}\tmac {:.5f}'.format(loss_val,f1mic_val,f1mac_val))
             printf('   avg train loss {:.5f}\tmic {:.5f}\tmac {:.5f}'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr)))
@@ -235,7 +236,7 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
     for tl in many_runs_timeline:
         timelines.update_timeline(tl)
     timelines.save('timeline.json')
-    saver.restore(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
+    saver.restore(sess, '{}/models/saved_model_{}_rand{}.chkpt'.format(FLAGS.log_dir,timestamp_chkpt,model_rand_serial))
     loss_val, f1mic_val, f1mac_val, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='val')
     printf("Full validation stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}".format(loss_val,f1mic_val,f1mac_val))
     loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='test')
