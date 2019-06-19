@@ -8,13 +8,9 @@ network:
 params:
   - lr: 0.01
     weight_decay: 0.0   
-    norm_loss: 1
-    norm_aggr: 1
-    q_threshold: 50
-    q_offset: 1
+    q_threshold: 50 # 100
 phase:
-  - end: 20
+  - end: 40
     dropout: 0.0
-    sampler: 'rw'
-    num_root: 2000
-    depth: 4
+    sampler: 'edge'
+    size_subg_edge: 3000
