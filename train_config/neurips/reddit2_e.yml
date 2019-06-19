@@ -8,9 +8,10 @@ network:
 params:
   - lr: 0.01
     weight_decay: 0.0   
-    q_threshold: 50 # 100
+    sample_coverage: 50 # 100
 phase:
   - end: 40
-    dropout: 0.0
+    dropout: 0.1
+    # dropout 0.0 also work, but 0.1 is more stable
     sampler: 'edge'
-    size_subg_edge: 3000
+    size_subg_edge: 6000
