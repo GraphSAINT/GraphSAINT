@@ -140,19 +140,18 @@ class Minibatch:
         self.norm_loss_train[self.node_train] = num_subg/self.norm_loss_train[self.node_train]/self.node_train.size
         # 4. norm_aggr based on _node_cnt and edge count
         _init_norm_aggr_cnt(0)
+        self.norm_aggr_train_dok=sp.dok_matrix(self.adj_train.shape,dtype=scipy.float32)
         for i in range(num_subg):
             for ip in range(len(self.subgraphs_remaining_nodes[i])):
                 _u = self.subgraphs_remaining_nodes[i][ip]
                 for _v in self.subgraphs_remaining_indices_orig[i][self.subgraphs_remaining_indptr[i][ip]:self.subgraphs_remaining_indptr[i][ip+1]]:
                     self.norm_aggr_train[_u][_v] += 1
+        self.norm_aggr_train_csr_data=[]
         for i_d,d in enumerate(self.norm_aggr_train):
-            self.norm_aggr_train[i_d] = {k:(_node_cnt[i_d])/(v+(v==0)*0.1)+(_node_cnt[i_d]==0)*0.1 for k,v in d.items()}
-        self.norm_aggr_train_dok=sp.dok_matrix(self.adj_train.shape,dtype=scipy.float32)
-        for i_d in range(len(self.norm_aggr_train)):
-            for k,v in self.norm_aggr_train[i_d].items():
-                self.norm_aggr_train_dok[i_d,k]=v
-        self.norm_aggr_train_csr=self.norm_aggr_train_dok.tocsr()
-
+            for k in sorted(d):
+                v=d[k]
+                self.norm_aggr_train_csr_data.append((_node_cnt[i_d])/(v+(v==0)*0.1)+(_node_cnt[i_d]==0)*0.1)
+        self.norm_aggr_train_csr_data=np.array(self.norm_aggr_train_csr_data)
 
 
     def par_graph_sample(self,phase):
@@ -195,7 +194,7 @@ class Minibatch:
             D = self.deg_train[self.node_subgraph]
             t1 = time.time()
             assert len(self.node_subgraph) == adj.shape[0]
-            adj.data=self.norm_aggr_train_csr.data[adj_edge_index]
+            adj.data=self.norm_aggr_train_csr_data[adj_edge_index]
 
             t2 = time.time()
             adj = sp.dia_matrix((1/D,0),shape=(adj.shape[0],adj.shape[1])).dot(adj)
