@@ -10,8 +10,9 @@ params:
     weight_decay: 0.0
     sample_coverage: 50
 phase:
-  - end: 400
+  - end: 350
     dropout: 0.0
-    sampler: 'rw'
-    depth: 2
-    num_root: 3000
+    sampler: 'mrw'
+    size_subgraph: 8000
+    size_frontier: 2500
+    max_deg: 100000
