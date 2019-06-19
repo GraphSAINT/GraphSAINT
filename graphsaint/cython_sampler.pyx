@@ -18,6 +18,8 @@ from libcpp cimport bool
 import time,math
 import random
 from libc.stdlib cimport rand
+cdef extern from "stdlib.h":
+    int RAND_MAX
 
 cimport graphsaint.cython_utils as cutils
 import graphsaint.cython_utils as cutils
@@ -54,7 +56,7 @@ cdef class Sampler:
 
     cdef void adj_extract(self, int p) nogil:
         """
-        Extract a subg adj matrix from the original adj matrix
+        Extract a subg adj matrix from the original training adj matrix
         ret_indices_orig:   the indices vector corresponding to node id in original G.
         """
         cdef int r = 0
@@ -126,13 +128,11 @@ cdef class Sampler:
         cdef vector[int] ret_indptr_vec = vector[int]()
         cdef vector[int] ret_indices_vec = vector[int]()
         cdef vector[int] ret_edge_index_vec = vector[int]()
-        # ch4
         cdef vector[int] ret_indices_orig_vec = vector[int]()
         cdef vector[float] ret_data_vec = vector[float]()
         ret_nodes_vec.reserve(offset_nodes[num_subg])
         ret_indptr_vec.reserve(offset_indptr[num_subg])
         ret_indices_vec.reserve(offset_indices[num_subg])
-        # ch5
         ret_indices_orig_vec.reserve(offset_indices[num_subg])
         ret_data_vec.reserve(offset_data[num_subg])
         ret_edge_index_vec.reserve(offset_edge_index[num_subg])
@@ -140,14 +140,12 @@ cdef class Sampler:
             ret_nodes_vec.insert(ret_nodes_vec.end(),self.node_sampled[r].begin(),self.node_sampled[r].end())
             ret_indptr_vec.insert(ret_indptr_vec.end(),self.ret_indptr[r].begin(),self.ret_indptr[r].end())
             ret_indices_vec.insert(ret_indices_vec.end(),self.ret_indices[r].begin(),self.ret_indices[r].end())
-            # ch6
             ret_indices_orig_vec.insert(ret_indices_orig_vec.end(),self.ret_indices_orig[r].begin(),self.ret_indices_orig[r].end())
             ret_edge_index_vec.insert(ret_edge_index_vec.end(),self.ret_edge_index[r].begin(),self.ret_edge_index[r].end())
             ret_data_vec.insert(ret_data_vec.end(),self.ret_data[r].begin(),self.ret_data[r].end())
 
         cdef cutils.array_wrapper_int wint_indptr = cutils.array_wrapper_int()
         cdef cutils.array_wrapper_int wint_indices = cutils.array_wrapper_int()
-        # ch7
         cdef cutils.array_wrapper_int wint_indices_orig = cutils.array_wrapper_int()
         cdef cutils.array_wrapper_int wint_nodes = cutils.array_wrapper_int()
         cdef cutils.array_wrapper_float wfloat_data = cutils.array_wrapper_float()
@@ -157,7 +155,6 @@ cdef class Sampler:
         ret_indptr_np = np.frombuffer(wint_indptr,dtype=np.int32)
         wint_indices.set_data(ret_indices_vec)
         ret_indices_np = np.frombuffer(wint_indices,dtype=np.int32)
-        # ch8
         wint_indices_orig.set_data(ret_indices_orig_vec)
         ret_indices_orig_np = np.frombuffer(wint_indices_orig,dtype=np.int32)
         wint_nodes.set_data(ret_nodes_vec)
@@ -171,11 +168,10 @@ cdef class Sampler:
             l_subg_nodes.append(ret_nodes_np[offset_nodes[r]:offset_nodes[r+1]])
             l_subg_indptr.append(ret_indptr_np[offset_indptr[r]:offset_indptr[r+1]])
             l_subg_indices.append(ret_indices_np[offset_indices[r]:offset_indices[r+1]])
-            # ch9
             l_subg_indices_orig.append(ret_indices_orig_np[offset_indices[r]:offset_indices[r+1]])
             l_subg_data.append(ret_data_np[offset_data[r]:offset_data[r+1]])
             l_subg_edge_index.append(ret_edge_index_np[offset_indices[r]:offset_indices[r+1]])
-        # ch10
+
         return l_subg_indptr,l_subg_indices,l_subg_indices_orig,l_subg_data,l_subg_nodes,l_subg_edge_index
 
     cdef void sample(self, int p) nogil:
@@ -185,7 +181,6 @@ cdef class Sampler:
     @cython.wraparound(False)
     def par_sample(self):
         cdef int p = 0
-        printf('num proc %d\n',self.num_proc)
         with nogil, parallel(num_threads=self.num_proc):
             for p in prange(self.num_proc,schedule='dynamic'):
                 self.sample(p)
@@ -198,8 +193,6 @@ cdef class Sampler:
         self.ret_indices_orig.swap(vector[vector[int]](_len))
         self.ret_data.swap(vector[vector[float]](_len))
         self.ret_edge_index.swap(vector[vector[int]](_len))
-        printf('len 1 %d\t',len(ret[0][0]))
-        printf('len 2 %d\n',self.ret_indptr.size())
         return ret
 
 
@@ -301,9 +294,6 @@ cdef class MRW(Sampler):
 
 
 
-          
-
-
 # ----------------------------------------------------
 
 cdef class RW(Sampler):
@@ -348,12 +338,41 @@ cdef class RW(Sampler):
 # ----------------------------------------------------
 
 cdef class Edge(Sampler):
+    cdef vector[int] row_train_vec
+    cdef vector[int] col_train_vec
+    cdef vector[float] prob_edge_vec
     def __cinit__(self, np.ndarray[int,ndim=1,mode='c'] adj_indptr,
                         np.ndarray[int,ndim=1,mode='c'] adj_indices,
                         np.ndarray[int,ndim=1,mode='c'] node_train,
-                        int num_proc, int num_sample_per_proc):
-        pass
+                        int num_proc, int num_sample_per_proc,
+                        np.ndarray[int,ndim=1,mode='c'] row_train,
+                        np.ndarray[int,ndim=1,mode='c'] col_train,
+                        np.ndarray[float,ndim=1,mode='c'] prob_edge):
+        cutils.npy2vec_int(row_train,self.row_train_vec)
+        cutils.npy2vec_int(col_train,self.col_train_vec)
+        cutils.npy2vec_float(prob_edge,self.prob_edge_vec)
 
+    cdef void sample(self, int p) nogil:
+        cdef int num_edge = self.row_train_vec.size()
+        cdef int i=0
+        cdef float ran=0.
+        cdef int g=0
+        cdef int idx_subg
+        while g < self.num_sample_per_proc:
+            idx_subg = p*self.num_sample_per_proc+g
+            i = 0
+            while i < num_edge:
+                ran = (<float> rand()) / RAND_MAX
+                if ran > self.prob_edge_vec[i]:
+                    # edge not selected
+                    i = i + 1
+                    continue
+                self.node_sampled[idx_subg].push_back(self.row_train_vec[i])
+                self.node_sampled[idx_subg].push_back(self.col_train_vec[i])
+                i = i + 1
+            sort(self.node_sampled[idx_subg].begin(),self.node_sampled[idx_subg].end())
+            self.node_sampled[idx_subg].erase(unique(self.node_sampled[idx_subg].begin(),self.node_sampled[idx_subg].end()),self.node_sampled[idx_subg].end())
+            g = g + 1
 
 
 # ----------------------------------------------------
@@ -386,8 +405,4 @@ cdef class Node(Sampler):
             r = r + 1
             sort(self.node_sampled[idx_subg].begin(),self.node_sampled[idx_subg].end())
             self.node_sampled[idx_subg].erase(unique(self.node_sampled[idx_subg].begin(),self.node_sampled[idx_subg].end()),self.node_sampled[idx_subg].end())
-
- 
-
-
 

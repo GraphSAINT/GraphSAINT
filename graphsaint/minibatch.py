@@ -7,8 +7,6 @@ from graphsaint.adj_misc import *
 import tensorflow as tf
 import scipy.sparse as sp
 import scipy
-import pandas as pd
-import norm_aggr
 
 import numpy as np
 import time
