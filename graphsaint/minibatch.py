@@ -3,7 +3,6 @@ import math
 from graphsaint.inits import *
 from graphsaint.utils import *
 from graphsaint.graph_samplers import *
-from graphsaint.adj_misc import *
 import tensorflow as tf
 import scipy.sparse as sp
 import scipy
@@ -149,9 +148,6 @@ class Minibatch:
                 self.norm_loss_train[np.where(self.norm_loss_train==0)[0]] = 0.1
                 self.norm_loss_train[self.node_val] = 0
                 self.norm_loss_train[self.node_test] = 0
-                #self.norm_loss_train[self.node_train] = 1/self.norm_loss_train[self.node_train]
-                #self.norm_loss_train = self.norm_loss_train\
-                #            /self.norm_loss_train.sum()*self.node_train.size
                 self.norm_loss_train[self.node_train] = num_subg/self.norm_loss_train[self.node_train]/self.node_train.size
             else:
                 self.norm_loss_train[self.node_train] = 1/avg_subg_size
@@ -163,24 +159,13 @@ class Minibatch:
                         _u = self.subgraphs_remaining_nodes[i][ip]
                         for _v in self.subgraphs_remaining_indices_orig[i][self.subgraphs_remaining_indptr[i][ip]:self.subgraphs_remaining_indptr[i][ip+1]]:
                             self.norm_aggr_train[_u][_v] += 1
-                # TODO: check train degree for Reddit
                 for i_d,d in enumerate(self.norm_aggr_train):
-                    self.norm_aggr_train[i_d] = {k:_node_cnt[i_d]/(v+0.1) for k,v in d.items()}
-                # for k,v in self.norm_aggr_train[i_d].items():
-                #     if math.isnan(v) or math.isinf(v):
-                #         import pdb; pdb.set_trace()
-
-                # try other data structure
+                    self.norm_aggr_train[i_d] = {k:(_node_cnt[i_d])/(v+(v==0)*0.1)+(_node_cnt[i_d]==0)*0.1 for k,v in d.items()}
                 self.norm_aggr_train_dok=sp.dok_matrix(self.adj_train.shape,dtype=scipy.float32)
                 for i_d in range(len(self.norm_aggr_train)):
                     for k,v in self.norm_aggr_train[i_d].items():
                         self.norm_aggr_train_dok[i_d,k]=v
                 self.norm_aggr_train_csr=self.norm_aggr_train_dok.tocsr()
-                # self.norm_aggr_train_dict={}
-                # for i_d in range(len(self.norm_aggr_train)):
-                #     for k,v in self.norm_aggr_train[i_d].items():
-                #         self.norm_aggr_train_dict[str.encode(str(i_d)+'10000000'+str(k))]=v
-                # norm_aggr.init(self.norm_aggr_train_dict)
             else:
                 _init_norm_aggr_cnt(1)
 
