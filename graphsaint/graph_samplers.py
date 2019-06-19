@@ -49,8 +49,10 @@ class edge_sampling(graph_sampler):
         self.deg_train = np.array(adj_train.sum(1)).flatten()
         self.adj_train_norm = scipy.sparse.dia_matrix((1/self.deg_train,0),shape=adj_train.shape).dot(adj_train)
         super().__init__(adj_train,node_train,self.size_subgraph,dict())
-        self.cy_sampler = cy.Edge(self.adj_train.indptr,self.adj_train.indices,self.node_train,\
-            NUM_PAR_SAMPLER,SAMPLES_PER_PROC,self.edge_prob_tri.row,self.edge_prob_tri.col,self.edge_prob_tri.data)
+        #self.cy_sampler = cy.Edge(self.adj_train.indptr,self.adj_train.indices,self.node_train,\
+        #    NUM_PAR_SAMPLER,SAMPLES_PER_PROC,self.edge_prob_tri.row,self.edge_prob_tri.col,self.edge_prob_tri.data)
+        self.cy_sampler = cy.Edge2(self.adj_train.indptr,self.adj_train.indices,self.node_train,\
+            NUM_PAR_SAMPLER,SAMPLES_PER_PROC,self.edge_prob_tri.row,self.edge_prob_tri.col,self.edge_prob_tri.data.cumsum(),self.num_edges_subgraph)
     def preproc(self,**kwargs):
         self.edge_prob = scipy.sparse.csr_matrix((np.zeros(self.adj_train.size),\
                 self.adj_train.indices,self.adj_train.indptr),shape=self.adj_train.shape)

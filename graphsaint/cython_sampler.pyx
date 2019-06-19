@@ -347,7 +347,7 @@ cdef class Edge(Sampler):
                         int num_proc, int num_sample_per_proc,
                         np.ndarray[int,ndim=1,mode='c'] row_train,
                         np.ndarray[int,ndim=1,mode='c'] col_train,
-                        np.ndarray[float,ndim=1,mode='c'] prob_edge):
+                        np.ndarray[float,ndim=1,mode='c'] prob_edge,*argv):
         cutils.npy2vec_int(row_train,self.row_train_vec)
         cutils.npy2vec_int(col_train,self.col_train_vec)
         cutils.npy2vec_float(prob_edge,self.prob_edge_vec)
@@ -374,6 +374,47 @@ cdef class Edge(Sampler):
             self.node_sampled[idx_subg].erase(unique(self.node_sampled[idx_subg].begin(),self.node_sampled[idx_subg].end()),self.node_sampled[idx_subg].end())
             g = g + 1
 
+
+cdef class Edge2(Sampler):
+    """
+    approximate version of the above Edge class
+    """
+    cdef vector[int] row_train_vec
+    cdef vector[int] col_train_vec
+    cdef vector[float] p_dist_cumsum_vec
+    cdef int size_subg_e
+    def __cinit__(self, np.ndarray[int,ndim=1,mode='c'] adj_indptr,
+                        np.ndarray[int,ndim=1,mode='c'] adj_indices,
+                        np.ndarray[int,ndim=1,mode='c'] node_train,
+                        int num_proc, int num_sample_per_proc,
+                        np.ndarray[int,ndim=1,mode='c'] row_train,
+                        np.ndarray[int,ndim=1,mode='c'] col_train,
+                        np.ndarray[float,ndim=1,mode='c'] p_dist_cumsum,
+                        int size_subg_e):
+        self.size_subg_e = size_subg_e
+        cutils.npy2vec_int(row_train,self.row_train_vec)
+        cutils.npy2vec_int(col_train,self.col_train_vec)
+        cutils.npy2vec_float(p_dist_cumsum,self.p_dist_cumsum_vec)
+
+    cdef void sample(self, int p) nogil:
+        cdef int i = 0
+        cdef int r = 0
+        cdef int e
+        cdef int idx_subg
+        cdef float ran = 0.
+        cdef float ran_range = self.p_dist_cumsum_vec[self.p_dist_cumsum_vec.size()-1]
+        while r < self.num_sample_per_proc:
+            idx_subg = p*self.num_sample_per_proc+r
+            i = 0
+            while i < self.size_subg_e:
+                ran = (<float> rand()) / RAND_MAX * ran_range
+                e = lower_bound(self.p_dist_cumsum_vec.begin(),self.p_dist_cumsum_vec.end(),ran)-self.p_dist_cumsum_vec.begin()
+                self.node_sampled[idx_subg].push_back(self.row_train_vec[e])
+                self.node_sampled[idx_subg].push_back(self.col_train_vec[e])
+                i = i + 1
+            sort(self.node_sampled[idx_subg].begin(),self.node_sampled[idx_subg].end())
+            self.node_sampled[idx_subg].erase(unique(self.node_sampled[idx_subg].begin(),self.node_sampled[idx_subg].end()),self.node_sampled[idx_subg].end())
+            r = r + 1
 
 # ----------------------------------------------------
 
