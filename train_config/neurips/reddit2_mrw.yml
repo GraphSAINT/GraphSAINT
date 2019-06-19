@@ -8,11 +8,12 @@ network:
 params:
   - lr: 0.01
     weight_decay: 0.0   
-    q_threshold: 100
+    sample_coverage: 100
 phase:
   - end: 30
-    dropout: 0.0
+    dropout: 0.1
     sampler: 'mrw'
+    # dropout 0.0 also work, but 0.1 is more stable
     size_subgraph: 8000 # (6000,1000) (7500,1000)
     size_frontier: 1000 #1000,  1200, 1500
     order: 1
