@@ -3,6 +3,7 @@ import math
 from graphsaint.inits import *
 from graphsaint.utils import *
 from graphsaint.graph_samplers import *
+from graphsaint.norm_aggr import *
 import tensorflow as tf
 import scipy.sparse as sp
 import scipy
@@ -151,7 +152,7 @@ class Minibatch:
             for k in sorted(d):
                 v=d[k]
                 self.norm_aggr_train_csr_data.append((_node_cnt[i_d])/(v+(v==0)*0.1)+(_node_cnt[i_d]==0)*0.1)
-        self.norm_aggr_train_csr_data=np.array(self.norm_aggr_train_csr_data)
+        self.norm_aggr_train_csr_data=np.array(self.norm_aggr_train_csr_data,dtype=np.float32)
 
 
     def par_graph_sample(self,phase):
@@ -182,6 +183,7 @@ class Minibatch:
             adj_7 = self.adj_full_norm_7
         else:
             assert mode == 'train'
+            tt0=time.time()
             if len(self.subgraphs_remaining_nodes) == 0:
                 self.par_graph_sample('train')
 
@@ -192,11 +194,12 @@ class Minibatch:
             adj_edge_index=self.subgraphs_remaining_edge_index.pop()
             #print("{} nodes, {} edges, {} degree".format(self.node_subgraph.size,adj.size,adj.size/self.node_subgraph.size))
             D = self.deg_train[self.node_subgraph]
-            t1 = time.time()
+            tt1 = time.time()
             assert len(self.node_subgraph) == adj.shape[0]
-            adj.data=self.norm_aggr_train_csr_data[adj_edge_index]
+            norm_aggr(adj.data,adj_edge_index,self.norm_aggr_train_csr_data)
+            # adj.data=self.norm_aggr_train_csr_data[adj_edge_index]
 
-            t2 = time.time()
+            tt2 = time.time()
             adj = sp.dia_matrix((1/D,0),shape=(adj.shape[0],adj.shape[1])).dot(adj)
 
             adj_0 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
@@ -239,6 +242,9 @@ class Minibatch:
             tf.SparseTensorValue(np.column_stack(adj_6.nonzero()),adj_6.data,adj_6.shape)})
         feed_dict.update({self.placeholders['adj_subgraph_7']: \
             tf.SparseTensorValue(np.column_stack(adj_7.nonzero()),adj_7.data,adj_7.shape)})
+        tt3=time.time()
+        # if mode in ['train']:
+        #     print("t1:{:.3f} t2:{:.3f} t3:{:.3f}".format(tt0-tt1,tt2-tt1,tt3-tt2))
         if mode in ['val','test']:
             feed_dict[self.placeholders['is_train']]=False
         else:
