@@ -126,6 +126,7 @@ class Minibatch:
             tot_sampled_nodes = sum([len(n) for n in self.subgraphs_remaining_nodes])
             if tot_sampled_nodes > self.sample_coverage*self.node_train.size:
                 break
+        print()
         num_subg = len(self.subgraphs_remaining_nodes)
         avg_subg_size = tot_sampled_nodes/num_subg
         # 2. update _node_cnt --> to be used by norm_loss_train/norm_aggr_train
@@ -160,7 +161,7 @@ class Minibatch:
         # _indices_orig: subgraph with indices in the original graph
         _indptr,_indices,_indices_orig,_data,_v,_edge_index= self.graph_sampler.par_sample(phase)
         t1 = time.time()
-        print('sampling 200 subgraphs:   time = ',t1-t0)
+        print('sampling 200 subgraphs:   time = {:.3f} sec'.format(t1-t0), end="\r")
         self.subgraphs_remaining_indptr.extend(_indptr)
         self.subgraphs_remaining_indices.extend(_indices)
         self.subgraphs_remaining_indices_orig.extend(_indices_orig)
@@ -186,6 +187,7 @@ class Minibatch:
             tt0=time.time()
             if len(self.subgraphs_remaining_nodes) == 0:
                 self.par_graph_sample('train')
+                print()
 
             self.node_subgraph = self.subgraphs_remaining_nodes.pop()
             self.size_subgraph = len(self.node_subgraph)
