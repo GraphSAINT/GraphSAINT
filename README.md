@@ -68,7 +68,7 @@ The hyperparameters needed in training can be set by writing the configuration f
 
 The configuration files to reproduce the Table 2 results are packed in `./train_config/neurips/`.
 
-For detailed description of the config, please see `/train_config/README.yml`
+For detailed description of the config, please see `/train_config/README.md`
 
 ## Run Training
 
