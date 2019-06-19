@@ -77,6 +77,7 @@ class edge_sampling(graph_sampler):
         node_binmap[node_subg] = 1
         _edge_row = list()
         _edge_col = list()
+        _edge_index = list()
         for u in node_subg:
             for iv in range(self.adj_train.indptr[u],self.adj_train.indptr[u+1],1):
                 if not node_binmap[self.adj_train.indices[iv]]:
@@ -100,13 +101,15 @@ class edge_sampling(graph_sampler):
         ret_indices_orig = list()
         ret_data = list()
         ret_node_subg = list()
+        ret_edge_index = list()
         for r in range(NUM_PAR_SAMPLER*SAMPLES_PER_PROC):
-            _indptr,_indices,_indices_orig,_data,_node_subg = self._sample()
+            _indptr,_indices,_indices_orig,_data,_node_subg,_edge_index = self._sample()
             ret_indptr.append(_indptr)
             ret_indices.append(_indices)
             ret_indices_orig.append(_indices_orig)
             ret_data.append(_data)
             ret_node_subg.append(_node_subg)
+            ret_edge_index.append(_edge_index)
         return ret_indptr,ret_indices,ret_indices_orig,ret_data,ret_node_subg
                 
 
