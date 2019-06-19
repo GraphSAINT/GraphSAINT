@@ -1,46 +1,24 @@
-network:
-  - <dim>-<order>-<norm/bias>-<act>-<aggr>
-  - <dim>-<order>-<norm/bias>-<act>-<aggr>
-  ...
+### Training Configuration
 
-  ########################################
-  # one line specifies arch of one layer #
-  ########################################
-  # <dim> dimension before concat
-  # <order> order of the GCN, 0 for MLP, currently we support order = 0,1,2.
-  ############
-  ### NOTE ###: an order-1 layer followed by an order-0 layer is equivalent to a single layer in S-GCN (Chen, ICML'18). 
-  ############
-  # <norm/bias> n for batch-norm; b for bias.
-  # <act> activations, relu for relu; lin for linear activation (f(x)=x).
-  # <aggr> concat for concatenation of order i features; add for addition of order i features.
-  
-params:
-  - lr: <lr>                      # learning rate for ADAM optimizer. 
-    weight_decay: <weight_decay>  # weight decay as specified in GraphSAGE code. 
-    norm_weight: <0/1>            # whether to apply normalization of the loss function (Sec 3.3).
-    norm_adj: <rw/sym>            # how to normalize the adj matrix: rw for random walk based normalization; sym for symmetric normalization.
-    model: <gs_mean/gsaint>       # gs_mean for graphsage_mean model of the GCN layer.
-    q_threshold: <q_threshold>    # estimate the distribution of subgraph based on <q_threshold>*<fullgraph_size>/<subgraph_size> number of sampled subgraphs.
-    q_offset: <q_offset>          # add <q_offset> to adjust the probability distribution estimated by the pre-processing sampling. 
-    batch_norm: <tf.nn/tf.layers> # we provide two options to implement batch norm for GCN layers. the tf.nn based implementation is inspired by the code of S-GCN, while tf.layer is more often seen in other deep learning models.
-    skip: <noskip/x-y>            # skip connection as described in ResNet design: noskip for no skip across the layers; x-y for the output of layer x added to the input of layer y.
-phase:                            # Different phases can have different graph sampling algorithms.
-  - end: <end>                    # end epoch of this phase.
-    dropout: <dropout>
-    sampler: <frontier/rw/khop/edge>
-    # frontier:
-    size_subgraph: <size_subgraph>
-    size_frontier: <size_frontier>
-    order: <order>
-    max_deg: <max_deg>            # clip the degree to max_deg
-    # rw:
-    num_root: <num_root>
-    depth: <depth>
-    # khop:
-    size_subgraph: <size_subgraph>
-    order: <order>
-    # edge:
-    size_subgraph: <size_subgraph>
-  ...
-    
+
+
+#### Network:
+
+* *dim*: hidden dimension of all layers
+* *aggr*: how to aggregate the self feature and neighbor feature
+* *loss*: loss function to choose (sigmoid for multi-label / softmax for single label)
+* *arch*: network architecture. `1` means an order 1 layer (self feature plus 1-hop neighbor feature), and `0` means an order 0 layer (self feature only).
+  * NOTE: a graph conv layer in S-GCN is equivalent to a `1-0` structure in GraphSAINT; a graph conv layer in other baselines is equivalent to a `1` layer in GraphSAINT. 
+  * For the above reason, when evaluating PPI and Reddit (used in the S-GCN paper), we use `1-0-1-0`. When evaluating Flickr andYelp, we use `1-1-0` (where the last `0` is for the classifier).
+  * We believe such decision on architecture gives us the fairest comparison with baselines.
+* *act*: activation (I / relu / leaky\_relu), where `I` is for linear activation
+* *bias*: can be `bias` or `norm` (meaning that batch norm is applied). S-GCN uses batch norm, and so GraphSAINT also uses batch norm in all configurations
+
+#### Hyperparameters:
+
+* *lr*: learning rate for Adam optimizer
+* *sample\_coverage*: the `N` number in Section 5.3
+
+#### Phase:
+
+Specification of sampling parameters

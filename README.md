@@ -2,7 +2,6 @@
 
 This is the open source implementation for the "GraphSAINT" paper submitted to NeurIPS 2019.
 
-Note: training time for the four datasets have been significantly improved after the submission (due to some simple optimization on GPU). See below:
 
 ## Dependencies
 
