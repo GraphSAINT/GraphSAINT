@@ -244,7 +244,6 @@ class Minibatch:
                 adj.data=self.norm_aggr_train_csr.data[adj_edge_index]
 
                 t2 = time.time()
-                print('    ---- time to set norm factor: ', t2-t1)
             adj = sp.dia_matrix((1/D,0),shape=(adj.shape[0],adj.shape[1])).dot(adj)
 
             adj_0 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
