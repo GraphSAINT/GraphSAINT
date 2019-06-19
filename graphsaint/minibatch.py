@@ -81,9 +81,6 @@ class Minibatch:
         self.norm_aggr_train = [dict()]     # list of dict. List index: start node index. dict key: end node idx
        
         self.q_threshold = train_params['q_threshold']
-        self.q_offset = train_params['q_offset']
-        self.is_norm_loss = train_params['norm_loss']
-        self.is_norm_aggr = train_params['norm_aggr']
         self.deg_train = np.array(self.adj_train.sum(1)).flatten()
 
 
@@ -121,53 +118,40 @@ class Minibatch:
                     self.norm_aggr_train[u][v] = val_init
 
         self.norm_loss_train = np.zeros(self.adj_full.shape[0])
-        if not self.is_norm_loss and not self.is_norm_aggr:
-            self.norm_loss_train[self.node_train] = 1/self.size_subg_budget
-            _init_norm_aggr_cnt(1)
-        else:       # need at least one of the norm techniques
-            tot_sampled_nodes = 0
-            # 1. sample enough subg
-            while True:
-                self.par_graph_sample('train')
-                tot_sampled_nodes = sum([len(n) for n in self.subgraphs_remaining_nodes])
-                if tot_sampled_nodes > self.q_threshold*self.node_train.size:
-                    break
-            num_subg = len(self.subgraphs_remaining_nodes)
-            avg_subg_size = tot_sampled_nodes/num_subg
-            # 2. update _node_cnt --> to be used by norm_loss_train/norm_aggr_train
-            _node_cnt = np.zeros(self.adj_full.shape[0])
-            for i in range(num_subg):
-                _node_cnt[self.subgraphs_remaining_nodes[i]] += 1
-            # 3. norm_loss based on _node_cnt
-            if self.is_norm_loss:
-                self.norm_loss_train[:] = _node_cnt[:]
-                self.norm_loss_train[self.node_train] += self.q_offset
-                ##if self.norm_loss_train[self.node_train].min() == 0:
-                ##    self.norm_loss_train[self.node_train] += 1
-                assert self.norm_loss_train[self.node_val].sum() + self.norm_loss_train[self.node_test].sum() == 0
-                self.norm_loss_train[np.where(self.norm_loss_train==0)[0]] = 0.1
-                self.norm_loss_train[self.node_val] = 0
-                self.norm_loss_train[self.node_test] = 0
-                self.norm_loss_train[self.node_train] = num_subg/self.norm_loss_train[self.node_train]/self.node_train.size
-            else:
-                self.norm_loss_train[self.node_train] = 1/avg_subg_size
-            # 4. norm_aggr based on _node_cnt and edge count
-            if self.is_norm_aggr:
-                _init_norm_aggr_cnt(0)
-                for i in range(num_subg):
-                    for ip in range(len(self.subgraphs_remaining_nodes[i])):
-                        _u = self.subgraphs_remaining_nodes[i][ip]
-                        for _v in self.subgraphs_remaining_indices_orig[i][self.subgraphs_remaining_indptr[i][ip]:self.subgraphs_remaining_indptr[i][ip+1]]:
-                            self.norm_aggr_train[_u][_v] += 1
-                for i_d,d in enumerate(self.norm_aggr_train):
-                    self.norm_aggr_train[i_d] = {k:(_node_cnt[i_d])/(v+(v==0)*0.1)+(_node_cnt[i_d]==0)*0.1 for k,v in d.items()}
-                self.norm_aggr_train_dok=sp.dok_matrix(self.adj_train.shape,dtype=scipy.float32)
-                for i_d in range(len(self.norm_aggr_train)):
-                    for k,v in self.norm_aggr_train[i_d].items():
-                        self.norm_aggr_train_dok[i_d,k]=v
-                self.norm_aggr_train_csr=self.norm_aggr_train_dok.tocsr()
-            else:
-                _init_norm_aggr_cnt(1)
+        tot_sampled_nodes = 0
+        # 1. sample enough subg
+        while True:
+            self.par_graph_sample('train')
+            tot_sampled_nodes = sum([len(n) for n in self.subgraphs_remaining_nodes])
+            if tot_sampled_nodes > self.q_threshold*self.node_train.size:
+                break
+        num_subg = len(self.subgraphs_remaining_nodes)
+        avg_subg_size = tot_sampled_nodes/num_subg
+        # 2. update _node_cnt --> to be used by norm_loss_train/norm_aggr_train
+        _node_cnt = np.zeros(self.adj_full.shape[0])
+        for i in range(num_subg):
+            _node_cnt[self.subgraphs_remaining_nodes[i]] += 1
+        # 3. norm_loss based on _node_cnt
+        self.norm_loss_train[:] = _node_cnt[:]
+        assert self.norm_loss_train[self.node_val].sum() + self.norm_loss_train[self.node_test].sum() == 0
+        self.norm_loss_train[np.where(self.norm_loss_train==0)[0]] = 0.1
+        self.norm_loss_train[self.node_val] = 0
+        self.norm_loss_train[self.node_test] = 0
+        self.norm_loss_train[self.node_train] = num_subg/self.norm_loss_train[self.node_train]/self.node_train.size
+        # 4. norm_aggr based on _node_cnt and edge count
+        _init_norm_aggr_cnt(0)
+        for i in range(num_subg):
+            for ip in range(len(self.subgraphs_remaining_nodes[i])):
+                _u = self.subgraphs_remaining_nodes[i][ip]
+                for _v in self.subgraphs_remaining_indices_orig[i][self.subgraphs_remaining_indptr[i][ip]:self.subgraphs_remaining_indptr[i][ip+1]]:
+                    self.norm_aggr_train[_u][_v] += 1
+        for i_d,d in enumerate(self.norm_aggr_train):
+            self.norm_aggr_train[i_d] = {k:(_node_cnt[i_d])/(v+(v==0)*0.1)+(_node_cnt[i_d]==0)*0.1 for k,v in d.items()}
+        self.norm_aggr_train_dok=sp.dok_matrix(self.adj_train.shape,dtype=scipy.float32)
+        for i_d in range(len(self.norm_aggr_train)):
+            for k,v in self.norm_aggr_train[i_d].items():
+                self.norm_aggr_train_dok[i_d,k]=v
+        self.norm_aggr_train_csr=self.norm_aggr_train_dok.tocsr()
 
 
 
@@ -208,27 +192,12 @@ class Minibatch:
                         self.subgraphs_remaining_indptr.pop()),shape=(self.node_subgraph.size,self.node_subgraph.size))
             adj_edge_index=self.subgraphs_remaining_edge_index.pop()
             #print("{} nodes, {} edges, {} degree".format(self.node_subgraph.size,adj.size,adj.size/self.node_subgraph.size))
-            if not self.is_norm_aggr:
-                D = adj.sum(1).flatten()
-            else:
-                D = self.deg_train[self.node_subgraph]
-                t1 = time.time()
-                assert len(self.node_subgraph) == adj.shape[0]
-                # orig method
-                # for u in range(adj.shape[0]):
-                #     u_orig = self.node_subgraph[u]
-                #     for iv,v in enumerate(adj.indices[adj.indptr[u]:adj.indptr[u+1]]):
-                #         v_orig = self.node_subgraph[v]
-                #         # adj.data[adj.indptr[u]+iv] = self.norm_aggr_train[u_orig][v_orig]
-                #         adj.data[adj.indptr[u]+iv]=self.norm_aggr_train_dict[str(u_orig)+' '+str(v_orig)]
+            D = self.deg_train[self.node_subgraph]
+            t1 = time.time()
+            assert len(self.node_subgraph) == adj.shape[0]
+            adj.data=self.norm_aggr_train_csr.data[adj_edge_index]
 
-                # cython version
-                # norm_aggr.norm_aggr(adj.indptr,adj.indices,adj.data,self.node_subgraph,20)
-
-                # from subg_adj
-                adj.data=self.norm_aggr_train_csr.data[adj_edge_index]
-
-                t2 = time.time()
+            t2 = time.time()
             adj = sp.dia_matrix((1/D,0),shape=(adj.shape[0],adj.shape[1])).dot(adj)
 
             adj_0 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))

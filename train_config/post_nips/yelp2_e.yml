@@ -1,16 +1,16 @@
 network:
-  - dim: 256
+  - dim: 512
     aggr: 'concat'
-    loss: 'softmax'
+    loss: 'sigmoid'
     arch: '1-1-0'
-    bias: 'norm'
     act: 'relu'
+    bias: 'norm'
 params:
   - lr: 0.01
     weight_decay: 0.0
-    q_threshold: 25
+    q_threshold: 100
 phase:
-  - end: 15
-    dropout: 0.2
+  - end: 35 
+    dropout: 0.0
     sampler: 'edge'
-    size_subg_edge: 2000
+    size_subg_edge: 2500

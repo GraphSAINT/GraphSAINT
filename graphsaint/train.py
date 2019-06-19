@@ -11,7 +11,6 @@ import tensorflow as tf
 from tensorflow.python import debug as tf_debug
 import numpy as np
 import time
-import datetime
 import pdb
 import getpass
 import json
@@ -103,16 +102,12 @@ def prepare(train_data,train_params,arch_gcn):
 
     # Initialize session
     sess = tf.Session(config=tf.ConfigProto(device_count={"CPU":40},inter_op_parallelism_threads=44,intra_op_parallelism_threads=44,log_device_placement=FLAGS.log_device_placement))
-    # sess = tf.Session(config=tf.ConfigProto(log_device_placement=FLAGS.log_device_placement))
     ph_misc_stat = {'val_f1_micro': tf.placeholder(DTYPE, shape=()),
                     'val_f1_macro': tf.placeholder(DTYPE, shape=()),
                     'train_f1_micro': tf.placeholder(DTYPE, shape=()),
                     'train_f1_macro': tf.placeholder(DTYPE, shape=()),
-                    'time_per_batch': tf.placeholder(DTYPE, shape=()),
                     'time_per_epoch': tf.placeholder(DTYPE, shape=()),
-                    'size_subgraph': tf.placeholder(tf.int32, shape=()),
-	            'learning_rate': tf.placeholder(DTYPE,shape=()),
-                    'epoch_sample_time': tf.placeholder(DTYPE,shape=())}
+                    'size_subgraph': tf.placeholder(tf.int32, shape=())}
     merged = tf.summary.merge_all()
 
     with tf.name_scope('summary'):
@@ -120,18 +115,14 @@ def prepare(train_data,train_params,arch_gcn):
         _misc_val_f1_macro = tf.summary.scalar('val_f1_macro', ph_misc_stat['val_f1_macro'])
         _misc_train_f1_micro = tf.summary.scalar('train_f1_micro', ph_misc_stat['train_f1_micro'])
         _misc_train_f1_macro = tf.summary.scalar('train_f1_macro', ph_misc_stat['train_f1_macro'])
-        _misc_time_per_batch = tf.summary.scalar('time_per_batch',ph_misc_stat['time_per_batch'])
         _misc_time_per_epoch = tf.summary.scalar('time_per_epoch',ph_misc_stat['time_per_epoch'])
         _misc_size_subgraph = tf.summary.scalar('size_subgraph',ph_misc_stat['size_subgraph'])
-        _misc_learning_rate = tf.summary.scalar('learning_rate',ph_misc_stat['learning_rate'])
-        _misc_sample_time = tf.summary.scalar('epoch_sample_time',ph_misc_stat['epoch_sample_time'])
 
     misc_stats = tf.summary.merge([_misc_val_f1_micro,_misc_val_f1_macro,_misc_train_f1_micro,_misc_train_f1_macro,
-                    _misc_time_per_batch,_misc_time_per_epoch,_misc_size_subgraph,_misc_learning_rate,_misc_sample_time])
+                    _misc_time_per_epoch,_misc_size_subgraph])
     summary_writer = tf.summary.FileWriter(log_dir(FLAGS.train_config,FLAGS.data_prefix,git_branch,git_rev,timestamp), sess.graph)
     # Init variables
     sess.run(tf.global_variables_initializer())
-    #sess = tf_debug.LocalCLIDebugWrapperSession(sess)
     return model,minibatch, sess, [merged,misc_stats],ph_misc_stat, summary_writer
 
 
@@ -233,11 +224,8 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
                                         ph_misc_stat['val_f1_macro']: f1mac_val,
                                         ph_misc_stat['train_f1_micro']: f_mean(l_f1mic_tr),
                                         ph_misc_stat['train_f1_macro']: f_mean(l_f1mac_tr),
-                                        ph_misc_stat['time_per_batch']: 0,#t_epoch/num_batches,
-                                        ph_misc_stat['time_per_epoch']: time_train_ep+time_prepare_ep,#t_epoch,
-                                        ph_misc_stat['size_subgraph']: f_mean(l_size_subg),
-                                        ph_misc_stat['learning_rate']: 0,#curr_learning_rate,
-                                        ph_misc_stat['epoch_sample_time']: 0})#t_epoch_sampling})
+                                        ph_misc_stat['time_per_epoch']: time_train_ep+time_prepare_ep,
+                                        ph_misc_stat['size_subgraph']: f_mean(l_size_subg)})
                 # tensorboard visualization
                 summary_writer.add_summary(_, e)
                 summary_writer.add_summary(misc_stat[0], e)
@@ -248,7 +236,6 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
         timelines.update_timeline(tl)
     timelines.save('timeline.json')
     saver.restore(sess, '/raid/users/{}/models/saved_model_{}_rand{}.chkpt'.format(getpass.getuser(),timestamp_chkpt,model_rand_serial))
-    #saver.restore(sess, './temp_model_{}_rand{}.chkpt'.format(timestamp_chkpt,model_rand_serial))
     loss_val, f1mic_val, f1mac_val, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='val')
     printf("Full validation stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}".format(loss_val,f1mic_val,f1mac_val))
     loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='test')

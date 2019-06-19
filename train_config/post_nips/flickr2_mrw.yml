@@ -8,10 +8,7 @@ network:
 params:
   - lr: 0.01
     weight_decay: 0.0
-    norm_loss: 1
-    norm_aggr: 1
     q_threshold: 25
-    q_offset: 0
 phase:
   - end: 15
     dropout: 0.2
