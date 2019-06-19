@@ -34,6 +34,7 @@ cdef class Sampler:
     cdef vector[vector[int]] ret_indices
     cdef vector[vector[int]] ret_indices_orig
     cdef vector[vector[float]] ret_data
+    cdef vector[vector[int]] ret_edge_index
 
     def __cinit__(self, np.ndarray[int,ndim=1,mode='c'] adj_indptr,
                         np.ndarray[int,ndim=1,mode='c'] adj_indices,
@@ -49,6 +50,7 @@ cdef class Sampler:
         self.ret_indices = vector[vector[int]](num_proc*num_sample_per_proc)
         self.ret_indices_orig = vector[vector[int]](num_proc*num_sample_per_proc)
         self.ret_data = vector[vector[float]](num_proc*num_sample_per_proc)
+        self.ret_edge_index = vector[vector[int]](num_proc*num_sample_per_proc)
 
     cdef void adj_extract(self, int p) nogil:
         """
@@ -71,6 +73,7 @@ cdef class Sampler:
             self.ret_indices[idx_g] = vector[int]()
             self.ret_indices_orig[idx_g] = vector[int]()
             self.ret_data[idx_g] = vector[float]()
+            self.ret_edge_index[idx_g]=vector[int]()
             i_end = num_v_sub
             i = 0
             while i < i_end:
@@ -86,6 +89,7 @@ cdef class Sampler:
                     if _arr_bit[self.adj_indices_vec[j]] > -1:
                         self.ret_indices[idx_g].push_back(_arr_bit[self.adj_indices_vec[j]])
                         self.ret_indices_orig[idx_g].push_back(self.adj_indices_vec[j])
+                        self.ret_edge_index[idx_g].push_back(j)
                         self.ret_indptr[idx_g][_arr_bit[v]+1] = self.ret_indptr[idx_g][_arr_bit[v]+1] + 1
                         self.ret_data[idx_g].push_back(1.)
                     j = j + 1
@@ -106,18 +110,22 @@ cdef class Sampler:
         l_subg_indices_orig = list()
         l_subg_data = list()
         l_subg_nodes = list()
+        l_subg_edge_index = list()
         offset_nodes = [0]
         offset_indptr = [0]
         offset_indices = [0]
         offset_data = [0]
+        offset_edge_index = [0]
         for r in range(num_subg):
             offset_nodes.append(offset_nodes[r]+self.node_sampled[r].size())
             offset_indptr.append(offset_indptr[r]+self.ret_indptr[r].size())
             offset_indices.append(offset_indices[r]+self.ret_indices[r].size())
             offset_data.append(offset_data[r]+self.ret_data[r].size())
+            offset_edge_index.append(offset_edge_index[r]+self.ret_edge_index[r].size())
         cdef vector[int] ret_nodes_vec = vector[int]()
         cdef vector[int] ret_indptr_vec = vector[int]()
         cdef vector[int] ret_indices_vec = vector[int]()
+        cdef vector[int] ret_edge_index_vec = vector[int]()
         # ch4
         cdef vector[int] ret_indices_orig_vec = vector[int]()
         cdef vector[float] ret_data_vec = vector[float]()
@@ -127,12 +135,14 @@ cdef class Sampler:
         # ch5
         ret_indices_orig_vec.reserve(offset_indices[num_subg])
         ret_data_vec.reserve(offset_data[num_subg])
+        ret_edge_index_vec.reserve(offset_edge_index[num_subg])
         for r in range(num_subg):
             ret_nodes_vec.insert(ret_nodes_vec.end(),self.node_sampled[r].begin(),self.node_sampled[r].end())
             ret_indptr_vec.insert(ret_indptr_vec.end(),self.ret_indptr[r].begin(),self.ret_indptr[r].end())
             ret_indices_vec.insert(ret_indices_vec.end(),self.ret_indices[r].begin(),self.ret_indices[r].end())
             # ch6
             ret_indices_orig_vec.insert(ret_indices_orig_vec.end(),self.ret_indices_orig[r].begin(),self.ret_indices_orig[r].end())
+            ret_edge_index_vec.insert(ret_edge_index_vec.end(),self.ret_edge_index[r].begin(),self.ret_edge_index[r].end())
             ret_data_vec.insert(ret_data_vec.end(),self.ret_data[r].begin(),self.ret_data[r].end())
 
         cdef cutils.array_wrapper_int wint_indptr = cutils.array_wrapper_int()
@@ -141,6 +151,7 @@ cdef class Sampler:
         cdef cutils.array_wrapper_int wint_indices_orig = cutils.array_wrapper_int()
         cdef cutils.array_wrapper_int wint_nodes = cutils.array_wrapper_int()
         cdef cutils.array_wrapper_float wfloat_data = cutils.array_wrapper_float()
+        cdef cutils.array_wrapper_int wint_edge_index = cutils.array_wrapper_int()
 
         wint_indptr.set_data(ret_indptr_vec)
         ret_indptr_np = np.frombuffer(wint_indptr,dtype=np.int32)
@@ -153,6 +164,8 @@ cdef class Sampler:
         ret_nodes_np = np.frombuffer(wint_nodes,dtype=np.int32)
         wfloat_data.set_data(ret_data_vec)
         ret_data_np = np.frombuffer(wfloat_data,dtype=np.float32)
+        wint_edge_index.set_data(ret_edge_index_vec)
+        ret_edge_index_np = np.frombuffer(wint_edge_index,dtype=np.int32)
 
         for r in range(num_subg):
             l_subg_nodes.append(ret_nodes_np[offset_nodes[r]:offset_nodes[r+1]])
@@ -161,8 +174,9 @@ cdef class Sampler:
             # ch9
             l_subg_indices_orig.append(ret_indices_orig_np[offset_indices[r]:offset_indices[r+1]])
             l_subg_data.append(ret_data_np[offset_data[r]:offset_data[r+1]])
+            l_subg_edge_index.append(ret_edge_index_np[offset_indices[r]:offset_indices[r+1]])
         # ch10
-        return l_subg_indptr,l_subg_indices,l_subg_indices_orig,l_subg_data,l_subg_nodes
+        return l_subg_indptr,l_subg_indices,l_subg_indices_orig,l_subg_data,l_subg_nodes,l_subg_edge_index
 
     cdef void sample(self, int p) nogil:
         pass
@@ -183,6 +197,7 @@ cdef class Sampler:
         self.ret_indices.swap(vector[vector[int]](_len))
         self.ret_indices_orig.swap(vector[vector[int]](_len))
         self.ret_data.swap(vector[vector[float]](_len))
+        self.ret_edge_index.swap(vector[vector[int]](_len))
         printf('len 1 %d\t',len(ret[0][0]))
         printf('len 2 %d\n',self.ret_indptr.size())
         return ret
