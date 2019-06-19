@@ -4,12 +4,6 @@ import os,sys,time,datetime
 from os.path import expanduser
 import pdb
 
-# change below according to your number of cores in CPU
-# -----------------------------------------
-NUM_PAR_SAMPLER = 20
-SAMPLES_PER_PROC = 200 / NUM_PAR_SAMPLER
-# -----------------------------------------
-
 
 import subprocess
 git_rev = subprocess.Popen("git rev-parse --short HEAD", shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()[0]
@@ -30,6 +24,7 @@ timestamp = datetime.datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d %
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 # Settings
+flags.DEFINE_integer('num_cpu_core', 20, 'Number of CPU cores for parallel sampling')
 flags.DEFINE_boolean('log_device_placement', False, "Whether to log device placement.")
 flags.DEFINE_string('data_prefix', '', 'prefix identifying training data. must be specified.')
 flags.DEFINE_string('log_dir', '.', 'base directory for logging and saving embeddings')
@@ -42,6 +37,9 @@ flags.DEFINE_string('dtype','s','d for double, s for single precision floating p
 flags.DEFINE_boolean('timeline',False,'to save timeline.json or not')
 flags.DEFINE_boolean('tensorboard',False,'to save data to tensorboard or not')
 flags.DEFINE_boolean('logging',False,'log input and output histogram of each layer')
+
+NUM_PAR_SAMPLER = FLAGS.num_cpu_core
+SAMPLES_PER_PROC = -(-(200 // NUM_PAR_SAMPLER)) # round up division
 
 
 

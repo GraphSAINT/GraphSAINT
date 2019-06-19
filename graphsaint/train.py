@@ -8,11 +8,9 @@ from tensorflow.python.client import timeline
 
 import sys, os, random
 import tensorflow as tf
-from tensorflow.python import debug as tf_debug
 import numpy as np
 import time
 import pdb
-import getpass
 import json
 
 class TimeLiner:
@@ -38,6 +36,8 @@ class TimeLiner:
 def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,mode):
     """
     Full batch evaluation
+    NOTE: HERE GCN RUNS THROUGH THE FULL GRAPH. HOWEVER, WE CALCULATE F1 SCORE
+        FOR VALIDATION / TEST NODES ONLY. 
     """
     options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
     run_metadata = tf.RunMetadata()
@@ -133,7 +133,6 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
     avg_time = 0.0
     timing_steps = 0
 
-    # ----------------------- tf saver
     saver = tf.train.Saver(var_list=tf.global_variables())
 
     epoch_ph_start = 0
@@ -147,7 +146,6 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
     model_rand_serial = random.randint(1,1000)
     options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
     run_metadata = tf.RunMetadata()
-    # many_runs_timeline = TimeLiner()
     many_runs_timeline=[]
     for ip,phase in enumerate(train_phases):
         tset_start = time.time()
@@ -192,7 +190,7 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
                 if not minibatch.batch_num % FLAGS.print_every:
                     t3 = time.time()
                     f1_mic,f1_mac = calc_f1(labels,pred_train,arch_gcn['loss'])
-                    printf("Iter {:4d}\ttrain loss {:.5f}\tmic {:5f}\tmac {:5f}".format(
+                    printf("  Iter {:4d}\ttrain loss {:.4f}\tmic {:4f}\tmac {:4f}".format(
                         minibatch.batch_num,loss_train,f1_mic,f1_mac))
                     l_loss_tr.append(loss_train)
                     l_f1mic_tr.append(f1_mic)
@@ -203,7 +201,7 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
             if FLAGS.timeline:
                 print('train time: {:4.2f}\tprepare time: {:4.2f}\ttimeline time: {:4.2f}'.format(time_train_ep,time_prepare_ep,time_timeline_ep)) 
             else:
-                print('train time: {:4.2f}\tprepare time: {:4.2f}'.format(time_train_ep,time_prepare_ep))
+                print('  TF train time: {:4.2f} sec\tminibatch preparation time: {:4.2f} sec'.format(time_train_ep,time_prepare_ep))
             time_train += time_train_ep
             time_prepare += time_prepare_ep
             loss_val,f1mic_val,f1mac_val,time_eval = \
@@ -214,11 +212,12 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
                 tsave=time.time()
                 if not os.path.exists(FLAGS.log_dir+'/models'):
                     os.makedirs(FLAGS.log_dir+'/models')
+                print('  Saving models ...')
                 savepath = saver.save(sess, '{}/models/saved_model_{}_rand{}.chkpt'.format(FLAGS.log_dir,timestamp_chkpt,model_rand_serial))
-                print('saver time: {:4.2f}'.format(time.time()-tsave))
-            printf('   val loss {:.5f}\tmic {:.5f}\tmac {:.5f}'.format(loss_val,f1mic_val,f1mac_val))
-            printf('   avg train loss {:.5f}\tmic {:.5f}\tmac {:.5f}'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr)))
-            
+                print('  TF saver time: {:4.2f} sec'.format(time.time()-tsave))
+            printf(' TRAIN (Ep avg): loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr)))
+            printf(' VALIDATION: loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val))
+
             if FLAGS.tensorboard:
                 misc_stat = sess.run([train_stat[1]],feed_dict={\
                                         ph_misc_stat['val_f1_micro']: f1mic_val,
@@ -238,13 +237,15 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
     timelines.save('timeline.json')
     saver.restore(sess, '{}/models/saved_model_{}_rand{}.chkpt'.format(FLAGS.log_dir,timestamp_chkpt,model_rand_serial))
     loss_val, f1mic_val, f1mac_val, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='val')
-    printf("Full validation stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}".format(loss_val,f1mic_val,f1mac_val))
+    printf("Full validation (Epoch {:4d}): \n  F1_Micro = {:.4f}\tF1_Macro = {:.4f}".format(e_best,f1mic_val,f1mac_val),style='red')
     loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='test')
-    printf("Full test stats: \n\tloss={:.5f}\tf1_micro={:.5f}\tf1_macro={:.5f}".format(loss_test,f1mic_test,f1mac_test))
-    return {'loss_val_opt':loss_val,'f1mic_val_opt':f1mic_val,'f1mac_val_opt':f1mac_val,\
+    printf("Full test stats: \n  F1_Micro = {:.4f}\tF1_Macro = {:.4f}".format(f1mic_test,f1mac_test),style='red')
+    printf('Total training time: {:6.2f} sec'.format(time_train),style='red')
+    ret = {'loss_val_opt':loss_val,'f1mic_val_opt':f1mic_val,'f1mac_val_opt':f1mac_val,\
             'loss_test_opt':loss_test,'f1mic_test_opt':f1mic_test,'f1mac_test_opt':f1mac_test,\
             'epoch_best':e_best,
             'time_train': time_train}
+    return
 
 
 ########
@@ -254,10 +255,7 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
 def train_main(argv=None):
     train_params,train_phases,train_data,arch_gcn = parse_n_prepare(FLAGS)
     model,minibatch,sess,train_stat,ph_misc_stat,summary_writer = prepare(train_data,train_params,arch_gcn)
-    time_start = time.time()
     ret = train(train_phases,train_params,arch_gcn,model,minibatch,sess,train_stat,ph_misc_stat,summary_writer)
-    time_end = time.time()
-    printf('see this!!! acc: {:5.4f}\ttime: {:6.2f}'.format(ret['f1mic_test_opt'],ret['time_train']),style='red')
     return ret
 
 
