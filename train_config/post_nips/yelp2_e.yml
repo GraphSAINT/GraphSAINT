@@ -8,7 +8,7 @@ network:
 params:
   - lr: 0.01
     weight_decay: 0.0
-    q_threshold: 100
+    sample_coverage: 100 # increasing this from 50 (as stated in the paper) to 100, slightly increases the accuracy
 phase:
   - end: 35 
     dropout: 0.0

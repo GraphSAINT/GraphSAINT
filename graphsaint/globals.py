@@ -1,5 +1,4 @@
 import tensorflow as tf
-from tensorflow.python import debug as tf_debug
 import numpy as np
 import os,sys,time,datetime
 from os.path import expanduser
@@ -33,17 +32,18 @@ FLAGS = flags.FLAGS
 # Settings
 flags.DEFINE_boolean('log_device_placement', False, "Whether to log device placement.")
 flags.DEFINE_string('data_prefix', '', 'prefix identifying training data. must be specified.')
-flags.DEFINE_string('base_log_dir', '.', 'base directory for logging and saving embeddings')
+flags.DEFINE_string('log_dir', '.', 'base directory for logging and saving embeddings')
 flags.DEFINE_integer('gpu', -1234, "which gpu to use.")
 flags.DEFINE_integer('print_every', 15, "How often to print training info.")
-flags.DEFINE_integer('max_total_steps', 10**10, "Maximum total number of iterations")
 
 flags.DEFINE_string('train_config', '', "path to the configuration of training (*.yml)")
 flags.DEFINE_string('model','','pretrained model')
 flags.DEFINE_string('dtype','s','d for double, s for single precision floating point')
 flags.DEFINE_boolean('timeline',False,'to save timeline.json or not')
-flags.DEFINE_boolean('tensorboard',True,'to save data to tensorboard or not')
+flags.DEFINE_boolean('tensorboard',False,'to save data to tensorboard or not')
 flags.DEFINE_boolean('logging',False,'log input and output histogram of each layer')
+
+
 
 
 

@@ -2,11 +2,11 @@ build/
 *.so
 __pycache__
 data
-adj_misc.cpp
-adj_pow.cpp
 cython_sampler.cpp
 cython_utils.cpp
 *.chkpt.*
 *.pickle
 timeline.json
 checkpoint
+tf_log/
+models/
