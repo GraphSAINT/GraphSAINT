@@ -13,26 +13,7 @@ params:
     q_threshold: 50
     q_offset: 0
 phase:
-  # We set small subgraph sizes for the initial phases. This speeds up convergence without affecting accuracy.
-  #- end: 50
-  #  dropout: 0.0
-  #  sampler: 'edge_indp'
-  #  size_subg_edge: 256
-  #  is_induced: 1
-  #  level_approx: 0
-  #- end: 80
-  #  dropout: 0.0
-  #  sampler: 'edge_indp'
-  #  size_subg_edge: 750
-  #  is_induced: 1
-  #  level_approx: 0
-  #- end: 180
-  #  dropout: 0.0
-  #  sampler: 'edge_indp'
-  #  size_subg_edge: 2500
-  #  is_induced: 1
-  #  level_approx: 0
-  - end: 350
+  - end: 400
     dropout: 0.0
     sampler: 'edge'
     size_subg_edge: 4000
