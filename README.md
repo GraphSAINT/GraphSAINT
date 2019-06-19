@@ -64,7 +64,7 @@ We have a cython module which need compilation before training can start. Compil
 
 ## Training Configuration
 
-The hyperparameters needed in training can be set by writing the configuration file: `./train_config/<dataset><num_layer>.yml`.
+The hyperparameters needed in training can be set by writing the configuration file: `./train_config/<name>.yml`.
 
 The configuration files to reproduce the Table 2 results are packed in `./train_config/neurips/`.
 
