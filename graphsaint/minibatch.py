@@ -80,7 +80,7 @@ class Minibatch:
         self.norm_loss_test[self.node_test] = 1/_denom
         self.norm_aggr_train = [dict()]     # list of dict. List index: start node index. dict key: end node idx
        
-        self.q_threshold = train_params['q_threshold']
+        self.sample_coverage = train_params['sample_coverage']
         self.deg_train = np.array(self.adj_train.sum(1)).flatten()
 
 
@@ -123,7 +123,7 @@ class Minibatch:
         while True:
             self.par_graph_sample('train')
             tot_sampled_nodes = sum([len(n) for n in self.subgraphs_remaining_nodes])
-            if tot_sampled_nodes > self.q_threshold*self.node_train.size:
+            if tot_sampled_nodes > self.sample_coverage*self.node_train.size:
                 break
         num_subg = len(self.subgraphs_remaining_nodes)
         avg_subg_size = tot_sampled_nodes/num_subg

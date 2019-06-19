@@ -8,7 +8,7 @@ network:
 params:
   - lr: 0.01
     weight_decay: 0.0
-    q_threshold: 25
+    sample_coverage: 25
 phase:
   - end: 15
     dropout: 0.2
