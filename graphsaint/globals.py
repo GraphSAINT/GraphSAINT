@@ -4,10 +4,10 @@ import os,sys,time,datetime
 from os.path import expanduser
 import pdb
 
-
+# change below according to your number of cores in CPU
 # -----------------------------------------
 NUM_PAR_SAMPLER = 20
-SAMPLES_PER_PROC = 10
+SAMPLES_PER_PROC = 200 / NUM_PAR_SAMPLER
 # -----------------------------------------
 
 
