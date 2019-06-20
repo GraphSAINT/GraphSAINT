@@ -3,6 +3,7 @@ import math
 from graphsaint.inits import *
 from graphsaint.utils import *
 from graphsaint.graph_samplers import *
+from graphsaint.norm_aggr import *
 import tensorflow as tf
 import scipy.sparse as sp
 import scipy
@@ -72,14 +73,14 @@ class Minibatch:
         self.subgraphs_remaining_nodes = []
         self.subgraphs_remaining_edge_index = []
         
-        self.norm_loss_train = None
+        self.norm_loss_train = np.zeros(self.adj_train.shape[0])
         # norm_loss_test is used in full batch evaluation (without sampling). so neighbor features are simply averaged.
         self.norm_loss_test = np.zeros(self.adj_full.shape[0])
         _denom = len(self.node_train) + len(self.node_val) +  len(self.node_test)
         self.norm_loss_test[self.node_train] = 1/_denom     
         self.norm_loss_test[self.node_val] = 1/_denom
         self.norm_loss_test[self.node_test] = 1/_denom
-        self.norm_aggr_train = [dict()]     # list of dict. List index: start node index. dict key: end node idx
+        self.norm_aggr_train = np.zeros(self.adj_train.size)
        
         self.sample_coverage = train_params['sample_coverage']
         self.deg_train = np.array(self.adj_train.sum(1)).flatten()
@@ -110,7 +111,7 @@ class Minibatch:
             raise NotImplementedError
 
         self.norm_loss_train = np.zeros(self.adj_train.shape[0])
-        self.norm_aggr_train = np.zeros(self.adj_train.size)
+        self.norm_aggr_train = np.zeros(self.adj_train.size).astype(np.float32)
 
         # For edge sampler, no need to estimate norm factors, we can calculate directly.
         #if self.method_sample == 'edge':
@@ -138,9 +139,6 @@ class Minibatch:
         self.norm_loss_train[self.node_val] = 0
         self.norm_loss_train[self.node_test] = 0
         self.norm_loss_train[self.node_train] = num_subg/self.norm_loss_train[self.node_train]/self.node_train.size
-
-
-
 
     def par_graph_sample(self,phase):
         t0 = time.time()
@@ -170,6 +168,7 @@ class Minibatch:
             adj_7 = self.adj_full_norm_7
         else:
             assert mode == 'train'
+            tt0=time.time()
             if len(self.subgraphs_remaining_nodes) == 0:
                 self.par_graph_sample('train')
                 print()
@@ -181,11 +180,11 @@ class Minibatch:
             adj_edge_index=self.subgraphs_remaining_edge_index.pop()
             #print("{} nodes, {} edges, {} degree".format(self.node_subgraph.size,adj.size,adj.size/self.node_subgraph.size))
             D = self.deg_train[self.node_subgraph]
-            t1 = time.time()
+            tt1 = time.time()
             assert len(self.node_subgraph) == adj.shape[0]
-            adj.data=self.norm_aggr_train[adj_edge_index]
+            norm_aggr(adj.data,adj_edge_index,self.norm_aggr_train)
 
-            t2 = time.time()
+            tt2 = time.time()
             adj = sp.dia_matrix((1/D,0),shape=(adj.shape[0],adj.shape[1])).dot(adj)
 
             adj_0 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
@@ -228,6 +227,9 @@ class Minibatch:
             tf.SparseTensorValue(np.column_stack(adj_6.nonzero()),adj_6.data,adj_6.shape)})
         feed_dict.update({self.placeholders['adj_subgraph_7']: \
             tf.SparseTensorValue(np.column_stack(adj_7.nonzero()),adj_7.data,adj_7.shape)})
+        tt3=time.time()
+        # if mode in ['train']:
+        #     print("t1:{:.3f} t2:{:.3f} t3:{:.3f}".format(tt0-tt1,tt2-tt1,tt3-tt2))
         if mode in ['val','test']:
             feed_dict[self.placeholders['is_train']]=False
         else:

@@ -4,6 +4,7 @@ __pycache__
 data
 cython_sampler.cpp
 cython_utils.cpp
+norm_aggr.cpp
 *.chkpt.*
 *.pickle
 timeline.json
