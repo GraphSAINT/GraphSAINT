@@ -13,6 +13,7 @@ Updated hyperparameter compared with the submitted version:
   * Result: All baseline results keep unchanged due to such additional parameter search. GraphSAINT has identified better configuration for Reddit (using dropout of 0.1).
 * Sampler parameters: for all samplers, we have evaluated additional design points based on the parameters of the specific sampler.
   * Result: For RW sampler, now walk length of 2 works the best for PPI and Flickr. 
+* Sampling phase: in the Appendix, we mentioned that for PPI, we used smaller subgraphs to "warm-up" training. Now we remove these initial phases. So now, every training uses a single phase, with the same subgraph size throughout all training iterations.
 
 ## Training Configuration
 
