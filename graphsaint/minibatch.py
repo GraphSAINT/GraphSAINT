@@ -197,7 +197,8 @@ class Minibatch:
             D = self.deg_train[self.node_subgraph]
             tt1 = time.time()
             assert len(self.node_subgraph) == adj.shape[0]
-            norm_aggr(adj.data,adj_edge_index,self.norm_aggr_train)
+            #norm_aggr(adj.data,adj_edge_index,self.norm_aggr_train)
+            adj.data = self.norm_aggr_train[adj_edge_index]
 
             tt2 = time.time()
             adj = sp.dia_matrix((1/D,0),shape=(adj.shape[0],adj.shape[1])).dot(adj)
