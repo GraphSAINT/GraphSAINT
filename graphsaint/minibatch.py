@@ -27,11 +27,6 @@ class Minibatch:
                     storing role of the node ('tr'/'va'/'te')
         class_arr: array of float (shape |V|xf)
                     storing initial feature vectors
-        TODO:       adj_full_norm: normalized adj. Norm by # non-zeros per row
-
-        norm_aggr_train:        list of dict
-                                norm_aggr_train[u] gives a dict recording prob of being sampled for all u's neighbor
-                                norm_aggr_train[u][v] gives the prob of being sampled for edge (u,v). i.e. P_{sampler}(u sampled|v sampled)
         """
         self.num_proc = 1
         self.node_train = np.array(role['tr'])
@@ -114,9 +109,29 @@ class Minibatch:
         self.norm_aggr_train = np.zeros(self.adj_train.size).astype(np.float32)
 
         # For edge sampler, no need to estimate norm factors, we can calculate directly.
-        #if self.method_sample == 'edge':
-        #    
-        #    return
+        """
+        if self.method_sample == 'edge':
+            for v in range(self.adj_train.shape[0]):
+                i_s = self.adj_train.indptr[v]
+                i_e = self.adj_train.indptr[v+1]
+                if i_s == i_e:
+                    continue
+                self.norm_aggr_train[i_s:i_e] = 1/self.deg_train[self.adj_train.indices[i_s:i_e]]
+                self.norm_aggr_train[i_s:i_e] += 1/self.deg_train[v]
+            self.norm_aggr_train = self.norm_aggr_train/self.norm_aggr_train.sum()*train_phases['size_subg_edge']
+            for v in range(self.adj_train.shape[0]):
+                i_s = self.adj_train.indptr[v]
+                i_e = self.adj_train.indptr[v+1]
+                self.norm_loss_train[v] = 1 - np.prod(1-self.norm_aggr_train[i_s:i_e])
+            for v in range(self.adj_train.shape[0]):
+                i_s = self.adj_train.indptr[v]
+                i_e = self.adj_train.indptr[v+1]
+                self.norm_aggr_train[i_s:i_e] = self.norm_loss_train[v]/self.norm_aggr_train[i_s:i_e]
+            self.norm_loss_train[self.node_train] = 1/self.norm_loss_train[self.node_train]/self.node_train.size
+            self.norm_loss_train[self.node_val] = 0
+            self.norm_loss_train[self.node_test] = 0
+            return
+        """
         tot_sampled_nodes = 0
         while True:
             self.par_graph_sample('train')
