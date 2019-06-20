@@ -12,6 +12,8 @@ This is the open source implementation for the "GraphSAINT" paper submitted to N
 * scipy >= 1.1.0
 * scikit-learn >= 0.19.1
 * pyyaml >= 3.12
+* g++ >= 5.4.0
+* openmp >= 4.0
 
 ## Dataset
 
