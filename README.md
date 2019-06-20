@@ -7,7 +7,7 @@ With better hyperparameter searching procedure, we keep improving our results. N
 Results highlight (2 layer GCN models):
 
 * Reddit-`./train_config/neurips/reddit2_rw.yml`: reaching 0.966 (from previously 0.964) F1-micro score, with the same training time
-* Yelp-`./train_config/neurips/yelp2_mrw.yml`: reaching 0.652 (from previously 0.642) F1-micro score, with 3x training time; reaching 0.645 (from previously 0.642) F1-micro score, with the same training time.
+* Yelp-`./train_config/neurips/yelp2_mrw.yml`: reaching 0.652 (from previously 0.642) F1-micro score, with 3x training time; reaching 0.646 (from previously 0.642) F1-micro score, with the same training time.
 * Flickr-`./train_config/neurips/flickr2_rw.yml`: reaching 0.513 (from previously 0.509) F1-micro score, with 0.75x training time
 * PPI-`./train_config/neurips/ppi2_rw.yml`: reaching 0.979 (from previously 0.973) F1-micro score, with 4x training time; reaching 0.974 (from previously 0.973) F1-micro score, with the same training time. 
 
