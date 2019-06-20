@@ -15,5 +15,4 @@ phase:
     sampler: 'mrw'
     size_subgraph: 12000
     size_frontier: 3000
-    order: 1
     max_deg: 10000
