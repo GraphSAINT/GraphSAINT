@@ -211,7 +211,7 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
                 if not os.path.exists(FLAGS.log_dir+'/models'):
                     os.makedirs(FLAGS.log_dir+'/models')
                 print('  Saving models ...')
-                savepath = saver.save(sess, '{}/models/saved_model_{}.chkpt'.format(FLAGS.log_dir,timestamp))
+                savepath = saver.save(sess, '{}/models/saved_model_{}.chkpt'.format(FLAGS.log_dir,timestamp),write_meta_graph=False,write_state=False)
                 print('  TF saver time: {:4.2f} sec'.format(time.time()-tsave))
             printf(' TRAIN (Ep avg): loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr)))
             printf(' VALIDATION: loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
