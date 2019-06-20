@@ -10,26 +10,27 @@ Unchanged hyperparameter compared with the submitted version:
 Updated hyperparameter compared with the submitted version:
 
 * Dropout: we search among dropout of 0.0, 0.1, 0.2, 0.3 instead of 0.0, 0.2 as stated in the paper. 
-  * Result: All baseline results keep unchanged due to such additional parameter search. GraphSAINT has identified better configuration for Reddit (using dropout of 0.1).
+  * Result: All baseline results keep unchanged with such additional parameter search. GraphSAINT has identified better configuration for Reddit and Yelp (using dropout of 0.1). See the main `README` and the configuration `./train_config/neurips/reddit2_rw.yml`, `./train_config/neurips/yelp2_mrw.yml`.
 * Sampler parameters: for all samplers, we have evaluated additional design points based on the parameters of the specific sampler.
-  * Result: For RW sampler, now walk length of 2 works the best for PPI and Flickr. 
-* Sampling phase: in the Appendix, we mentioned that for PPI, we used smaller subgraphs to "warm-up" training. Now we remove these initial phases. So now, every training uses a single phase, with the same subgraph size throughout all training iterations.
+  * Result: For RW sampler, now walk length of 2 (instead of 4) works the best for PPI and Flickr. 
+* Training phase: in the Appendix, we mentioned that for PPI, we used smaller subgraphs to "warm-up" training. Now to simplify the hyperparameter searching procedure, we have removed these initial phases. Therefore, every training now uses a single phase, with the same subgraph size throughout all training iterations.
 
 ## Training Configuration
 
-
+Below we describe how to write the configuration file `./train_config/<name>.yml` to start your own training. 
+You can open any `*.yml` file in `./train_config/neurips/` to better understand the below sections. 
 
 #### Network:
 
-* *dim*: hidden dimension of all layers
-* *aggr*: how to aggregate the self feature and neighbor feature
-* *loss*: loss function to choose (sigmoid for multi-label / softmax for single label)
-* *arch*: network architecture. `1` means an order 1 layer (self feature plus 1-hop neighbor feature), and `0` means an order 0 layer (self feature only).
+* *dim*: `[int]` hidden dimension of all layers
+* *aggr*: `['concat' / 'mean']` how to aggregate the self feature and neighbor features
+* *loss*: `['sigmoid' / 'softmax']` loss function to choose (sigmoid for multi-label / softmax for single label)
+* *arch*: `['<int>-<int>-...']` network architecture. `1` means an order 1 layer (self feature plus 1-hop neighbor feature), and `0` means an order 0 layer (self feature only).
   * NOTE: a graph conv layer in S-GCN is equivalent to a `1-0` structure in GraphSAINT; a graph conv layer in other baselines is equivalent to a `1` layer in GraphSAINT. 
-  * For the above reason, when evaluating PPI and Reddit (used in the S-GCN paper), we use `1-0-1-0`. When evaluating Flickr andYelp, we use `1-1-0` (where the last `0` is for the classifier).
-  * We believe such decision on architecture gives us the fairest comparison with baselines.
-* *act*: activation (I / relu / leaky\_relu), where `I` is for linear activation
-* *bias*: can be `bias` or `norm` (meaning that batch norm is applied). S-GCN uses batch norm, and so GraphSAINT also uses batch norm in all configurations
+  * For the above reason, when evaluating PPI and Reddit (which are evaluated in the S-GCN paper), GraphSAINT uses `1-0-1-0` architecture. When evaluating Flickr and Yelp, GraphSAINT uses `1-1-0` (where the last `0` is stands for dense layer for the classifier).
+  * We believe such design choice on architecture gives us the fairest comparison with baselines.
+* *act*: `['I' / 'relu' / 'leaky_relu']` activation function, where `I` is for linear activation. For leaky_relu, the current version of the code supports only the default alpha value.
+* *bias*: `['bias' / 'norm']` whether to apply bias or batch norm at the end of each conv layer. S-GCN uses batch norm, and so GraphSAINT also uses batch norm in all `./train_config/neurips/` configurations. 
 
 #### Hyperparameters:
 
