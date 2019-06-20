@@ -11,3 +11,4 @@ timeline.json
 checkpoint
 tf_log/
 models/
+*ignore*

@@ -10,10 +10,9 @@ params:
     weight_decay: 0.0
     sample_coverage: 50
 phase:
-  - end: 25
+  - end: 30
     dropout: 0.0
     sampler: 'mrw'
     size_subgraph: 2500
     size_frontier: 1000
-    order: 1
     max_deg: 100

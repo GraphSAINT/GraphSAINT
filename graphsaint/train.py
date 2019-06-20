@@ -142,8 +142,6 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
     time_qest = 0
     time_train = 0
     time_prepare = 0
-    timestamp_chkpt = time.time()
-    model_rand_serial = random.randint(1,1000)
     options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
     run_metadata = tf.RunMetadata()
     many_runs_timeline=[]
@@ -213,10 +211,10 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
                 if not os.path.exists(FLAGS.log_dir+'/models'):
                     os.makedirs(FLAGS.log_dir+'/models')
                 print('  Saving models ...')
-                savepath = saver.save(sess, '{}/models/saved_model_{}_rand{}.chkpt'.format(FLAGS.log_dir,timestamp_chkpt,model_rand_serial))
+                savepath = saver.save(sess, '{}/models/saved_model_{}.chkpt'.format(FLAGS.log_dir,timestamp))
                 print('  TF saver time: {:4.2f} sec'.format(time.time()-tsave))
             printf(' TRAIN (Ep avg): loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr)))
-            printf(' VALIDATION: loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val))
+            printf(' VALIDATION: loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
 
             if FLAGS.tensorboard:
                 misc_stat = sess.run([train_stat[1]],feed_dict={\
@@ -235,7 +233,7 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
     for tl in many_runs_timeline:
         timelines.update_timeline(tl)
     timelines.save('timeline.json')
-    saver.restore(sess, '{}/models/saved_model_{}_rand{}.chkpt'.format(FLAGS.log_dir,timestamp_chkpt,model_rand_serial))
+    saver.restore(sess, '{}/models/saved_model_{}.chkpt'.format(FLAGS.log_dir,timestamp))
     loss_val, f1mic_val, f1mac_val, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='val')
     printf("Full validation (Epoch {:4d}): \n  F1_Micro = {:.4f}\tF1_Macro = {:.4f}".format(e_best,f1mic_val,f1mac_val),style='red')
     loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='test')
