@@ -12,6 +12,13 @@ Results highlight:
 
 [Updated table to be added]
 
+## Features
+
+As stated in the paper, GraphSAINT can be easily extended to support various graph samplers, as well as other GCN architectures. 
+To add customized sampler, implement the a new sampler class in `./graphsaint/cython_sampler.pyx`. 
+
+As for the GCN architecture, right now higher order graph convolutional layers are already supported. Just specify the order in the configuration file (see `./train_config/README.md`). 
+
 ## Dependencies
 
 * python >= 3.6.8
