@@ -2,6 +2,9 @@
 
 This is the open source implementation for the "GraphSAINT" paper submitted to NeurIPS 2019.
 
+We keep improving our results. Now GraphSAINT performs even better in terms of both accuracy and time (compared to Table 2 in the submitted paper).
+
+[Updated table to be added] 
 
 ## Dependencies
 
@@ -19,42 +22,42 @@ This is the open source implementation for the "GraphSAINT" paper submitted to N
 
 Currently available datasets:
 
-* ppi
-* reddit
-* flickr
-* yelp
+* PPI
+* Reddit
+* Flickr
+* Yelp
   
 They are available at [gdrive](https://drive.google.com/open?id=1zycmmDES39zVlbVCYs88JTJ1Wm5FbfLz). Rename the folder to `data` at the root directory.  The root directory should be
 
 ```
-GraphSAINT
+GraphSAINT/
 │   README.md
 │   run_graphsaint.sh
 │   ... 
 │
-└───graphsaint
+└───graphsaint/
 │   │   models.py
 │   │   train.py
 │   │   ...
 │   
-└───data
-│   └───ppi
+└───data/
+│   └───ppi/
 │   │   │    adj_train.npz
 │   │   │    adj_full.npz
 │   │   │    ...
 │   │   
-│   └───reddit
+│   └───reddit/
 │   │   │    ...
 │   │
 │   └───...
 │
 ```
 
-We also have a script that convert our dataset format to GraphSAGE format. To run the script,
+We also have a script that converts datasets from our format to GraphSAGE format. To run the script,
 
 `python convert.py <dataset name>`
 
-For example `python convert.py ppi` will convert dataset PPI and will save GraphSAGE format to `/data.ignore/ppi`
+For example `python convert.py ppi` will convert dataset PPI and save new data in GraphSAGE format to `./data.ignore/ppi/`
   
 
 
@@ -66,13 +69,15 @@ We have a cython module which need compilation before training can start. Compil
 
 ## Training Configuration
 
-The hyperparameters needed in training can be set by writing the configuration file: `./train_config/<name>.yml`.
+The hyperparameters needed in training can be set via the configuration file: `./train_config/<name>.yml`.
 
 The configuration files to reproduce the Table 2 results are packed in `./train_config/neurips/`.
 
-For detailed description of the config, please see `/train_config/README.md`
+For detailed description of the configuration file format, please see `./train_config/README.md`
 
 ## Run Training
+
+We suggest looking through the available tensorflow command line flags defined in `./graphsaint/globals.py`. By properly setting the flags, you can maximize CPU utilization (by telling the number of available cores), and turn on / off Tensorboard, etc. 
 
 To run the code on cpu
 
