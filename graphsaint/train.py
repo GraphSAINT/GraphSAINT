@@ -200,6 +200,8 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
             time_prepare += time_prepare_ep
             loss_val,f1mic_val,f1mac_val,time_eval = \
                     evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='val')
+            printf(' TRAIN (Ep avg): loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}\ttrain time = {:.4f} sec'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr),time_train_ep))
+            printf(' VALIDATION:     loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
             if f1mic_val > f1mic_best:
                 f1mic_best = f1mic_val
                 e_best = e
@@ -208,9 +210,7 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
                     os.makedirs(FLAGS.log_dir+'/models')
                 print('  Saving models ...')
                 savepath = saver.save(sess, '{}/models/saved_model_{}.chkpt'.format(FLAGS.log_dir,timestamp),write_meta_graph=False,write_state=False)
-            printf(' TRAIN (Ep avg): loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}\ttrain time = {:.4f} sec'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr),time_train_ep))
-            printf(' VALIDATION:     loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
-
+ 
             if FLAGS.tensorboard:
                 misc_stat = sess.run([train_stat[1]],feed_dict={\
                                         ph_misc_stat['val_f1_micro']: f1mic_val,

@@ -109,29 +109,9 @@ class Minibatch:
         self.norm_aggr_train = np.zeros(self.adj_train.size).astype(np.float32)
 
         # For edge sampler, no need to estimate norm factors, we can calculate directly.
-        """
-        if self.method_sample == 'edge':
-            for v in range(self.adj_train.shape[0]):
-                i_s = self.adj_train.indptr[v]
-                i_e = self.adj_train.indptr[v+1]
-                if i_s == i_e:
-                    continue
-                self.norm_aggr_train[i_s:i_e] = 1/self.deg_train[self.adj_train.indices[i_s:i_e]]
-                self.norm_aggr_train[i_s:i_e] += 1/self.deg_train[v]
-            self.norm_aggr_train = self.norm_aggr_train/self.norm_aggr_train.sum()*train_phases['size_subg_edge']
-            for v in range(self.adj_train.shape[0]):
-                i_s = self.adj_train.indptr[v]
-                i_e = self.adj_train.indptr[v+1]
-                self.norm_loss_train[v] = 1 - np.prod(1-self.norm_aggr_train[i_s:i_e])
-            for v in range(self.adj_train.shape[0]):
-                i_s = self.adj_train.indptr[v]
-                i_e = self.adj_train.indptr[v+1]
-                self.norm_aggr_train[i_s:i_e] = self.norm_loss_train[v]/self.norm_aggr_train[i_s:i_e]
-            self.norm_loss_train[self.node_train] = 1/self.norm_loss_train[self.node_train]/self.node_train.size
-            self.norm_loss_train[self.node_val] = 0
-            self.norm_loss_train[self.node_test] = 0
-            return
-        """
+        # However, for integrity of the framework, we decide to follow the same procedure for all samplers: 
+        # 1. sample enough number of subgraphs
+        # 2. estimate norm factor alpha and lambda
         tot_sampled_nodes = 0
         while True:
             self.par_graph_sample('train')
@@ -197,8 +177,8 @@ class Minibatch:
             D = self.deg_train[self.node_subgraph]
             tt1 = time.time()
             assert len(self.node_subgraph) == adj.shape[0]
-            #norm_aggr(adj.data,adj_edge_index,self.norm_aggr_train)
-            adj.data = self.norm_aggr_train[adj_edge_index]
+            norm_aggr(adj.data,adj_edge_index,self.norm_aggr_train,num_proc=FLAGS.num_cpu_core)
+            #adj.data = self.norm_aggr_train[adj_edge_index]
 
             tt2 = time.time()
             adj = sp.dia_matrix((1/D,0),shape=(adj.shape[0],adj.shape[1])).dot(adj)
