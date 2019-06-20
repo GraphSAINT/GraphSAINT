@@ -10,7 +10,7 @@ params:
     weight_decay: 0.0
     sample_coverage: 50
 phase:
-  - end: 400
+  - end: 2000   # NOTE: change this to 40 will give 0.973 within 25 sec
     dropout: 0.0
     sampler: 'rw'
     depth: 2
