@@ -11,7 +11,7 @@ Results highlight (2 layer GCN models):
 * Flickr-`./train_config/neurips/flickr2_rw.yml`: reaching 0.513 (from previously 0.509) F1-micro score, with 0.75x training time
 * PPI-`./train_config/neurips/ppi2_rw.yml`: reaching 0.979 (from previously 0.973) F1-micro score, with 4x training time; reaching 0.974 (from previously 0.973) F1-micro score, with the same training time. 
 
-[Updated Table 2 and convergence curve of the submitted paper to be added soon]
+[Updated Table 2 and convergence curve to be added soon]
 
 [New results with deeper GCNs and other architectures coming soon]
 
@@ -44,7 +44,7 @@ Currently available datasets:
 * Flickr
 * Yelp
   
-They are available at [gdrive](https://drive.google.com/open?id=1zycmmDES39zVlbVCYs88JTJ1Wm5FbfLz). Rename the folder to `data` at the root directory.  The root directory should be
+They are available via this [Google Drive link](https://drive.google.com/open?id=1zycmmDES39zVlbVCYs88JTJ1Wm5FbfLz). Rename the folder to `data` at the root directory.  The directory structure should be as below:
 
 ```
 GraphSAINT/
@@ -88,13 +88,13 @@ We have a cython module which need compilation before training can start. Compil
 
 The hyperparameters needed in training can be set via the configuration file: `./train_config/<name>.yml`.
 
-The configuration files to reproduce the Table 2 results are packed in `./train_config/neurips/`.
+The configuration files to reproduce the Table 2 results are packed in `./train_config/neurips/` (some configuration files now produces even better results compared with Table 2).
 
 For detailed description of the configuration file format, please see `./train_config/README.md`
 
 ## Run Training
 
-We suggest looking through the available tensorflow command line flags defined in `./graphsaint/globals.py`. By properly setting the flags, you can maximize CPU utilization (by telling the number of available cores), and turn on / off Tensorboard, etc. 
+We suggest looking through the available tensorflow command line flags defined in `./graphsaint/globals.py`. By properly setting the flags, you can maximize CPU utilization in the sampling step (by telling the number of available cores), and turn on / off Tensorboard, etc. 
 
 To run the code on cpu
 
