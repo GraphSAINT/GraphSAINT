@@ -1,4 +1,20 @@
-### Training Configuration
+## Hyperparameter Search
+
+The configuration provided here may differ from that provided in Table 3 of the submitted Appendix. The reason is that, we have identified better hyperparameters for GraphSAINT after the NeurIPS submission. 
+
+Unchanged hyperparameter compared with the submitted version:
+
+* Hidden dimension of each model
+* Learning rate
+
+Updated hyperparameter compared with the submitted version:
+
+* Dropout: we search among dropout of 0.0, 0.1, 0.2, 0.3 instead of 0.0, 0.2 as stated in the paper. 
+  * Result: All baseline results keep unchanged due to such additional parameter search. GraphSAINT has identified better configuration for Reddit (using dropout of 0.1).
+* Sampler parameters: for all samplers, we have evaluated additional design points based on the parameters of the specific sampler.
+  * Result: For RW sampler, now walk length of 2 works the best for PPI and Flickr. 
+
+## Training Configuration
 
 
 
