@@ -149,13 +149,13 @@ class HighOrderAggregator(Layer):
         vw = self.act(vw)
         if self.bias == 'bias':
             vw += self.vars['order{}_bias'.format(order)]
-        elif self.bias == 'norm':   # batch norm realized by tf.nn.batch_norm
+        elif self.bias == 'norm':   # batch norm realized by tf.nn.batch_norm (consistent with SGCN implementation)
             mean,variance = tf.nn.moments(vw,axes=[1],keep_dims=True)
             _off = 'order{}_offset'.format(order)
             _sca = 'order{}_scale'.format(order)
             vw = tf.nn.batch_normalization(vw,mean,variance,self.vars[_off],self.vars[_sca],1e-9)
-        else:                       # otherwise, batch norm realized by tf.layer.batch_norm
-            vw=tf.layers.batch_normalization(vw,training=self.is_train,renorm=False)
+        else:
+            raise NotImplementedError
         return vw
 
     def _call(self, inputs):

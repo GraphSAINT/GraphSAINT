@@ -73,9 +73,10 @@ class Minibatch:
         self.subgraphs_remaining_edge_index = []
         
         self.norm_loss_train = None
+        # norm_loss_test is used in full batch evaluation (without sampling). so neighbor features are simply averaged.
         self.norm_loss_test = np.zeros(self.adj_full.shape[0])
         _denom = len(self.node_train) + len(self.node_val) +  len(self.node_test)
-        self.norm_loss_test[self.node_train] = 1/_denom
+        self.norm_loss_test[self.node_train] = 1/_denom     
         self.norm_loss_test[self.node_val] = 1/_denom
         self.norm_loss_test[self.node_test] = 1/_denom
         self.norm_aggr_train = [dict()]     # list of dict. List index: start node index. dict key: end node idx
@@ -108,18 +109,14 @@ class Minibatch:
         else:
             raise NotImplementedError
 
-        def _init_norm_aggr_cnt(val_init):
-            self.norm_aggr_train = list()
-            for u in range(self.adj_train.shape[0]):
-                self.norm_aggr_train.append(dict())
-                _ind_start = self.adj_train.indptr[u]
-                _ind_end = self.adj_train.indptr[u+1]
-                for v in self.adj_train.indices[_ind_start:_ind_end]:
-                    self.norm_aggr_train[u][v] = val_init
+        self.norm_loss_train = np.zeros(self.adj_train.shape[0])
+        self.norm_aggr_train = np.zeros(self.adj_train.size)
 
-        self.norm_loss_train = np.zeros(self.adj_full.shape[0])
+        # For edge sampler, no need to estimate norm factors, we can calculate directly.
+        #if self.method_sample == 'edge':
+        #    
+        #    return
         tot_sampled_nodes = 0
-        # 1. sample enough subg
         while True:
             self.par_graph_sample('train')
             tot_sampled_nodes = sum([len(n) for n in self.subgraphs_remaining_nodes])
@@ -127,32 +124,22 @@ class Minibatch:
                 break
         print()
         num_subg = len(self.subgraphs_remaining_nodes)
-        avg_subg_size = tot_sampled_nodes/num_subg
-        # 2. update _node_cnt --> to be used by norm_loss_train/norm_aggr_train
-        _node_cnt = np.zeros(self.adj_full.shape[0])
         for i in range(num_subg):
-            _node_cnt[self.subgraphs_remaining_nodes[i]] += 1
-        # 3. norm_loss based on _node_cnt
-        self.norm_loss_train[:] = _node_cnt[:]
+            self.norm_aggr_train[self.subgraphs_remaining_edge_index[i]] += 1
+            self.norm_loss_train[self.subgraphs_remaining_nodes[i]] += 1
         assert self.norm_loss_train[self.node_val].sum() + self.norm_loss_train[self.node_test].sum() == 0
+        for v in range(self.adj_train.shape[0]):
+            i_s = self.adj_train.indptr[v]
+            i_e = self.adj_train.indptr[v+1]
+            val = np.clip(self.norm_loss_train[v]/self.norm_aggr_train[i_s:i_e], 0, 1e4)
+            val[np.isnan(val)] = 0.1
+            self.norm_aggr_train[i_s:i_e] = val
         self.norm_loss_train[np.where(self.norm_loss_train==0)[0]] = 0.1
         self.norm_loss_train[self.node_val] = 0
         self.norm_loss_train[self.node_test] = 0
         self.norm_loss_train[self.node_train] = num_subg/self.norm_loss_train[self.node_train]/self.node_train.size
-        # 4. norm_aggr based on _node_cnt and edge count
-        _init_norm_aggr_cnt(0)
-        self.norm_aggr_train_dok=sp.dok_matrix(self.adj_train.shape,dtype=scipy.float32)
-        for i in range(num_subg):
-            for ip in range(len(self.subgraphs_remaining_nodes[i])):
-                _u = self.subgraphs_remaining_nodes[i][ip]
-                for _v in self.subgraphs_remaining_indices_orig[i][self.subgraphs_remaining_indptr[i][ip]:self.subgraphs_remaining_indptr[i][ip+1]]:
-                    self.norm_aggr_train[_u][_v] += 1
-        self.norm_aggr_train_csr_data=[]
-        for i_d,d in enumerate(self.norm_aggr_train):
-            for k in sorted(d):
-                v=d[k]
-                self.norm_aggr_train_csr_data.append((_node_cnt[i_d])/(v+(v==0)*0.1)+(_node_cnt[i_d]==0)*0.1)
-        self.norm_aggr_train_csr_data=np.array(self.norm_aggr_train_csr_data)
+
+
 
 
     def par_graph_sample(self,phase):
@@ -196,7 +183,7 @@ class Minibatch:
             D = self.deg_train[self.node_subgraph]
             t1 = time.time()
             assert len(self.node_subgraph) == adj.shape[0]
-            adj.data=self.norm_aggr_train_csr_data[adj_edge_index]
+            adj.data=self.norm_aggr_train[adj_edge_index]
 
             t2 = time.time()
             adj = sp.dia_matrix((1/D,0),shape=(adj.shape[0],adj.shape[1])).dot(adj)
