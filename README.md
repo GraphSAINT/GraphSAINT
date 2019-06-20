@@ -2,23 +2,25 @@
 
 This is the open source implementation for the "GraphSAINT" paper submitted to NeurIPS 2019.
 
-We keep improving our results. Now GraphSAINT performs even better in terms of both accuracy and time (compared to Table 2 in the submitted paper).
+With better hyperparameter searching procedure, we keep improving our results. Now GraphSAINT performs even better in terms of both accuracy and time (compared to Table 2 in the submitted paper).
 
 Results highlight (2 layer GCN models):
 
 * Reddit-`./train_config/neurips/reddit2_rw.yml`: reaching 0.966 (from previously 0.964) F1-micro score, with the same training time
-* Yelp-`./train_config/neurips/yelp2_mrw.yml`: reaching 0.652 (from previously 0.642) F1-micro score, with longer training time
-* Flickr-`./train_config/neurips/flickr2_rw.yml`: reaching 0.513 (from previously 0.509) F1-micro score, with even shorter time
-* PPI-`./train_config/neurips/ppi2_rw.yml`: reaching 0.979 (from previously 0.973) F1-micro score, with longer training time
+* Yelp-`./train_config/neurips/yelp2_mrw.yml`: reaching 0.652 (from previously 0.642) F1-micro score, with 3x training time; reaching 0.645 (from previously 0.642) F1-micro score, with the same training time.
+* Flickr-`./train_config/neurips/flickr2_rw.yml`: reaching 0.513 (from previously 0.509) F1-micro score, with 0.75x training time
+* PPI-`./train_config/neurips/ppi2_rw.yml`: reaching 0.979 (from previously 0.973) F1-micro score, with 4x training time; reaching 0.974 (from previously 0.973) F1-micro score, with the same training time. 
 
-[Updated table to be added]
+[Updated Table 2 and convergence curve of the submitted paper to be added soon]
+
+[New results with deeper GCNs and other architectures coming soon]
 
 ## Features
 
 As stated in the paper, GraphSAINT can be easily extended to support various graph samplers, as well as other GCN architectures. 
 To add customized sampler, implement the a new sampler class in `./graphsaint/cython_sampler.pyx`. 
 
-As for the GCN architecture, right now higher order graph convolutional layers are already supported. Just specify the order in the configuration file (see `./train_config/README.md`). 
+As for the GCN architecture, right now higher order graph convolutional layers are already supported in this codebase. Just specify the order in the configuration file (see `./train_config/README.md`). 
 We will add support for JK-Net (Jumping Knowledge GCN) soon. 
 
 ## Dependencies
