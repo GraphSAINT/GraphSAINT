@@ -12,3 +12,4 @@ checkpoint
 tf_log/
 models/
 *ignore*
+*.pyc
