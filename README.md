@@ -4,7 +4,14 @@ This is the open source implementation for the "GraphSAINT" paper submitted to N
 
 We keep improving our results. Now GraphSAINT performs even better in terms of both accuracy and time (compared to Table 2 in the submitted paper).
 
-[Updated table to be added] 
+[Updated table to be added]
+
+## Features
+
+As stated in the paper, GraphSAINT can be easily extended to support various graph samplers, as well as other GCN architectures. 
+To add customized sampler, implement the a new sampler class in `./graphsaint/cython_sampler.pyx`. 
+
+As for the GCN architecture, right now higher order graph convolutional layers are already supported. Just specify the order in the configuration file (see `./train_config/README.md`). 
 
 ## Dependencies
 
