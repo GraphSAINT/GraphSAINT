@@ -14,7 +14,6 @@ phase:
     dropout: 0.1
     sampler: 'mrw'
     # dropout 0.0 also work, but 0.1 is more stable
-    size_subgraph: 8000 # (6000,1000) (7500,1000)
-    size_frontier: 1000 #1000,  1200, 1500
-    order: 1
+    size_subgraph: 8000
+    size_frontier: 1000
     max_deg: 10000
