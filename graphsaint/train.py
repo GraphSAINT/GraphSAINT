@@ -185,21 +185,17 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
                     t2 = time.time()
                 time_train_ep += t2-t1
                 time_prepare_ep += t1-t0
-                if not minibatch.batch_num % FLAGS.print_every:
+                if not minibatch.batch_num % FLAGS.eval_train_every:
                     t3 = time.time()
                     f1_mic,f1_mac = calc_f1(labels,pred_train,arch_gcn['loss'])
-                    printf("  Iter {:4d}\ttrain loss {:.4f}\tmic {:4f}\tmac {:4f}".format(
-                        minibatch.batch_num,loss_train,f1_mic,f1_mac))
+                    #printf("  Iter {:4d}\ttrain loss {:.4f}\tmic {:4f}\tmac {:4f}".format(
+                    #    minibatch.batch_num,loss_train,f1_mic,f1_mac))
                     l_loss_tr.append(loss_train)
                     l_f1mic_tr.append(f1_mic)
                     l_f1mac_tr.append(f1_mac)
                     l_size_subg.append(minibatch.size_subgraph)
                     t4 = time.time()
                     time_calc_f1 += t4 - t3
-            if FLAGS.timeline:
-                print('train time: {:4.2f}\tprepare time: {:4.2f}\ttimeline time: {:4.2f}'.format(time_train_ep,time_prepare_ep,time_timeline_ep)) 
-            else:
-                print('  TF train time: {:4.2f} sec\tminibatch preparation time: {:4.2f} sec'.format(time_train_ep,time_prepare_ep))
             time_train += time_train_ep
             time_prepare += time_prepare_ep
             loss_val,f1mic_val,f1mac_val,time_eval = \
@@ -213,8 +209,8 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
                 print('  Saving models ...')
                 savepath = saver.save(sess, '{}/models/saved_model_{}.chkpt'.format(FLAGS.log_dir,timestamp),write_meta_graph=False,write_state=False)
                 print('  TF saver time: {:4.2f} sec'.format(time.time()-tsave))
-            printf(' TRAIN (Ep avg): loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr)))
-            printf(' VALIDATION: loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
+            printf(' TRAIN (Ep avg): loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}\ttrain time = {:.4f} sec'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr),time_train_ep))
+            printf(' VALIDATION:     loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
 
             if FLAGS.tensorboard:
                 misc_stat = sess.run([train_stat[1]],feed_dict={\

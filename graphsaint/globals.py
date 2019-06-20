@@ -29,7 +29,7 @@ flags.DEFINE_boolean('log_device_placement', False, "Whether to log device place
 flags.DEFINE_string('data_prefix', '', 'prefix identifying training data. must be specified.')
 flags.DEFINE_string('log_dir', '.', 'base directory for logging and saving embeddings')
 flags.DEFINE_integer('gpu', -1234, "which gpu to use.")
-flags.DEFINE_integer('print_every', 15, "How often to print training info.")
+flags.DEFINE_integer('eval_train_every', 15, "How often to evaluate training subgraph accuracy.")
 
 flags.DEFINE_string('train_config', '', "path to the configuration of training (*.yml)")
 flags.DEFINE_string('model','','pretrained model')

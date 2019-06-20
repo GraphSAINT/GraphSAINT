@@ -4,7 +4,13 @@ This is the open source implementation for the "GraphSAINT" paper submitted to N
 
 We keep improving our results. Now GraphSAINT performs even better in terms of both accuracy and time (compared to Table 2 in the submitted paper).
 
-[Updated table to be added] 
+Results highlight:
+
+* Reddit: reaching over 0.966 F1-micro score (without increasing training time)
+* Yelp: reaching over 0.652 F1-micro score
+* Flickr: reaching over 0.513 F1-micro score (with even shorter time)
+
+[Updated table to be added]
 
 ## Dependencies
 
