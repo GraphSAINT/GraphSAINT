@@ -10,8 +10,8 @@ params:
     weight_decay: 0.0
     sample_coverage: 50
 phase:
-  - end: 30
-    dropout: 0.0
+  - end: 25
+    dropout: 0.1        # adding dropout of 0.1 helps stablizing training
     sampler: 'mrw'
     size_subgraph: 2500
     size_frontier: 1000
