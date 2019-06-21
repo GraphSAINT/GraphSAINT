@@ -40,6 +40,8 @@ You can open any `*.yml` file in `./train_config/neurips/` to better understand 
 
 #### Phase:
 
+The training can proceed in different *phases*, where in each phase we can set different sampling parameters. Note here that we abuse the notation of an "epoch". We define an epoch as |V|/|V_s| iterations, where |V| is the number of training nodes, and |V_s| is the average number of subgraph nodes. 
+
 Specification of sampling parameters
 
 Node sampler:
