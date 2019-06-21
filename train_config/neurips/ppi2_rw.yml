@@ -11,7 +11,7 @@ params:
     sample_coverage: 50
 phase:
   - end: 2000   # NOTE: change this to 400 will give 0.974 within 25 sec
-    dropout: 0.0
+    dropout: 0.1
     sampler: 'rw'
     depth: 2
     num_root: 3000
