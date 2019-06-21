@@ -81,7 +81,6 @@ def parse_n_prepare(flags):
     train_phases = train_config['phase']
     for ph in train_phases:
         assert 'end' in ph
-        assert 'dropout' in ph
         assert 'sampler' in ph
     print("Loading training data..")
     temp_data = load_data(flags.data_prefix)

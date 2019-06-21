@@ -104,6 +104,21 @@ class Dense(Layer):
         return self.act(output)
 
 
+class JumpingKnowledge(Layer):
+    def __init__(self, mode=None, **kwargs):
+        """
+        """
+        super(JumpingKnowledge,self).__init__(**kwargs)
+        self.mode = mode
+
+    def _call(self, inputs):
+        feats_l,idx_conv = inputs
+        if not self.mode:
+            return feats_l[-1]
+        elif self.mode == 'concat':
+            pass
+
+
 
 
 class HighOrderAggregator(Layer):

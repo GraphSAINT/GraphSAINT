@@ -7,10 +7,10 @@ network:
     bias: 'norm'
 params:
   - lr: 0.01
-    weight_decay: 0.0
-    sample_coverage: 100 # increasing this from 50 (as stated in the paper) to 100, slightly increases the accuracy
-phase:
-  - end: 50
     dropout: 0.1
+    weight_decay: 0.0
+    sample_coverage: 50
+phase:
+  - end: 50     # setting this to 30 will give you 0.644 F1-micro within the time listed in Table 2
     sampler: 'edge'
     size_subg_edge: 2500

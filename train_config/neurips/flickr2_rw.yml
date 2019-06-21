@@ -7,11 +7,11 @@ network:
     bias: 'norm'
 params:
   - lr: 0.01
+    dropout: 0.2
     weight_decay: 0.0
     sample_coverage: 25
 phase:
   - end: 15
-    dropout: 0.2
     sampler: 'rw'
     num_root: 6000
     depth: 2

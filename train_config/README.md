@@ -36,7 +36,31 @@ You can open any `*.yml` file in `./train_config/neurips/` to better understand 
 
 * *lr*: learning rate for Adam optimizer
 * *sample\_coverage*: the `N` number in Section 5.3
+* *dropout*: dropout value
 
 #### Phase:
 
 Specification of sampling parameters
+
+Node sampler:
+
+* *sampler*: `'node'`
+* *size_subgraph*: `[int]` size of the subgraph measured in number of nodes
+
+Edge sampler:
+
+* *sampler*: `'edge'`
+* *size_subg_edge*: `[int]` how many edges to perform independent sampling
+
+Random walk sampler:
+
+* *sampler*: `'rw'`
+* *num_root*: `[int]` number of random walkers
+* *depth*: `[int]` walk length of each walker
+
+Multi-dimensional random walk:
+
+* *sampler*: `'mrw'`
+* *size_subgraph*: `[int]` size of the subgraph measured by number of nodes. **NOTE**: this number only specifies a node budget. This algorithm may repeatedly sample some high degree nodes, and thus the final number of subgraph nodes may be much less than this budget. 
+* *size_frontier*: `[int]` size of the initial frontier nodes
+* *deg_clip* (optional): `[int]` clipping the degree of a node to restrict the probability of sampling nodes with extremely high degree. **NOTE**: this clipping only restricts the sampling probability, and it does NOT change the graph topology.
