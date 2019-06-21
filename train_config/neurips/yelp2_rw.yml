@@ -7,11 +7,11 @@ network:
     bias: 'norm'
 params:
   - lr: 0.01
-    weight_decay: 0.0
-    sample_coverage: 100
-phase:
-  - end: 50
     dropout: 0.1
+    weight_decay: 0.0
+    sample_coverage: 50
+phase:
+  - end: 50         # setting this to 30 gives over 0.647 F1-mic with the training time shown in Table 2
     sampler: 'rw'
     num_root: 1250
     depth: 2

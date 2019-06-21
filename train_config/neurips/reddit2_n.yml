@@ -7,11 +7,10 @@ network:
     bias: 'norm'
 params:
   - lr: 0.01
+    dropout: 0.1    # dropout of 0.0 also works, but 0.1 is more stable
     weight_decay: 0.0   
-    sample_coverage: 50 # 100
+    sample_coverage: 50
 phase:
   - end: 40
-    dropout: 0.1
-    # dropout 0.0 also work, but 0.1 is more stable
     sampler: 'node'
     size_subgraph: 8000

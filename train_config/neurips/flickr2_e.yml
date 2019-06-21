@@ -7,10 +7,10 @@ network:
     act: 'relu'
 params:
   - lr: 0.01
+    dropout: 0.2
     weight_decay: 0.0
     sample_coverage: 25
 phase:
   - end: 15
-    dropout: 0.2
     sampler: 'edge'
     size_subg_edge: 2000

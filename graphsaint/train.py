@@ -43,7 +43,7 @@ def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,mode):
     run_metadata = tf.RunMetadata()
     t1 = time.time()
     num_cls = minibatch_iter.class_arr.shape[-1]
-    feed_dict, labels = minibatch_iter.feed_dict(0.,mode)
+    feed_dict, labels = minibatch_iter.feed_dict(mode)
     if FLAGS.timeline:
         preds,loss = sess.run([model.preds, model.loss], feed_dict=feed_dict, options=options, run_metadata=run_metadata)
         fetched_timeline = timeline.Timeline(run_metadata.step_stats)
@@ -127,7 +127,7 @@ def prepare(train_data,train_params,arch_gcn):
 
 
 
-def train(train_phases,train_params,arch_gcn,model,minibatch,\
+def train(train_phases,arch_gcn,model,minibatch,\
             sess,train_stat,ph_misc_stat,summary_writer):
     import time
     avg_time = 0.0
@@ -150,7 +150,6 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
         minibatch.set_sampler(phase)
         tset_end = time.time()
         time_qest += tset_end-tset_start
-        sess.run(model.reset_optimizer_op)
         num_batches = minibatch.num_training_batches()
         printf('START PHASE {:4d}'.format(ip),style='underline')
         for e in range(epoch_ph_start,int(phase['end'])):
@@ -167,7 +166,7 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
             time_list = 0
             while not minibatch.end():
                 t0 = time.time()
-                feed_dict, labels = minibatch.feed_dict(phase['dropout'],mode='train')
+                feed_dict, labels = minibatch.feed_dict(mode='train')
                 t1 = time.time()
                 if FLAGS.timeline:
                     _,__,loss_train,pred_train = sess.run([train_stat[0], \
@@ -248,7 +247,7 @@ def train(train_phases,train_params,arch_gcn,model,minibatch,\
 def train_main(argv=None):
     train_params,train_phases,train_data,arch_gcn = parse_n_prepare(FLAGS)
     model,minibatch,sess,train_stat,ph_misc_stat,summary_writer = prepare(train_data,train_params,arch_gcn)
-    ret = train(train_phases,train_params,arch_gcn,model,minibatch,sess,train_stat,ph_misc_stat,summary_writer)
+    ret = train(train_phases,arch_gcn,model,minibatch,sess,train_stat,ph_misc_stat,summary_writer)
     return ret
 
 

@@ -25,6 +25,7 @@ class GraphSAINT:
         self.node_subgraph = placeholders['node_subgraph']
         self.num_layers = len(arch_gcn['arch'].split('-'))
         self.weight_decay = train_params['weight_decay']
+        self.jk = None if 'jk' not in train_params else train_params['jk']
         self.adj_subgraph = placeholders['adj_subgraph']
         self.adj_subgraph_last = placeholders['adj_subgraph_last']
         self.adj_subgraph_0=placeholders['adj_subgraph_0']
@@ -48,10 +49,6 @@ class GraphSAINT:
         self.placeholders = placeholders
 
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
-        self.reset_optimizer_op = tf.variables_initializer(self.optimizer.variables())
-        #if 'reset_opt' in train_params:
-        #    if train_params['reset_opt'] == 0:
-        self.reset_optimizer_op = tf.no_op()
 
         self.loss = 0
         self.opt_op = None
@@ -73,12 +70,14 @@ class GraphSAINT:
         model_pretrain_aggr = model_pretrain['meanaggr'] if model_pretrain else None
         model_pretrain_dense = model_pretrain['dense'] if model_pretrain else None
         self.aggregators = self.get_aggregators(model_pretrain=model_pretrain_aggr)
-        self.outputs = self.aggregate_subgraph()
+        _outputs_l = self.aggregate_subgraph()
+        self.layer_jk = layers.JumpingKnowledge(mode=self.jk)
+        self.outputs = self.layer_jk([_outputs_l, None])      # TODO: set conv_idx
         # OUPTUT LAYER
         self.outputs = tf.nn.l2_normalize(self.outputs, 1)
-        self.node_pred = layers.Dense(self.dims_feat[-1], self.num_classes, self.weight_decay,
+        self.layer_pred = layers.Dense(self.dims_feat[-1], self.num_classes, self.weight_decay,
                 dropout=self.placeholders['dropout'], act='I', model_pretrain=model_pretrain_dense)
-        self.node_preds = self.node_pred(self.outputs)
+        self.node_preds = self.layer_pred(self.outputs)
 
         # BACK PROP
         self._loss()
@@ -97,7 +96,7 @@ class GraphSAINT:
         for aggregator in self.aggregators:
             for var in aggregator.vars.values():
                 self.loss += self.weight_decay * tf.nn.l2_loss(var)
-        for var in self.node_pred.vars.values():
+        for var in self.layer_pred.vars.values():
             self.loss += self.weight_decay * tf.nn.l2_loss(var)
 
         # classification loss
@@ -138,8 +137,10 @@ class GraphSAINT:
         else:
             hidden = self.features
             adj = self.adj_full_norm
+        ret_l = list()
         for layer in range(self.num_layers):
             hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
                     self.adj_subgraph_3,self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7))
-        return hidden
+            ret_l.append(hidden)
+        return ret_l
 

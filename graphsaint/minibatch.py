@@ -78,6 +78,7 @@ class Minibatch:
         self.norm_aggr_train = np.zeros(self.adj_train.size)
        
         self.sample_coverage = train_params['sample_coverage']
+        self.dropout = train_params['dropout']
         self.deg_train = np.array(self.adj_train.sum(1)).flatten()
 
 
@@ -89,9 +90,13 @@ class Minibatch:
         self.subgraphs_remaining_nodes = list()
         self.method_sample = train_phases['sampler']
         if self.method_sample == 'mrw':
+            if 'deg_clip' in train_phases:
+                _deg_clip = int(train_phases['deg_clip'])
+            else:
+                _deg_clip = 100000      # setting this to a large number so essentially there is no clipping in probability
             self.size_subg_budget = train_phases['size_subgraph']
             self.graph_sampler = mrw_sampling(self.adj_train,\
-                self.node_train,self.size_subg_budget,train_phases['size_frontier'],int(train_phases['max_deg']))
+                self.node_train,self.size_subg_budget,train_phases['size_frontier'],_deg_clip)
         elif self.method_sample == 'rw':
             self.size_subg_budget = train_phases['num_root']*train_phases['depth']
             self.graph_sampler = rw_sampling(self.adj_train,\
@@ -148,7 +153,7 @@ class Minibatch:
         self.subgraphs_remaining_nodes.extend(_v)
         self.subgraphs_remaining_edge_index.extend(_edge_index)
 
-    def feed_dict(self,dropout,mode='train'):
+    def feed_dict(self,mode='train'):
         """ DONE """
         if mode in ['val','test']:
             self.node_subgraph = np.arange(self.class_arr.shape[0])
@@ -161,6 +166,7 @@ class Minibatch:
             adj_5 = self.adj_full_norm_5
             adj_6 = self.adj_full_norm_6
             adj_7 = self.adj_full_norm_7
+            _dropout = 0.
         else:
             assert mode == 'train'
             tt0=time.time()
@@ -191,11 +197,14 @@ class Minibatch:
             adj_5 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
             adj_6 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
             adj_7 = sp.csr_matrix(([],[],np.zeros(2)),shape=(1,self.node_subgraph.shape[0]))
+
+            _dropout = self.dropout
+
             self.batch_num += 1
         feed_dict = dict()
         feed_dict.update({self.placeholders['node_subgraph']: self.node_subgraph})
         feed_dict.update({self.placeholders['labels']: self.class_arr[self.node_subgraph]})
-        feed_dict.update({self.placeholders['dropout']: dropout})
+        feed_dict.update({self.placeholders['dropout']: _dropout})
         if mode in ['val','test']:
             feed_dict.update({self.placeholders['norm_loss']: self.norm_loss_test})
         else:
