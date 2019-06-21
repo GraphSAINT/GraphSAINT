@@ -6,10 +6,15 @@ With better hyperparameter searching procedure, we keep improving our results. N
 
 Results highlight (2 layer GCN models):
 
-* Reddit-`./train_config/neurips/reddit2_rw.yml`: reaching 0.966 (from previously 0.964) F1-micro score, with the same training time
-* Yelp-`./train_config/neurips/yelp2_mrw.yml`: reaching 0.652 (from previously 0.642) F1-micro score, with 3x training time; reaching 0.646 (from previously 0.642) F1-micro score, with the same training time.
-* Flickr-`./train_config/neurips/flickr2_rw.yml`: reaching 0.513 (from previously 0.509) F1-micro score, with 0.75x training time
-* PPI-`./train_config/neurips/ppi2_rw.yml`: reaching 0.979 (from previously 0.973) F1-micro score, with 4x training time; reaching 0.974 (from previously 0.973) F1-micro score, with the same training time. 
+* Reddit
+  * `./train_config/neurips/reddit2_rw.yml`: reaching 0.966 (from previously 0.964) F1-micro score, with the same training time
+* Yelp
+  * `./train_config/neurips/yelp2_mrw.yml`: reaching 0.652 (from previously 0.642) F1-micro score, with 3x training time; reaching 0.646 (from previously 0.642) F1-micro score, with the same training time.
+  * `./train_config/neurips/yelp2_e.yml`: reaching 0.650 (from previously 0.642) F1-micro score, with 1.3x training time.
+* Flickr
+  * `./train_config/neurips/flickr2_rw.yml`: reaching 0.513 (from previously 0.509) F1-micro score, with 0.75x training time
+* PPI
+  * `./train_config/neurips/ppi2_rw.yml`: reaching 0.982 (from previously 0.973) F1-micro score, with 4x training time; reaching 0.974 (from previously 0.973) F1-micro score, with the same training time. 
 
 [Updated Table 2 and convergence curve to be added soon]
 
@@ -20,7 +25,7 @@ Results highlight (2 layer GCN models):
 As stated in the paper, GraphSAINT can be easily extended to support various graph samplers, as well as other GCN architectures. 
 To add customized sampler, implement the a new sampler class in `./graphsaint/cython_sampler.pyx`. 
 
-As for the GCN architecture, right now higher order graph convolutional layers are already supported in this codebase. Just specify the order in the configuration file (see `./train_config/README.md`). 
+As for the GCN architecture, right now higher order graph convolutional layers are already supported in this codebase. Just specify the order in the configuration file (see `./train_config/README.md`, and also `./train_config/explore/reddit2_rw.yml` for an example order two GCN reaching 0.967 F1-micro). 
 We will add support for JK-Net (Jumping Knowledge GCN) soon. 
 
 ## Dependencies
