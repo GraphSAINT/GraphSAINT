@@ -29,18 +29,20 @@ You can open any `*.yml` file in `./train_config/neurips/` to better understand 
   * NOTE: a graph conv layer in S-GCN is equivalent to a `1-0` structure in GraphSAINT; a graph conv layer in other baselines is equivalent to a `1` layer in GraphSAINT. 
   * For the above reason, when evaluating PPI and Reddit (which are evaluated in the S-GCN paper), GraphSAINT uses `1-0-1-0` architecture. When evaluating Flickr and Yelp, GraphSAINT uses `1-1-0` (where the last `0` is stands for dense layer for the classifier).
   * We believe such design choice on architecture gives us the fairest comparison with baselines.
-* *act*: `['I' / 'relu' / 'leaky_relu']` activation function, where `I` is for linear activation. For leaky_relu, the current version of the code supports only the default alpha value.
+* *act*: `['I' / 'relu' / 'leaky_relu']` activation function, where `I` is for linear activation. For `leaky_relu`, the current version of the code supports only the default alpha value.
 * *bias*: `['bias' / 'norm']` whether to apply bias or batch norm at the end of each conv layer. S-GCN uses batch norm, and so GraphSAINT also uses batch norm in all `./train_config/neurips/` configurations. 
 
 #### Hyperparameters:
 
-* *lr*: learning rate for Adam optimizer
-* *sample\_coverage*: the `N` number in Section 5.3
-* *dropout*: dropout value
+* *lr*: `[float]` learning rate for Adam optimizer
+* *sample\_coverage*: `[int]` the `N` number in Section 5.3
+* *dropout*: `[float]` dropout value
 
 #### Phase:
 
-The training can proceed in different *phases*, where in each phase we can set different sampling parameters. Note here that we abuse the notation of an "epoch". We define an epoch as |V|/|V_s| iterations, where |V| is the number of training nodes, and |V_s| is the average number of subgraph nodes. 
+The training can proceed in different *phases*, where in each phase we can set different sampling parameters. Note here that we abuse the notation of an "epoch". We define an "epoch" as |V|/|V_s| iterations, where |V| is the number of training nodes, and |V_s| is the average number of subgraph nodes. 
+
+* *end*: the termination epoch number. 
 
 Specification of sampling parameters
 
