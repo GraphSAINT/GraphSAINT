@@ -2,7 +2,7 @@
 
 This is the open source implementation for the "GraphSAINT" paper submitted to NeurIPS 2019.
 
-With better hyperparameter searching procedure, we keep improving our results. Now GraphSAINT performs even better in terms of both accuracy and time (compared to Table 2 in the submitted paper).
+With better hyperparameter searching procedure, we keep improving our results. Now GraphSAINT performs even better in terms of both accuracy and time (compared to Table 2 in the submitted paper). **NOTE**: baseline performance remains unchanged (see `./train_config/README.md` for detailed description of the parameter searching procedure). 
 
 Results highlight (2 layer GCN models):
 
