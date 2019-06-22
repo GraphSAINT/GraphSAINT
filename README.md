@@ -9,6 +9,7 @@ Results highlight (2 layer GCN models):
 * Reddit
   * `./train_config/neurips/reddit2_rw.yml`: reaching 0.966 (from previously 0.964) F1-micro score, with the same training time
 * Yelp
+  * `./train_config/neurips/yelp2_rw.yml`: reaching 0.654 (from previously 0.640) F1-micro score, with 4x training time; reaching 0.648 (from previously 0.640) F1-micro score, with the same training time. 
   * `./train_config/neurips/yelp2_mrw.yml`: reaching 0.652 (from previously 0.642) F1-micro score, with 3x training time; reaching 0.646 (from previously 0.642) F1-micro score, with the same training time.
   * `./train_config/neurips/yelp2_e.yml`: reaching 0.650 (from previously 0.642) F1-micro score, with 1.3x training time.
 * Flickr
