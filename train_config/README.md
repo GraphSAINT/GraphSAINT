@@ -1,6 +1,6 @@
 ## Hyperparameter Search
 
-The configuration provided here may differ from that provided in Table 3 of the submitted Appendix. The reason is that, we have identified better hyperparameters for GraphSAINT after the NeurIPS submission. 
+The configuration provided here may differ from that provided in Table 3 of the submitted Appendix. With more thorough hyperparameter searching, we have identified better configuration for GraphSAINT after the NeurIPS submission. 
 
 Unchanged hyperparameter compared with the submitted version:
 
@@ -42,7 +42,7 @@ You can open any `*.yml` file in `./train_config/neurips/` to better understand 
 
 The training can proceed in different *phases*, where in each phase we can set different sampling parameters. Note here that we abuse the notation of an "epoch". We define an "epoch" as |V|/|V_s| iterations, where |V| is the number of training nodes, and |V_s| is the average number of subgraph nodes. 
 
-* *end*: the termination epoch number. 
+* *end*: `[int]` the termination epoch number. 
 
 Specification of sampling parameters
 
