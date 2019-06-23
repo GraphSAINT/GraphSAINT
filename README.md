@@ -4,7 +4,7 @@ This is the open source implementation for the "GraphSAINT" paper submitted to N
 
 With better hyperparameter searching procedure, we keep improving our results. Now GraphSAINT performs even better in terms of both accuracy and time (compared to Table 2 in the submitted paper). **NOTE**: baseline performance remains unchanged (see `./train_config/README.md` for detailed description of the parameter searching procedure). 
 
-Results highlight (2 layer GCN models):
+**Highlight** of GraphSAINT new results (2 layer GCN models):
 
 * Reddit
   * `./train_config/neurips/reddit2_rw.yml`: reaching 0.966 (from previously 0.964) F1-micro score, with the same training time
@@ -14,7 +14,7 @@ Results highlight (2 layer GCN models):
 * Flickr
   * `./train_config/neurips/flickr2_rw.yml`: reaching 0.513 (from previously 0.509) F1-micro score, with 0.75x training time
 * PPI
-  * `./train_config/neurips/ppi2_rw.yml`: reaching 0.982 (from previously 0.973) F1-micro score, with 4x training time; reaching 0.974 (from previously 0.973) F1-micro score, with the same training time. 
+  * `./train_config/neurips/ppi2_rw.yml`: reaching 0.982 (from previously 0.973) F1-micro score, with 4x training time; reaching 0.974 (from previously 0.973) F1-micro score, with 1x training time. 
 
 [Updated Table 2 and convergence curve to be added soon]
 
