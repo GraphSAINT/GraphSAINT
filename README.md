@@ -18,7 +18,7 @@ With better hyperparameter searching procedure, we keep improving our results. N
 
 2 layer convergence (validation f1 mic per epoch with time) plot
 
-![Alt text](convergence.png)
+![Alt text](convergen.png)
 
 [New results with deeper GCNs and other architectures coming soon]
 
