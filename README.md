@@ -30,7 +30,7 @@ To add customized sampler, implement the new sampler class in `./graphsaint/cyth
 As for the GCN architecture:
 
 * Higher order graph convolutional layers are supported. Just specify the order in the configuration file (see `./train_config/README.md`, and also `./train_config/explore/reddit2_rw.yml` for an example order two GCN reaching 0.967 F1-micro). 
-* Jumping Knowledge GCN (JK-Net) is supported. The JK-Net in the [original paper](https://arxiv.org/abs/1806.03536) adopts the neighbor sampling strategy of GraphSAGE, where neighbor explosion in deeper layers is **not** resolved. Here in this codebase, we demonstrate that graph sampling based minibatch of GraphSAINT can be applied to JK-Net architecture to improve training scalability w.r.t. GCN depth. Check out `./train_config/explore/reddit4_jk_rw.yml` for a 4-layer JK-Net achieving **0.968** F1-Micro on Reddit. The training time (under random walk sampler) is under 40 seconds!
+* Jumping Knowledge GCN (JK-Net) is supported. The JK-Net in the [original paper](https://arxiv.org/abs/1806.03536) adopts the neighbor sampling strategy of GraphSAGE, where neighbor explosion in deeper layers is **not** resolved. Here in this codebase, we demonstrate that graph sampling based minibatch of GraphSAINT can be applied to JK-Net architecture to improve training scalability w.r.t. GCN depth. Check out `./train_config/explore/reddit4_jk_rw.yml` for a 4-layer JK-Net achieving **0.968** F1-Micro on Reddit. The training time (using random walk sampler) is under 40 seconds!
 
 ## Dependencies
 
