@@ -16,7 +16,8 @@ With better hyperparameter searching procedure, we keep improving our results. N
 * PPI
   * `./train_config/neurips/ppi2_rw.yml`: reaching 0.982 (from previously 0.973) F1-micro score, with 4x training time; reaching 0.974 (from previously 0.973) F1-micro score, with 1x training time. 
 
-2 layer convergence (validation f1 mic per epoch with time) plot
+2 layer convergence (Validation F1-Micro w.r.t. Training time) plot
+**There is some error with the FastGCN curve. We are fixing this.**
 
 ![Alt text](converge.png)
 
