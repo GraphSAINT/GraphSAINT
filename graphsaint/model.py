@@ -25,7 +25,8 @@ class GraphSAINT:
         self.node_subgraph = placeholders['node_subgraph']
         self.num_layers = len(arch_gcn['arch'].split('-'))
         self.weight_decay = train_params['weight_decay']
-        self.jk = None if 'jk' not in train_params else train_params['jk']
+        self.jk = None if 'jk' not in arch_gcn else arch_gcn['jk']
+        self.arch_gcn = arch_gcn
         self.adj_subgraph = placeholders['adj_subgraph']
         self.adj_subgraph_last = placeholders['adj_subgraph_last']
         self.adj_subgraph_0=placeholders['adj_subgraph_0']
@@ -45,6 +46,8 @@ class GraphSAINT:
         self.num_classes = num_classes
         self.sigmoid_loss = (arch_gcn['loss']=='sigmoid')
         _dims,self.order_layer,self.act_layer,self.bias_layer,self.aggr_layer = parse_layer_yml(arch_gcn,features.shape[1])
+        # get layer index for each conv layer, useful for jk net last layer aggregation
+        self.set_idx_conv()
         self.set_dims(_dims)
         self.placeholders = placeholders
 
@@ -61,6 +64,12 @@ class GraphSAINT:
         self.dims_feat = [dims[0]] + [((self.aggr_layer[l]=='concat')*self.order_layer[l]+1)*dims[l+1] for l in range(len(dims)-1)]
         self.dims_weight = [(self.dims_feat[l],dims[l+1]) for l in range(len(dims)-1)]
 
+    def set_idx_conv(self):
+        idx_conv = np.where(np.array(self.order_layer)>=1)[0]
+        idx_conv = list(idx_conv[1:] - 1)
+        idx_conv.append(len(self.order_layer)-1)
+        self.idx_conv = idx_conv
+
 
     def build(self, model_pretrain=None):
         """
@@ -71,11 +80,16 @@ class GraphSAINT:
         model_pretrain_dense = model_pretrain['dense'] if model_pretrain else None
         self.aggregators = self.get_aggregators(model_pretrain=model_pretrain_aggr)
         _outputs_l = self.aggregate_subgraph()
-        self.layer_jk = layers.JumpingKnowledge(mode=self.jk)
-        self.outputs = self.layer_jk([_outputs_l, None])      # TODO: set conv_idx
+        if self.jk == 'concat':
+            _dim_input_jk = np.array(self.dims_feat)[np.array(self.idx_conv)+1].sum()
+        else:
+            _dim_input_jk = self.dims_feat[-1]
+        self.layer_jk = layers.JumpingKnowledge(self.arch_gcn,_dim_input_jk,mode=self.jk)
+        self.outputs = self.layer_jk([_outputs_l, self.idx_conv])
         # OUPTUT LAYER
         self.outputs = tf.nn.l2_normalize(self.outputs, 1)
-        self.layer_pred = layers.Dense(self.dims_feat[-1], self.num_classes, self.weight_decay,
+        _dim_final = self.arch_gcn['dim'] if self.jk else self.dims_feat[-1]
+        self.layer_pred = layers.Dense(_dim_final, self.num_classes, self.weight_decay,
                 dropout=self.placeholders['dropout'], act='I', model_pretrain=model_pretrain_dense)
         self.node_preds = self.layer_pred(self.outputs)
 
