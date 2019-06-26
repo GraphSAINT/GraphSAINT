@@ -16,7 +16,7 @@ With better hyperparameter searching procedure, we keep improving our results. N
 * PPI
   * `./train_config/neurips/ppi2_rw.yml`: reaching 0.982 (from previously 0.973) F1-micro score, with 4x training time; reaching 0.974 (from previously 0.973) F1-micro score, with 1x training time. 
 
-![avatar][base64str]
+![alt][base64str]
 [Updated Table 2 and convergence curve to be added soon]
 
 [New results with deeper GCNs and other architectures coming soon]
