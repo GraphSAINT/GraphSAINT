@@ -2,7 +2,7 @@
 
 This is the open source implementation for the "GraphSAINT" paper submitted to NeurIPS 2019.
 
-With better hyperparameter searching procedure, we keep improving our results. Now GraphSAINT performs even better in terms of both accuracy and time (compared to Table 2 in the submitted paper). **NOTE**: baseline performance remains unchanged (see `./train_config/README.md` for detailed description of the parameter searching procedure). 
+With better hyperparameter searching procedure, we keep improving our results. Now GraphSAINT performs even better in terms of both accuracy and time (compared to Table 2 in the submitted paper). **NOTE**: baseline performance mostly remains unchanged (exception: FastGCN on Flickr has 0.01 higher test accuracy --- from 0.503 to 0.504). See `./train_config/README.md` for detailed description of the updated parameter searching procedure. 
 
 **Highlight** of GraphSAINT new results (2 layer GCN models):
 
@@ -16,17 +16,21 @@ With better hyperparameter searching procedure, we keep improving our results. N
 * PPI
   * `./train_config/neurips/ppi2_rw.yml`: reaching 0.982 (from previously 0.973) F1-micro score, with 4x training time; reaching 0.974 (from previously 0.973) F1-micro score, with 1x training time. 
 
-[Updated Table 2 and convergence curve to be added soon]
+2 layer convergence (Validation F1-Micro w.r.t. Training time) plot
+
+![Alt text](converge.png)
 
 [New results with deeper GCNs and other architectures coming soon]
 
 ## Features
 
 As stated in the paper, GraphSAINT can be easily extended to support various graph samplers, as well as other GCN architectures. 
-To add customized sampler, implement the a new sampler class in `./graphsaint/cython_sampler.pyx`. 
+To add customized sampler, implement the new sampler class in `./graphsaint/cython_sampler.pyx`. 
 
-As for the GCN architecture, right now higher order graph convolutional layers are already supported in this codebase. Just specify the order in the configuration file (see `./train_config/README.md`, and also `./train_config/explore/reddit2_rw.yml` for an example order two GCN reaching 0.967 F1-micro). 
-We will add support for JK-Net (Jumping Knowledge GCN) soon. 
+As for the GCN architecture:
+
+* Higher order graph convolutional layers are already supported in this codebase. Just specify the order in the configuration file (see `./train_config/README.md`, and also `./train_config/explore/reddit2_rw.yml` for an example order two GCN reaching 0.967 F1-micro). 
+* We will add support for Jumping Knowledge GCN (JK-Net) soon. JK-Net adopts the neighbor sampling strategy of GraphSAGE, where neighbor explosion in deeper layers is **not** resolved. We believe the graph sampling technique of GraphSAINT can be naturally applied to the architecture of JK-Nets. 
 
 ## Dependencies
 
