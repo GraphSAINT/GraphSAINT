@@ -105,18 +105,46 @@ class Dense(Layer):
 
 
 class JumpingKnowledge(Layer):
-    def __init__(self, mode=None, **kwargs):
+    def __init__(self, arch_gcn, dim_input_jk, mode=None, **kwargs):
         """
         """
         super(JumpingKnowledge,self).__init__(**kwargs)
         self.mode = mode
+        if not mode:
+            return
+        self.act = F_ACT[arch_gcn['act']]
+        self.bias = arch_gcn['bias']
+        self.dim_in = dim_input_jk
+        self.dim_out = arch_gcn['dim']
+
+        with tf.variable_scope(self.name + '_vars'):
+            self.vars['weights'] = glorot([self.dim_in,self.dim_out],name='weights')
+            self.vars['bias'] = zeros([self.dim_out],name='bias')
+            if self.bias == 'norm':
+                self.vars['offset'] = zeros([1,self.dim_out],name='offset')
+                self.vars['scale'] = ones([1,self.dim_out],name='scale')
+        
 
     def _call(self, inputs):
         feats_l,idx_conv = inputs
         if not self.mode:
             return feats_l[-1]
         elif self.mode == 'concat':
-            pass
+            feats_sel = [f for i,f in enumerate(feats_l) if i in idx_conv]
+            feats_aggr = tf.concat(feats_sel, axis=1)
+        elif self.mode == 'max_pool':
+            feats_sel = [f for i,f in enumerate(feats_l) if i in idx_conv]
+            feats_stack = tf.stack(feats_sel)
+            feats_aggr =  tf.reduce_max(feats_stack,axis=0)
+        else:
+            raise NotImplementedError
+        vw = tf.matmul(feats_aggr,self.vars['weights'])
+        vw += self.vars['bias']
+        vw = self.act(vw)
+        if self.bias == 'norm':
+            mean,variance = tf.nn.moments(vw,axes=[1],keep_dims=True)
+            vw = tf.nn.batch_normalization(vw,mean,variance,self.vars['offset'],self.vars['scale'],1e-9)
+        return vw
 
 
 
@@ -162,15 +190,11 @@ class HighOrderAggregator(Layer):
         vw = tf.matmul(vecs,self.vars['order{}_weights'.format(order)])
         vw += self.vars['order{}_bias'.format(order)]
         vw = self.act(vw)
-        if self.bias == 'bias':
-            vw += self.vars['order{}_bias'.format(order)]
-        elif self.bias == 'norm':   # batch norm realized by tf.nn.batch_norm (consistent with SGCN implementation)
+        if self.bias == 'norm':   # batch norm realized by tf.nn.batch_norm (consistent with SGCN implementation)
             mean,variance = tf.nn.moments(vw,axes=[1],keep_dims=True)
             _off = 'order{}_offset'.format(order)
             _sca = 'order{}_scale'.format(order)
             vw = tf.nn.batch_normalization(vw,mean,variance,self.vars[_off],self.vars[_sca],1e-9)
-        else:
-            raise NotImplementedError
         return vw
 
     def _call(self, inputs):
