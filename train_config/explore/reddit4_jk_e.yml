@@ -8,10 +8,10 @@ network:
     bias: 'norm'
 params:
   - lr: 0.01
-    dropout: 0.15
+    dropout: 0.2
     weight_decay: 0.0
     sample_coverage: 100
 phase:
-  - end: 80
+  - end: 100
     sampler: 'edge'
-    size_subg_edge: 6000
+    size_subg_edge: 11000
