@@ -28,7 +28,7 @@ flags.DEFINE_integer('num_cpu_core', 20, 'Number of CPU cores for parallel sampl
 flags.DEFINE_boolean('log_device_placement', False, "Whether to log device placement.")
 flags.DEFINE_string('data_prefix', '', 'prefix identifying training data. must be specified.')
 flags.DEFINE_string('log_dir', '.', 'base directory for logging and saving embeddings')
-flags.DEFINE_integer('gpu', -1234, "which gpu to use.")
+flags.DEFINE_string('gpu','-1234', "which gpu to use.")
 flags.DEFINE_integer('eval_train_every', 15, "How often to evaluate training subgraph accuracy.")
 
 flags.DEFINE_string('train_config', '', "path to the configuration of training (*.yml)")
@@ -37,6 +37,7 @@ flags.DEFINE_string('dtype','s','d for double, s for single precision floating p
 flags.DEFINE_boolean('timeline',False,'to save timeline.json or not')
 flags.DEFINE_boolean('tensorboard',False,'to save data to tensorboard or not')
 flags.DEFINE_boolean('logging',False,'log input and output histogram of each layer')
+flags.DEFINE_boolean('dualGPU',False,'whether to distribute the model to two GPU')
 
 NUM_PAR_SAMPLER = FLAGS.num_cpu_core
 SAMPLES_PER_PROC = -(-(200 // NUM_PAR_SAMPLER)) # round up division
@@ -47,7 +48,7 @@ SAMPLES_PER_PROC = -(-(200 // NUM_PAR_SAMPLER)) # round up division
 
 # auto choosing available NVIDIA GPU
 gpu_selected = FLAGS.gpu
-if gpu_selected == -1234:
+if gpu_selected == '-1234':
     # auto detect gpu by filtering on the nvidia-smi command output
     gpu_stat = subprocess.Popen("nvidia-smi",shell=True,stdout=subprocess.PIPE,universal_newlines=True).communicate()[0]
     gpu_avail = set([str(i) for i in range(8)])
@@ -61,8 +62,9 @@ if gpu_selected == -1234:
                 gpu_selected = sorted(list(gpu_avail))[0]
     if gpu_selected == -1:
         gpu_selected = '0'
-
-if int(gpu_selected) >= 0:
+if str(gpu_selected).startswith('nvlink'):
+    os.environ["CUDA_VISIBLE_DEVICES"]=str(gpu_selected).split('nvlink')[1]
+elif int(gpu_selected) >= 0:
     os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"]=str(gpu_selected)
     GPU_MEM_FRACTION = 0.8

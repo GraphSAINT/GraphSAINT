@@ -38,6 +38,7 @@ class GraphSAINT:
         self.adj_subgraph_6=placeholders['adj_subgraph_6']
         self.adj_subgraph_7=placeholders['adj_subgraph_7']
         self.features = tf.Variable(tf.constant(features, dtype=DTYPE), trainable=False)
+        self.dualGPU=FLAGS.dualGPU
         _indices = np.column_stack(adj_full_norm.nonzero())
         _data = adj_full_norm.data
         _shape = adj_full_norm.shape
@@ -152,9 +153,22 @@ class GraphSAINT:
             hidden = self.features
             adj = self.adj_full_norm
         ret_l = list()
-        for layer in range(self.num_layers):
-            hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
-                    self.adj_subgraph_3,self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7))
-            ret_l.append(hidden)
+        if not FLAGS.dualGPU:
+            for layer in range(self.num_layers):
+                hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
+                        self.adj_subgraph_3,self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7))
+                ret_l.append(hidden)
+        else:
+            split=int(self.num_layers/2)
+            with tf.device('/gpu:0'):
+                for layer in range(split):
+                    hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
+                        self.adj_subgraph_3,self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7))
+                    ret_l.append(hidden)
+            with tf.device('/gpu:1'):
+                for layer in range(split,self.num_layers):
+                    hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
+                        self.adj_subgraph_3,self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7))
+                    ret_l.append(hidden)
         return ret_l
 
