@@ -7,11 +7,10 @@ network:
     bias: 'norm'
 params:
   - lr: 0.01
-    dropout: 0.1
+    dropout: 0.0
     weight_decay: 0.0
     sample_coverage: 50
 phase:
-  - end: 1000   # NOTE: change this to 400 will give 0.974 within 25 sec
-    sampler: 'rw'
-    depth: 2
-    num_root: 3000
+  - end: 1000
+    sampler: 'node'
+    size_subgraph: 6000
