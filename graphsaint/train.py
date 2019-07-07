@@ -201,6 +201,7 @@ def train(train_phases,arch_gcn,model,minibatch,\
                     evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='val')
             printf(' TRAIN (Ep avg): loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}\ttrain time = {:.4f} sec'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr),time_train_ep))
             printf(' VALIDATION:     loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
+            #printf(' GREP: ({:.4f},{:4f})'.format(time_train,f1mic_val))
             if f1mic_val > f1mic_best:
                 f1mic_best = f1mic_val
                 e_best = e
