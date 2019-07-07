@@ -13,4 +13,4 @@ params:
 phase:
   - end: 30
     sampler: 'node'
-    size_subgraph: 4000
+    size_subgraph: 8000

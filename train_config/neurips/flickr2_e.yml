@@ -13,4 +13,4 @@ params:
 phase:
   - end: 15
     sampler: 'edge'
-    size_subg_edge: 2000
+    size_subg_edge: 6000
