@@ -11,7 +11,6 @@ params:
     weight_decay: 0.0
     sample_coverage: 50
 phase:
-  - end: 75         # setting this to 30 gives over 0.648 F1-mic with the training time shown in Table 2
-    sampler: 'rw'
-    num_root: 1250
-    depth: 2
+  - end: 50
+    sampler: 'node'
+    size_subgraph: 5000
