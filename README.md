@@ -1,24 +1,13 @@
 # GraphSAINT: Graph <u>Sa</u>mpling Based <u>In</u>ductive Learning Me<u>t</u>hod
 
-This is the open source implementation for the "GraphSAINT" paper submitted to NeurIPS 2019.
+This is the open source implementation for the "GraphSAINT" paper.
 
-With better hyperparameter searching procedure, we keep improving our results. Now GraphSAINT performs even better in terms of both accuracy and time (compared to Table 2 in the submitted paper). **NOTE**: baseline performance mostly remains unchanged (exception: FastGCN on Flickr has 0.001 higher test accuracy --- from 0.503 to 0.504). See `./train_config/README.md` for detailed description of the updated parameter searching procedure. 
-
-**Highlight** of GraphSAINT new results (2 layer GCN models):
-
-* Reddit
-  * `./train_config/neurips/reddit2_rw.yml`: reaching 0.966 (from previously 0.964) F1-micro score, with the same training time
-* Yelp
-  * `./train_config/neurips/yelp2_e.yml`: reaching 0.654 (from previously 0.642) F1-micro score, with 2x training time; reaching 0.648 (from previously 0.642) F1-micro score, with 1x training time.
-  * `./train_config/neurips/yelp2_rw.yml`: reaching 0.654 (from previously 0.640) F1-micro score, with 4x training time; reaching 0.648 (from previously 0.640) F1-micro score, with the same training time. 
-* Flickr
-  * `./train_config/neurips/flickr2_rw.yml`: reaching 0.513 (from previously 0.509) F1-micro score, with 0.75x training time
-* PPI
-  * `./train_config/neurips/ppi2_rw.yml`: reaching 0.982 (from previously 0.973) F1-micro score, with 4x training time; reaching 0.974 (from previously 0.973) F1-micro score, with 1x training time. 
 
 2 layer convergence (Validation F1-Micro w.r.t. Training time) plot
 
 ![Alt text](converge.png)
+
+Run configuration in `./train_config/table2/*.yml` to reproduce results in Table 2. 
 
 For results using deeper GCNs and other layer architectures, please see below. 
 
@@ -98,7 +87,7 @@ We have a cython module which need compilation before training can start. Compil
 
 The hyperparameters needed in training can be set via the configuration file: `./train_config/<name>.yml`.
 
-The configuration files to reproduce the Table 2 results are packed in `./train_config/neurips/` (some configuration files now produces even better results compared with Table 2).
+The configuration files to reproduce the Table 2 results are packed in `./train_config/table2/`.
 
 For detailed description of the configuration file format, please see `./train_config/README.md`
 
