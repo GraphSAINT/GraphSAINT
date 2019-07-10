@@ -10,7 +10,7 @@
 ## Training Configuration
 
 Below we describe how to write the configuration file `./train_config/<name>.yml` to start your own training. 
-You can open any `*.yml` file in `./train_config/neurips/` to better understand the below sections. 
+You can open any `*.yml` file in `./train_config/table2/` to better understand the below sections. 
 
 #### Network:
 
@@ -22,7 +22,7 @@ You can open any `*.yml` file in `./train_config/neurips/` to better understand 
   * For the above reason, when evaluating PPI and Reddit (which are evaluated in the S-GCN paper), GraphSAINT uses `1-0-1-0` architecture. When evaluating Flickr and Yelp, GraphSAINT uses `1-1-0` (where the last `0` is for the dense layer of the node classifier)
   * We believe such design choice on architecture gives us the fairest comparison with baselines.
 * *act*: `['I' / 'relu' / 'leaky_relu']` activation function, where `I` is for linear activation. For `leaky_relu`, the current version of the code supports only the default alpha value.
-* *bias*: `['bias' / 'norm']` whether to apply bias or batch norm at the end of each conv layer. S-GCN uses batch norm, and so GraphSAINT also uses batch norm in all `./train_config/neurips/` configurations. 
+* *bias*: `['bias' / 'norm']` whether to apply bias or batch norm at the end of each conv layer. S-GCN uses batch norm, and so GraphSAINT also uses batch norm in all `./train_config/table2/` configurations. 
 * *jk* (optional): `['concat' / 'max_pool']` if this field is not specified, we will not add a aggregation layer at the end of all graph conv layers. If specified, we will aggregate all the graph conv layer hidden features by concatenation or max pooling, using the architecture described in the [Jk-Net paper](https://arxiv.org/abs/1806.03536).  
 
 #### Hyperparameters:
