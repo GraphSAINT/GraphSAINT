@@ -7,6 +7,10 @@ This is the open source implementation for the "GraphSAINT" paper.
 
 ![Alt text](converge.png)
 
+Comparison of test set accuracy and training time with state-of-the-art methods
+
+![Alt text](acc.png)
+
 Run configuration in `./train_config/table2/*.yml` to reproduce results in Table 2. 
 
 For results using deeper GCNs and other layer architectures, please see below. 
@@ -39,6 +43,7 @@ As for the GCN architecture:
 Currently available datasets:
 
 * PPI
+* PPI-large (a larger version of PPI)
 * Reddit
 * Flickr
 * Yelp
