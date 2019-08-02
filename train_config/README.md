@@ -20,7 +20,7 @@ You can open any `*.yml` file in `./train_config/table2/` to better understand t
 * *arch*: `['<int>-<int>-...']` network architecture. `1` means an order 1 layer (self feature plus 1-hop neighbor feature), and `0` means an order 0 layer (self feature only).
   * NOTE: a graph conv layer in S-GCN is equivalent to a `1-0` structure in GraphSAINT; a graph conv layer in other baselines is equivalent to a `1` layer in GraphSAINT. 
   * For the above reason, when evaluating PPI and Reddit (which are evaluated in the S-GCN paper), GraphSAINT uses `1-0-1-0` architecture. When evaluating Flickr and Yelp, GraphSAINT uses `1-1-0` (where the last `0` is for the dense layer of the node classifier)
-  * We believe such design choice on architecture gives us the fairest comparison with baselines.
+  * We believe such design choice on architecture gives the fairest comparison with baselines. Alternatively for PPI and Reddit, you can simply replace `1-0-1-0` with `1-1-0`, without significant impact on accuracy. 
 * *act*: `['I' / 'relu' / 'leaky_relu']` activation function, where `I` is for linear activation. For `leaky_relu`, the current version of the code supports only the default alpha value.
 * *bias*: `['bias' / 'norm']` whether to apply bias or batch norm at the end of each conv layer. S-GCN uses batch norm, and so GraphSAINT also uses batch norm in all `./train_config/table2/` configurations. 
 * *jk* (optional): `['concat' / 'max_pool']` if this field is not specified, we will not add a aggregation layer at the end of all graph conv layers. If specified, we will aggregate all the graph conv layer hidden features by concatenation or max pooling, using the architecture described in the [Jk-Net paper](https://arxiv.org/abs/1806.03536).  
