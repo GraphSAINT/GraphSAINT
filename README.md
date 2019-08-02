@@ -4,6 +4,7 @@ This is the open source implementation for the "GraphSAINT" paper.
 
 
 2 layer convergence (Validation F1-Micro w.r.t. Training time) plot
+* The GraphSAINT curves correspond to samplers of RW, RW, RW, Edge for datasets PPI, Flickr, Reddit, Yelp. 
 
 ![Alt text](converge.png)
 
@@ -11,20 +12,22 @@ Comparison of test set accuracy and training time with state-of-the-art methods
 
 ![Alt text](acc.png)
 
-Run configuration in `./train_config/table2/*.yml` to reproduce results in Table 2. 
+Run configuration in `./train_config/table2/*.yml` to reproduce results in the above table. 
 
-For results using deeper GCNs and other layer architectures, please see below. 
+For results using **deeper GCNs** and **other architectures**, please see below. 
 
-## Features
+## Highlights in Flexibility
 
 As stated in the paper, GraphSAINT can be easily extended to support various graph samplers, as well as other GCN architectures. 
-To add customized sampler, implement the new sampler class in `./graphsaint/cython_sampler.pyx`. 
+To add customized sampler, just implement the new sampler class in `./graphsaint/cython_sampler.pyx`. 
 
-As for the GCN architecture:
+We have integrated the following architecture variants into GraphSAINT in this codebase:
 
-* Higher order graph convolutional layers are supported. Just specify the order in the configuration file (see `./train_config/README.md`, and also `./train_config/explore/reddit2_rw.yml` for an example order two GCN reaching 0.967 F1-micro). 
-* Jumping Knowledge GCN (JK-Net) is supported. The JK-Net in the [original paper](https://arxiv.org/abs/1806.03536) adopts the neighbor sampling strategy of GraphSAGE, where neighbor explosion in deeper layers is **not** resolved. Here in this codebase, we demonstrate that graph sampling based minibatch of GraphSAINT can be applied to JK-Net architecture to improve training scalability w.r.t. GCN depth. 
+* **Higher order graph convolutional layers**: Just specify the order in the configuration file (see `./train_config/README.md`, and also `./train_config/explore/reddit2_o2_rw.yml` for an example order two GCN reaching 0.967 F1-micro). 
+* **Jumping Knowledge connection**: The JK-Net in the [original paper](https://arxiv.org/abs/1806.03536) adopts the neighbor sampling strategy of GraphSAGE, where neighbor explosion in deeper layers is **not** resolved. Here, we demonstrate that graph sampling based minibatch of GraphSAINT can be applied to JK-Net architecture to improve training scalability w.r.t. GCN depth. 
 * Check out `./train_config/explore/reddit4_jk_e.yml` for a 4-layer GraphSAINT-JK-Net achieving **0.970** F1-Micro on Reddit. The total training time (using independent edge sampler) is under 55 seconds, which is even 2x faster than 2-layer S-GCN!
+
+Also, check out`./train_config/explore/ppi-large_5.yml` for a 5-layer GraphSAINT GCN achieving **0.995** F1-micro on the PPI-large dataset. 
 
 ## Dependencies
 
@@ -109,4 +112,6 @@ To run the code on gpu
 `./run_graphsaint.sh <dataset_name> <path to train_config yml> --gpu <GPU number>`
 
 For example `--gpu 0` will run on the first GPU. 
+
+We have also realized dual-GPU training to further speedup runtime. Simply add the flag `--dualGPU`.
 
