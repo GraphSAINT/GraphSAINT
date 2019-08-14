@@ -5,6 +5,7 @@ This is the open source implementation for the "GraphSAINT" paper.
 
 2 layer convergence (Validation F1-Micro w.r.t. Training time) plot
 * The GraphSAINT curves correspond to samplers of RW, RW, RW, Edge for datasets PPI, Flickr, Reddit, Yelp. 
+* For a larger version of the PPI dataset (with 0.995 accuracy), please see the below section. 
 
 ![Alt text](converge.png)
 
