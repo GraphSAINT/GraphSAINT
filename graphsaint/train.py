@@ -133,7 +133,9 @@ def train(train_phases,arch_gcn,model,minibatch,\
     avg_time = 0.0
     timing_steps = 0
 
-    saver = tf.train.Saver(var_list=tf.trainable_variables())#global_variables())
+    # saver = tf.train.Saver(var_list=tf.trainable_variables())
+    saver=tf.train.Saver()
+    #global_variables())
 
     epoch_ph_start = 0
     f1mic_best = 0
@@ -197,8 +199,18 @@ def train(train_phases,arch_gcn,model,minibatch,\
                     time_calc_f1 += t4 - t3
             time_train += time_train_ep
             time_prepare += time_prepare_ep
+            if FLAGS.cpu_eval:
+                saver.save(sess,'./tmp.chkpt')
+                with tf.device('/cpu:0'):
+                    sess_cpu = tf.Session(config=tf.ConfigProto(device_count={'GPU': 0}))
+                    sess_cpu.run(tf.global_variables_initializer())
+                    saver = tf.train.Saver()
+                    saver.restore(sess_cpu, './tmp.chkpt')
+                    sess_eval=sess_cpu
+            else:
+                sess_eval=sess
             loss_val,f1mic_val,f1mac_val,time_eval = \
-                    evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='val')
+                    evaluate_full_batch(sess_eval,model,minibatch,many_runs_timeline,mode='val')
             printf(' TRAIN (Ep avg): loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}\ttrain time = {:.4f} sec'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr),time_train_ep))
             printf(' VALIDATION:     loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
             #printf(' GREP: ({:.4f},{:4f})'.format(time_train,f1mic_val))
@@ -228,10 +240,10 @@ def train(train_phases,arch_gcn,model,minibatch,\
     for tl in many_runs_timeline:
         timelines.update_timeline(tl)
     timelines.save('timeline.json')
-    saver.restore(sess, '{}/models/saved_model_{}.chkpt'.format(FLAGS.log_dir,timestamp))
-    loss_val, f1mic_val, f1mac_val, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='val')
+    saver.restore(sess_eval, '{}/models/saved_model_{}.chkpt'.format(FLAGS.log_dir,timestamp))
+    loss_val, f1mic_val, f1mac_val, duration = evaluate_full_batch(sess_eval,model,minibatch,many_runs_timeline,mode='val')
     printf("Full validation (Epoch {:4d}): \n  F1_Micro = {:.4f}\tF1_Macro = {:.4f}".format(e_best,f1mic_val,f1mac_val),style='red')
-    loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess,model,minibatch,many_runs_timeline,mode='test')
+    loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess_eval,model,minibatch,many_runs_timeline,mode='test')
     printf("Full test stats: \n  F1_Micro = {:.4f}\tF1_Macro = {:.4f}".format(f1mic_test,f1mac_test),style='red')
     printf('Total training time: {:6.2f} sec'.format(time_train),style='red')
     ret = {'loss_val_opt':loss_val,'f1mic_val_opt':f1mic_val,'f1mac_val_opt':f1mac_val,\
