@@ -5,6 +5,7 @@ This is the open source implementation for the "GraphSAINT" paper.
 
 2 layer convergence (Validation F1-Micro w.r.t. Training time) plot
 * The GraphSAINT curves correspond to samplers of RW, RW, RW, Edge for datasets PPI, Flickr, Reddit, Yelp. 
+* For a larger version of the PPI dataset (with 0.995 accuracy), please see the below section. 
 
 ![Alt text](converge.png)
 
@@ -25,9 +26,10 @@ We have integrated the following architecture variants into GraphSAINT in this c
 
 * **Higher order graph convolutional layers**: Just specify the order in the configuration file (see `./train_config/README.md`, and also `./train_config/explore/reddit2_o2_rw.yml` for an example order two GCN reaching 0.967 F1-micro). 
 * **Jumping Knowledge connection**: The JK-Net in the [original paper](https://arxiv.org/abs/1806.03536) adopts the neighbor sampling strategy of GraphSAGE, where neighbor explosion in deeper layers is **not** resolved. Here, we demonstrate that graph sampling based minibatch of GraphSAINT can be applied to JK-Net architecture to improve training scalability w.r.t. GCN depth. 
-* Check out `./train_config/explore/reddit4_jk_e.yml` for a 4-layer GraphSAINT-JK-Net achieving **0.970** F1-Micro on Reddit. The total training time (using independent edge sampler) is under 55 seconds, which is even 2x faster than 2-layer S-GCN!
 
-Also, check out`./train_config/explore/ppi-large_5.yml` for a 5-layer GraphSAINT GCN achieving **0.995** F1-micro on the PPI-large dataset. 
+***New state-of-the-art results on deep models:***
+* Check out `./train_config/explore/reddit4_jk_e.yml` for a 4-layer GraphSAINT-JK-Net achieving **0.970** F1-Micro on Reddit. The total training time (using independent edge sampler) is under 55 seconds, which is even 2x faster than 2-layer S-GCN!
+* Check out`./train_config/explore/ppi-large_5.yml` for a 5-layer GraphSAINT GCN achieving **0.995** F1-micro on the PPI-large dataset. 
 
 ## Dependencies
 

@@ -38,12 +38,14 @@ flags.DEFINE_boolean('timeline',False,'to save timeline.json or not')
 flags.DEFINE_boolean('tensorboard',False,'to save data to tensorboard or not')
 flags.DEFINE_boolean('logging',False,'log input and output histogram of each layer')
 flags.DEFINE_boolean('dualGPU',False,'whether to distribute the model to two GPU')
+flags.DEFINE_boolean('cpu_eval',False,'whether to use CPU to do evaulation')
 
 NUM_PAR_SAMPLER = FLAGS.num_cpu_core
 SAMPLES_PER_PROC = -(-(200 // NUM_PAR_SAMPLER)) # round up division
 
 
-
+if FLAGS.data_prefix.split('/')[-1]=='amazon':
+    FLAGS.cpu_eval=True
 
 
 # auto choosing available NVIDIA GPU

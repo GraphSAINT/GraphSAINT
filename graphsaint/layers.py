@@ -214,7 +214,7 @@ class HighOrderAggregator(Layer):
                 ans2_7=tf.sparse_tensor_dense_matmul(adj_7,vecs_hop[o+1])
                 ans2=tf.concat([ans2_0,ans2_1,ans2_2,ans2_3,ans2_4,ans2_5,ans2_6,ans2_7],0)
                 vecs_hop[o+1]=tf.cond(self.is_train,lambda: tf.identity(ans1),lambda: tf.identity(ans2))
-        vecs_hop = [self._F_nonlinear(v,o) for o,v in enumerate(vecs_hop)]        
+        vecs_hop = [self._F_nonlinear(v,o) for o,v in enumerate(vecs_hop)]    
         if self.aggr == 'mean':
             ret = vecs_hop[0]
             for o in range(len(vecs_hop)-1):
