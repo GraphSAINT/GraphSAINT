@@ -20,7 +20,10 @@ class GraphSAINT:
             - sigmoid_loss: Set to true if nodes can belong to multiple classes
             - model_pretrain: contains pre-trained weights, if you are doing inferencing
         '''
-        self.aggregator_cls = layers.HighOrderAggregator
+        if "attention" in arch_gcn:
+            self.aggregator_cls = layers.AttentionAggregator
+        else:
+            self.aggregator_cls = layers.HighOrderAggregator
         self.lr = train_params['lr']
         self.node_subgraph = placeholders['node_subgraph']
         self.num_layers = len(arch_gcn['arch'].split('-'))
@@ -28,7 +31,6 @@ class GraphSAINT:
         self.jk = None if 'jk' not in arch_gcn else arch_gcn['jk']
         self.arch_gcn = arch_gcn
         self.adj_subgraph = placeholders['adj_subgraph']
-        self.adj_subgraph_last = placeholders['adj_subgraph_last']
         self.adj_subgraph_0=placeholders['adj_subgraph_0']
         self.adj_subgraph_1=placeholders['adj_subgraph_1']
         self.adj_subgraph_2=placeholders['adj_subgraph_2']
@@ -58,6 +60,8 @@ class GraphSAINT:
         self.opt_op = None
         self.norm_loss = placeholders['norm_loss']
         self.is_train = placeholders['is_train']
+        
+        self.debug = list()
 
         self.build(model_pretrain=model_pretrain)
 
@@ -140,7 +144,7 @@ class GraphSAINT:
             aggregator = self.aggregator_cls(self.dims_weight[layer][0], self.dims_weight[layer][1],
                     dropout=self.placeholders['dropout'],name=name,model_pretrain=model_pretrain[layer],
                     act=self.act_layer[layer],order=self.order_layer[layer],aggr=self.aggr_layer[layer],\
-                    is_train=self.is_train,bias=self.bias_layer[layer],logging=FLAGS.logging)
+                    is_train=self.is_train,bias=self.bias_layer[layer],logging=FLAGS.logging,I_vector=self.placeholders['I_vector'])
             aggregators.append(aggregator)
         return aggregators
 
@@ -155,9 +159,10 @@ class GraphSAINT:
         ret_l = list()
         if not FLAGS.dualGPU:
             for layer in range(self.num_layers):
-                hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
+                hidden,_ = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
                         self.adj_subgraph_3,self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7))
                 ret_l.append(hidden)
+                self.debug.append(_)
         else:
             split=int(self.num_layers/2)
             with tf.device('/gpu:0'):

@@ -232,6 +232,8 @@ class Minibatch:
             tf.SparseTensorValue(np.column_stack(adj_6.nonzero()),adj_6.data,adj_6.shape)})
         feed_dict.update({self.placeholders['adj_subgraph_7']: \
             tf.SparseTensorValue(np.column_stack(adj_7.nonzero()),adj_7.data,adj_7.shape)})
+        feed_dict.update({self.placeholders['I_vector']: \
+            np.ones(self.node_subgraph.size).reshape(-1,1)})
         tt3=time.time()
         # if mode in ['train']:
         #     print("t1:{:.3f} t2:{:.3f} t3:{:.3f}".format(tt0-tt1,tt2-tt1,tt3-tt2))
