@@ -259,6 +259,8 @@ class AttentionAggregator(Layer):
                     self.vars[_k2] = ones([1,dim_out],name=_k2)
             self.vars['attention_0'] = glorot([1,dim_out], name='attention_0')      # to apply to self feat     # tf.ones([1,dim_out])
             self.vars['attention_1'] = glorot([1,dim_out], name='attention_1')      # to apply to neigh feat
+            self.vars['att_bias_0'] = zeros([1], name='att_bias_0')
+            self.vars['att_bias_1'] = zeros([1], name='att_bias_1')
         print('>> layer {}, dim: [{},{}]'.format(self.name, dim_in, dim_out))
         if self.logging:
             self._log_vars()
@@ -271,7 +273,6 @@ class AttentionAggregator(Layer):
     def _call(self, inputs):
     
         vecs, adj_norm, len_feat, adj_0, adj_1, adj_2, adj_3, adj_4, adj_5, adj_6, adj_7 = inputs
-        ## adj_norm is_train concat
         vecs = tf.nn.dropout(vecs, 1-self.dropout)
         adj_mask = tf.dtypes.cast(tf.dtypes.cast(adj_norm, tf.bool), tf.float32)
 
@@ -281,17 +282,20 @@ class AttentionAggregator(Layer):
         #-vw_self += self.vars['order0_bias']
         vw_neigh_att = tf.reduce_sum(vw_neigh * self.vars['attention_1'], axis=-1)
         vw_self_att = tf.reduce_sum(vw_neigh * self.vars['attention_0'], axis=-1)       # NOTE: here we still use vw_neigh
+        vw_neigh_att += self.vars['att_bias_1']
+        vw_self_att += self.vars['att_bias_0']
         a1 = tf.SparseTensor(adj_mask.indices, tf.nn.embedding_lookup(vw_neigh_att, adj_mask.indices[:,1]), adj_mask.dense_shape)
         a2 = tf.SparseTensor(adj_mask.indices, tf.nn.embedding_lookup(vw_self_att, adj_mask.indices[:,0]),adj_mask.dense_shape)
         a = tf.SparseTensor(a1.indices,a1.values+a2.values,a1.dense_shape)
         a = tf.SparseTensor(a.indices,tf.nn.leaky_relu(a.values),a.dense_shape)
-        a_exp = tf.SparseTensor(a.indices,tf.math.exp(a.values),a.dense_shape)
+        ##a_exp = tf.SparseTensor(a.indices,tf.math.exp(a.values),a.dense_shape)
         #a_exp = tf.math.exp(a) * adj_mask
         #a_exp dot I
-        a_exp_sum = tf.sparse_tensor_dense_matmul(a_exp,self.I_vector)
+        ##a_exp_sum = tf.sparse_tensor_dense_matmul(a_exp,self.I_vector)
         deg = tf.squeeze(tf.sparse_tensor_dense_matmul(adj_mask,self.I_vector),axis=1)
-        a_exp_sum = tf.SparseTensor(a_exp.indices,tf.nn.embedding_lookup(tf.squeeze(a_exp_sum,axis=1), a_exp.indices[:,0]), a_exp.dense_shape)
-        alpha = tf.SparseTensor(a_exp.indices, a_exp.values/a_exp_sum.values, a_exp.dense_shape)
+        ##a_exp_sum = tf.SparseTensor(a_exp.indices,tf.nn.embedding_lookup(tf.squeeze(a_exp_sum,axis=1), a_exp.indices[:,0]), a_exp.dense_shape)
+        ##alpha = tf.SparseTensor(a_exp.indices, a_exp.values/a_exp_sum.values, a_exp.dense_shape)
+        alpha = tf.sparse.softmax(a)
         _n = tf.nn.embedding_lookup(deg, adj_mask.indices[:,0])
         alpha = tf.SparseTensor(alpha.indices, alpha.values*_n,alpha.dense_shape)
 
