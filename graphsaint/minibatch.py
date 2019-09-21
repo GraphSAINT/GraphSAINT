@@ -157,7 +157,8 @@ class Minibatch:
         """ DONE """
         if mode in ['val','test']:
             self.node_subgraph = np.arange(self.class_arr.shape[0])
-            adj = sp.csr_matrix(([],[],np.zeros(2)), shape=(1,self.node_subgraph.shape[0]))
+            #adj = sp.csr_matrix(([],[],np.zeros(2)), shape=(1,self.node_subgraph.shape[0]))
+            adj = self.adj_full_norm
             adj_0 = self.adj_full_norm_0
             adj_1 = self.adj_full_norm_1
             adj_2 = self.adj_full_norm_2

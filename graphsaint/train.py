@@ -39,8 +39,7 @@ def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,mode):
     NOTE: HERE GCN RUNS THROUGH THE FULL GRAPH. HOWEVER, WE CALCULATE F1 SCORE
         FOR VALIDATION / TEST NODES ONLY. 
     """
-    return 0,0,0,0
-    import pdb; pdb.set_trace()
+    #return 0,0,0,0
     options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
     run_metadata = tf.RunMetadata()
     t1 = time.time()
@@ -202,20 +201,22 @@ def train(train_phases,arch_gcn,model,minibatch,\
                     time_calc_f1 += t4 - t3
             time_train += time_train_ep
             time_prepare += time_prepare_ep
-            if FLAGS.cpu_eval:
-                saver.save(sess,'./tmp.chkpt')
-                with tf.device('/cpu:0'):
-                    sess_cpu = tf.Session(config=tf.ConfigProto(device_count={'GPU': 0}))
-                    sess_cpu.run(tf.global_variables_initializer())
-                    saver = tf.train.Saver()
-                    saver.restore(sess_cpu, './tmp.chkpt')
-                    sess_eval=sess_cpu
-            else:
-                sess_eval=sess
-            loss_val,f1mic_val,f1mac_val,time_eval = \
+            if e % 10 == 9 or e == 0:
+                if FLAGS.cpu_eval:
+                    saver.save(sess,'./tmp.chkpt')
+                    with tf.device('/cpu:0'):
+                        sess_cpu = tf.Session(config=tf.ConfigProto(device_count={'GPU': 0}))
+                        sess_cpu.run(tf.global_variables_initializer())
+                        saver = tf.train.Saver()
+                        saver.restore(sess_cpu, './tmp.chkpt')
+                        sess_eval=sess_cpu
+                else:
+                    sess_eval=sess
+                loss_val,f1mic_val,f1mac_val,time_eval = \
                     evaluate_full_batch(sess_eval,model,minibatch,many_runs_timeline,mode='val')
             printf(' TRAIN (Ep avg): loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}\ttrain time = {:.4f} sec'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr),time_train_ep))
-            printf(' VALIDATION:     loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
+            if e % 10 == 9 or e == 0:
+                printf(' VALIDATION:     loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
             #printf(' GREP: ({:.4f},{:4f})'.format(time_train,f1mic_val))
             if f1mic_val > f1mic_best:
                 f1mic_best = f1mic_val
