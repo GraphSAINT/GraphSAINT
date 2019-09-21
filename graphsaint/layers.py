@@ -30,7 +30,7 @@ class Layer:
     """
 
     def __init__(self, **kwargs):
-        allowed_kwargs = {'name', 'logging'}
+        allowed_kwargs = {'name', 'logging', 'I_vector'}
         for kwarg in kwargs.keys():
             assert kwarg in allowed_kwargs, 'Invalid keyword argument: ' + kwarg
         name = kwargs.get('name')
@@ -223,4 +223,90 @@ class HighOrderAggregator(Layer):
             ret = tf.concat(vecs_hop,axis=1)
         else:
             raise NotImplementedError
-        return ret
+        return ret,[adj_norm]
+
+
+class AttentionAggregator(Layer):
+    def __init__(self, dim_in, dim_out,
+            dropout=0., act='relu', order=1, aggr='mean', model_pretrain=None, is_train=True, bias='norm', **kwargs):
+        assert order == 1, "now only support attention for order 1 layers"
+        super(AttentionAggregator,self).__init__(**kwargs)
+        self.dropout = dropout
+        self.bias = bias
+        self.act = F_ACT[act]
+        self.order = 1      # for attention, right now we only support order 1 (i.e., self + 1-hop neighbor)
+        self.aggr = aggr
+        self.is_train = is_train
+        with tf.variable_scope(self.name + '_vars'):
+            if model_pretrain is None:
+                for o in range(self.order+1):
+                    _k = 'order{}_weights'.format(o)
+                    self.vars[_k] = glorot([dim_in,dim_out],name=_k)
+            else:
+                for o in range(self.order+1):
+                    _k = 'order{}_weights'.format(o)
+                    self.vars[_k] = trained(model_pretrain[0], name=_k)
+            for o in range(self.order+1):
+                _k = 'order{}_bias'.format(o)
+                self.vars[_k] = zeros([dim_out],name=_k)
+                _k = 'order{}_bias_after'.format(o)
+                self.vars[_k] = zeros([dim_out],name=_k)
+            if self.bias == 'norm':
+                for o in range(self.order+1):
+                    _k1 = 'order{}_offset'.format(o)
+                    _k2 = 'order{}_scale'.format(o)
+                    self.vars[_k1] = zeros([1,dim_out],name=_k1)
+                    self.vars[_k2] = ones([1,dim_out],name=_k2)
+            self.vars['attention_0'] = glorot([1,dim_out], name='attention_0')      # to apply to self feat     # tf.ones([1,dim_out])
+            self.vars['attention_1'] = glorot([1,dim_out], name='attention_1')      # to apply to neigh feat
+        print('>> layer {}, dim: [{},{}]'.format(self.name, dim_in, dim_out))
+        if self.logging:
+            self._log_vars()
+
+        self.dim_in = dim_in
+        self.dim_out = dim_out
+
+        self.I_vector = kwargs['I_vector']
+
+    def _call(self, inputs):
+    
+        vecs, adj_norm, len_feat, adj_0, adj_1, adj_2, adj_3, adj_4, adj_5, adj_6, adj_7 = inputs
+        ## adj_norm is_train concat
+        vecs = tf.nn.dropout(vecs, 1-self.dropout)
+        adj_mask = tf.dtypes.cast(tf.dtypes.cast(adj_norm, tf.bool), tf.float32)
+
+        vw_neigh = tf.matmul(vecs,self.vars['order1_weights'])
+        vw_self = tf.matmul(vecs,self.vars['order0_weights'])
+        #-vw_neigh += self.vars['order1_bias']
+        #-vw_self += self.vars['order0_bias']
+        vw_neigh_att = tf.reduce_sum(vw_neigh * self.vars['attention_1'], axis=-1)
+        vw_self_att = tf.reduce_sum(vw_neigh * self.vars['attention_0'], axis=-1)       # NOTE: here we still use vw_neigh
+        a1 = tf.SparseTensor(adj_mask.indices, tf.nn.embedding_lookup(vw_neigh_att, adj_mask.indices[:,1]), adj_mask.dense_shape)
+        a2 = tf.SparseTensor(adj_mask.indices, tf.nn.embedding_lookup(vw_self_att, adj_mask.indices[:,0]),adj_mask.dense_shape)
+        a = tf.SparseTensor(a1.indices,a1.values+a2.values,a1.dense_shape)
+        a = tf.SparseTensor(a.indices,tf.nn.leaky_relu(a.values),a.dense_shape)
+        a_exp = tf.SparseTensor(a.indices,tf.math.exp(a.values),a.dense_shape)
+        #a_exp = tf.math.exp(a) * adj_mask
+        #a_exp dot I
+        a_exp_sum = tf.sparse_tensor_dense_matmul(a_exp,self.I_vector)
+        deg = tf.squeeze(tf.sparse_tensor_dense_matmul(adj_mask,self.I_vector),axis=1)
+        a_exp_sum = tf.SparseTensor(a_exp.indices,tf.nn.embedding_lookup(tf.squeeze(a_exp_sum,axis=1), a_exp.indices[:,0]), a_exp.dense_shape)
+        alpha = tf.SparseTensor(a_exp.indices, a_exp.values/a_exp_sum.values, a_exp.dense_shape)
+        _n = tf.nn.embedding_lookup(deg, adj_mask.indices[:,0])
+        alpha = tf.SparseTensor(alpha.indices, alpha.values*_n,alpha.dense_shape)
+
+        adj_weighted = tf.SparseTensor(adj_norm.indices, adj_norm.values * alpha.values, adj_norm.dense_shape)
+        ret_neigh = tf.sparse_tensor_dense_matmul(adj_weighted,vw_neigh)
+        ret_self = vw_self
+        ret_neigh += self.vars['order1_bias']
+        ret_self += self.vars['order0_bias']
+        ret_neigh = self.act(ret_neigh)
+        ret_self = self.act(ret_self)
+        if self.aggr == 'mean':
+            ret = ret_neigh + ret_self
+        elif self.aggr == 'concat':
+            ret = tf.concat([ret_self,ret_neigh],axis=1)
+        else:
+            raise NotImplementedError
+        return ret, [_n, alpha]
+

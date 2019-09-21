@@ -39,6 +39,8 @@ def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,mode):
     NOTE: HERE GCN RUNS THROUGH THE FULL GRAPH. HOWEVER, WE CALCULATE F1 SCORE
         FOR VALIDATION / TEST NODES ONLY. 
     """
+    return 0,0,0,0
+    import pdb; pdb.set_trace()
     options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
     run_metadata = tf.RunMetadata()
     t1 = time.time()
@@ -63,8 +65,7 @@ def construct_placeholders(num_classes):
         'labels': tf.placeholder(DTYPE, shape=(None, num_classes), name='labels'),
         'node_subgraph': tf.placeholder(tf.int32, shape=(None), name='node_subgraph'),
         'dropout': tf.placeholder(DTYPE, shape=(None), name='dropout'),
-        'adj_subgraph' : tf.sparse_placeholder(DTYPE,name='adj_subgraph'),
-        'adj_subgraph_last': tf.sparse_placeholder(DTYPE,name='adj_subgraph_last'),
+        'adj_subgraph' : tf.sparse_placeholder(DTYPE,name='adj_subgraph',shape=(None,None)),
         'adj_subgraph_0' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_0'),
         'adj_subgraph_1' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_1'),
         'adj_subgraph_2' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_2'),
@@ -74,6 +75,7 @@ def construct_placeholders(num_classes):
         'adj_subgraph_6' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_6'),
         'adj_subgraph_7' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_7'),
         'norm_loss': tf.placeholder(DTYPE,shape=(None),name='norm_loss'),
+        'I_vector': tf.placeholder(DTYPE,shape=(None,1),name='I_vector'),         # to be used by GAT
         'is_train': tf.placeholder(tf.bool, shape=(None), name='is_train')
     }
     return placeholders
@@ -169,7 +171,7 @@ def train(train_phases,arch_gcn,model,minibatch,\
                 feed_dict, labels = minibatch.feed_dict(mode='train')
                 t1 = time.time()
                 if FLAGS.timeline:
-                    _,__,loss_train,pred_train = sess.run([train_stat[0], \
+                    _,__,loss_train,pred_train,dbg = sess.run([train_stat[0], \
                             model.opt_op, model.loss, model.preds], feed_dict=feed_dict,
                             options=options, run_metadata=run_metadata)
                     t2 = time.time()
@@ -179,8 +181,9 @@ def train(train_phases,arch_gcn,model,minibatch,\
                     t3=time.time()
                     time_timeline_ep+=t3-t2
                 else:
-                    _,__,loss_train,pred_train = sess.run([train_stat[0], \
-                            model.opt_op, model.loss, model.preds], feed_dict=feed_dict,options=tf.RunOptions(report_tensor_allocations_upon_oom=True))
+                    _,__,loss_train,pred_train,_dbg = sess.run([train_stat[0], \
+                            model.opt_op, model.loss, model.preds,model.debug], feed_dict=feed_dict,options=tf.RunOptions(report_tensor_allocations_upon_oom=True))
+                    #import pdb; pdb.set_trace()
                     t2 = time.time()
                 time_train_ep += t2-t1
                 time_prepare_ep += t1-t0
