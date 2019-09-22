@@ -3,16 +3,21 @@ network:
     aggr: 'concat'
     loss: 'softmax'
     arch: '1-1'
-    attention: 'concat'
+    attention: 8
     act: 'relu'
     #bias: 'norm'
 params:
-  - lr: 0.01
+  - lr: 0.01  # 0.001
     dropout: 0.05
     weight_decay: 0.0
-    sample_coverage: 100
+    sample_coverage: 50
 phase:
-  - end: 80
+  - end: 70
+    #sampler: 'full_batch'
+    #
     sampler: 'rw'
     num_root: 3000
     depth: 2
+    #
+    #sampler: 'edge'
+    #size_subg_edge: 2000

@@ -182,9 +182,8 @@ def train(train_phases,arch_gcn,model,minibatch,\
                     t3=time.time()
                     time_timeline_ep+=t3-t2
                 else:
-                    _,__,loss_train,pred_train,_dbg = sess.run([train_stat[0], \
-                            model.opt_op, model.loss, model.preds,model.debug], feed_dict=feed_dict,options=tf.RunOptions(report_tensor_allocations_upon_oom=True))
-                    #import pdb; pdb.set_trace()
+                    _,__,loss_train,pred_train = sess.run([train_stat[0], model.opt_op, model.loss, model.preds], \
+                                            feed_dict=feed_dict,options=tf.RunOptions(report_tensor_allocations_upon_oom=True))
                     t2 = time.time()
                 time_train_ep += t2-t1
                 time_prepare_ep += t1-t0
