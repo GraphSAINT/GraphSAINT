@@ -223,7 +223,7 @@ class HighOrderAggregator(Layer):
             ret = tf.concat(vecs_hop,axis=1)
         else:
             raise NotImplementedError
-        return ret,[adj_norm]
+        return ret
 
 
 class AttentionAggregator(Layer):
@@ -245,9 +245,6 @@ class AttentionAggregator(Layer):
             self.vars['order0_weights'] = glorot([dim_in,dim_out],name='order0_weights')
             for k in range(self.mulhead):
                 self.vars['order1_weights_h{}'.format(k)] = glorot([dim_in,int(dim_out/self.mulhead)],name='order1_weights_h{}'.format(k))
-            #_w = glorot([dim_in,int(dim_out/self.mulhead)],name='order1_weights_hk')
-            #for k in range(self.mulhead):
-            #    self.vars['order1_weights_h{}'.format(k)] = _w
             self.vars['order0_bias'] = zeros([dim_out],name='order0_bias')
             for k in range(self.mulhead):
                 self.vars['order1_bias_h{}'.format(k)] = zeros([int(dim_out/self.mulhead)],name='order1_bias_h{}'.format(k))
@@ -259,10 +256,10 @@ class AttentionAggregator(Layer):
                     self.vars[_k1] = zeros([1,dim_out],name=_k1)
                     self.vars[_k2] = ones([1,dim_out],name=_k2)
             for k in range(self.mulhead):
-                self.vars['attention_0_h{}'.format(k)] = zeros([1,int(dim_out/self.mulhead)],name='attention_0_h{}'.format(k))#glorot([1,int(dim_out/self.mulhead)], name='attention_0_h{}'.format(k))      # to apply to self feat     # tf.ones([1,dim_out])
-                self.vars['attention_1_h{}'.format(k)] = zeros([1,int(dim_out/self.mulhead)],name='attention_1_h{}'.format(k))#glorot([1,int(dim_out/self.mulhead)], name='attention_1_h{}'.format(k))      # to apply to neigh feat
-                self.vars['att_bias_0_h{}'.format(k)] = ones([1],name='att_bias_0_h{}'.format(k))#zeros([1], name='att_bias_0_h{}'.format(k))
-                self.vars['att_bias_1_h{}'.format(k)] = ones([1],name='att_bias_1_h{}'.format(k))#zeros([1], name='att_bias_1_h{}'.format(k))
+                self.vars['attention_0_h{}'.format(k)] = glorot([1,int(dim_out/self.mulhead)],name='attention_0_h{}'.format(k))
+                self.vars['attention_1_h{}'.format(k)] = glorot([1,int(dim_out/self.mulhead)],name='attention_1_h{}'.format(k))
+                self.vars['att_bias_0_h{}'.format(k)] = zeros([1],name='att_bias_0_h{}'.format(k))
+                self.vars['att_bias_1_h{}'.format(k)] = zeros([1],name='att_bias_1_h{}'.format(k))
         print('>> layer {}, dim: [{},{}]'.format(self.name, dim_in, dim_out))
         if self.logging:
             self._log_vars()
@@ -281,8 +278,6 @@ class AttentionAggregator(Layer):
 
         vw_neigh_l = [tf.matmul(vecs_do1,self.vars['order1_weights_h{}'.format(k)]) for k in range(self.mulhead)]
         vw_self = tf.matmul(vecs_do2,self.vars['order0_weights'])
-        #-vw_neigh += self.vars['order1_bias']
-        #-vw_self += self.vars['order0_bias']
         vw_neigh_att = [tf.reduce_sum(vw_neigh_l[i] * self.vars['attention_1_h{}'.format(i)], axis=-1) for i in range(self.mulhead)]
         vw_self_att = [tf.reduce_sum(vw_neigh_l[i] * self.vars['attention_0_h{}'.format(i)], axis=-1) for i in range(self.mulhead)]       # NOTE: here we still use vw_neigh
         vw_neigh_att = [vw + self.vars['att_bias_1_h{}'.format(i)] for i,vw in enumerate(vw_neigh_att)]
@@ -293,13 +288,9 @@ class AttentionAggregator(Layer):
         a2 = [tf.SparseTensor(adj_mask.indices, 
               tf.nn.embedding_lookup(vw, adj_mask.indices[:,0]),\
               adj_mask.dense_shape) for vw in vw_self_att]
-        a = [tf.SparseTensor(a1[i].indices,\
-             tf.nn.leaky_relu(a1[i].values+a2[i].values),\
+        alpha = [tf.SparseTensor(a1[i].indices,\
+             tf.nn.relu(a1[i].values+a2[i].values),\
              a1[i].dense_shape) for i in range(self.mulhead)]
-        deg = tf.squeeze(tf.sparse_tensor_dense_matmul(adj_mask,self.I_vector),axis=1)
-        alpha = [tf.sparse.softmax(a[i]) for i in range(self.mulhead)]
-        _n = tf.nn.embedding_lookup(deg, adj_mask.indices[:,0])
-        alpha = [tf.SparseTensor(alpha[i].indices, alpha[i].values*_n,alpha[i].dense_shape) for i in range(self.mulhead)]
 
         adj_weighted = [tf.SparseTensor(adj_norm.indices, adj_norm.values * alpha[i].values, adj_norm.dense_shape) for i in range(self.mulhead)]
         ret_neigh_l = [tf.sparse_tensor_dense_matmul(adj_weighted[i],vw_neigh_l[i]) for i in range(self.mulhead)]
@@ -319,5 +310,5 @@ class AttentionAggregator(Layer):
             ret = tf.concat([ret_self,ret_neigh],axis=1)
         else:
             raise NotImplementedError
-        return ret, []#[adj_norm, _n, alpha]
+        return ret
 

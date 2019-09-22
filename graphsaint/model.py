@@ -63,8 +63,6 @@ class GraphSAINT:
         self.norm_loss = placeholders['norm_loss']
         self.is_train = placeholders['is_train']
         
-        self.debug = list()
-
         self.build(model_pretrain=model_pretrain)
 
     def set_dims(self,dims):
@@ -162,10 +160,9 @@ class GraphSAINT:
         ret_l = list()
         if not FLAGS.dualGPU:
             for layer in range(self.num_layers):
-                hidden,_ = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
+                hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
                         self.adj_subgraph_3,self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7))
                 ret_l.append(hidden)
-                self.debug.append(_)
         else:
             split=int(self.num_layers/2)
             with tf.device('/gpu:0'):
