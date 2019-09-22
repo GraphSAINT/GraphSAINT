@@ -43,6 +43,7 @@ class Minibatch:
         s5=int(adj_full_norm.shape[0]/8*5)
         s6=int(adj_full_norm.shape[0]/8*6)
         s7=int(adj_full_norm.shape[0]/8*7)
+        self.dim0_adj_sub = adj_full_norm.shape[0]/8
         self.adj_full_norm_0=adj_full_norm[:s1,:]
         self.adj_full_norm_1=adj_full_norm[s1:s2,:]
         self.adj_full_norm_2=adj_full_norm[s2:s3,:]
@@ -160,8 +161,8 @@ class Minibatch:
         """ DONE """
         if mode in ['val','test']:
             self.node_subgraph = np.arange(self.class_arr.shape[0])
-            #adj = sp.csr_matrix(([],[],np.zeros(2)), shape=(1,self.node_subgraph.shape[0]))
-            adj = self.adj_full_norm
+            adj = sp.csr_matrix(([],[],np.zeros(2)), shape=(1,self.node_subgraph.shape[0]))
+            #adj = self.adj_full_norm
             adj_0 = self.adj_full_norm_0
             adj_1 = self.adj_full_norm_1
             adj_2 = self.adj_full_norm_2
@@ -236,8 +237,8 @@ class Minibatch:
             tf.SparseTensorValue(np.column_stack(adj_6.nonzero()),adj_6.data,adj_6.shape)})
         feed_dict.update({self.placeholders['adj_subgraph_7']: \
             tf.SparseTensorValue(np.column_stack(adj_7.nonzero()),adj_7.data,adj_7.shape)})
-        feed_dict.update({self.placeholders['I_vector']: \
-            np.ones(self.node_subgraph.size).reshape(-1,1)})
+        feed_dict.update({self.placeholders['dim0_adj_sub']:\
+            self.dim0_adj_sub})
         tt3=time.time()
         # if mode in ['train']:
         #     print("t1:{:.3f} t2:{:.3f} t3:{:.3f}".format(tt0-tt1,tt2-tt1,tt3-tt2))

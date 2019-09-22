@@ -41,6 +41,7 @@ class GraphSAINT:
         self.adj_subgraph_5=placeholders['adj_subgraph_5']
         self.adj_subgraph_6=placeholders['adj_subgraph_6']
         self.adj_subgraph_7=placeholders['adj_subgraph_7']
+        self.dim0_adj_sub = placeholders['dim0_adj_sub'] #adj_full_norm.shape[0]/8
         self.features = tf.Variable(tf.constant(features, dtype=DTYPE), trainable=False)
         self.dualGPU=FLAGS.dualGPU
         _indices = np.column_stack(adj_full_norm.nonzero())
@@ -145,7 +146,7 @@ class GraphSAINT:
                     dropout=self.placeholders['dropout'],name=name,model_pretrain=model_pretrain[layer],
                     act=self.act_layer[layer],order=self.order_layer[layer],aggr=self.aggr_layer[layer],\
                     is_train=self.is_train,bias=self.bias_layer[layer],logging=FLAGS.logging,\
-                    I_vector=self.placeholders['I_vector'],mulhead=self.mulhead)
+                    mulhead=self.mulhead)
             aggregators.append(aggregator)
         return aggregators
 
@@ -158,22 +159,21 @@ class GraphSAINT:
             hidden = self.features
             adj = self.adj_full_norm
         ret_l = list()
+        _adj_sub_l = [self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,self.adj_subgraph_3,
+                      self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7]
         if not FLAGS.dualGPU:
             for layer in range(self.num_layers):
-                hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
-                        self.adj_subgraph_3,self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7))
+                hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],_adj_sub_l,self.dim0_adj_sub))
                 ret_l.append(hidden)
         else:
             split=int(self.num_layers/2)
             with tf.device('/gpu:0'):
                 for layer in range(split):
-                    hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
-                        self.adj_subgraph_3,self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7))
+                    hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],_adj_sub_l,self.dim0_adj_sub))
                     ret_l.append(hidden)
             with tf.device('/gpu:1'):
                 for layer in range(split,self.num_layers):
-                    hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,\
-                        self.adj_subgraph_3,self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7))
+                    hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],_adj_sub_l,self.dim0_adj_sub))
                     ret_l.append(hidden)
         return ret_l
 

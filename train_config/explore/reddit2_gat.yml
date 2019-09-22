@@ -12,9 +12,7 @@ params:
     weight_decay: 0.0
     sample_coverage: 50
 phase:
-  - end: 70
-    #sampler: 'full_batch'
-    #
+  - end: 40
     sampler: 'rw'
     num_root: 3000
     depth: 2
