@@ -73,8 +73,8 @@ def construct_placeholders(num_classes):
         'adj_subgraph_5' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_5'),
         'adj_subgraph_6' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_6'),
         'adj_subgraph_7' : tf.sparse_placeholder(DTYPE,name='adj_subgraph_7'),
+        'dim0_adj_sub' : tf.placeholder(tf.int64,shape=(None),name='dim0_adj_sub'),
         'norm_loss': tf.placeholder(DTYPE,shape=(None),name='norm_loss'),
-        'I_vector': tf.placeholder(DTYPE,shape=(None,1),name='I_vector'),         # to be used by GAT
         'is_train': tf.placeholder(tf.bool, shape=(None), name='is_train')
     }
     return placeholders
@@ -200,22 +200,20 @@ def train(train_phases,arch_gcn,model,minibatch,\
                     time_calc_f1 += t4 - t3
             time_train += time_train_ep
             time_prepare += time_prepare_ep
-            if e % 10 == 9 or e == 0:
-                if FLAGS.cpu_eval:
-                    saver.save(sess,'./tmp.chkpt')
-                    with tf.device('/cpu:0'):
-                        sess_cpu = tf.Session(config=tf.ConfigProto(device_count={'GPU': 0}))
-                        sess_cpu.run(tf.global_variables_initializer())
-                        saver = tf.train.Saver()
-                        saver.restore(sess_cpu, './tmp.chkpt')
-                        sess_eval=sess_cpu
-                else:
-                    sess_eval=sess
-                loss_val,f1mic_val,f1mac_val,time_eval = \
-                    evaluate_full_batch(sess_eval,model,minibatch,many_runs_timeline,mode='val')
+            if FLAGS.cpu_eval:
+                saver.save(sess,'./tmp.chkpt')
+                with tf.device('/cpu:0'):
+                    sess_cpu = tf.Session(config=tf.ConfigProto(device_count={'GPU': 0}))
+                    sess_cpu.run(tf.global_variables_initializer())
+                    saver = tf.train.Saver()
+                    saver.restore(sess_cpu, './tmp.chkpt')
+                    sess_eval=sess_cpu
+            else:
+                sess_eval=sess
+            loss_val,f1mic_val,f1mac_val,time_eval = \
+                evaluate_full_batch(sess_eval,model,minibatch,many_runs_timeline,mode='val')
             printf(' TRAIN (Ep avg): loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}\ttrain time = {:.4f} sec'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr),time_train_ep))
-            if e % 10 == 9 or e == 0:
-                printf(' VALIDATION:     loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
+            printf(' VALIDATION:     loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
             #printf(' GREP: ({:.4f},{:4f})'.format(time_train,f1mic_val))
             if f1mic_val > f1mic_best:
                 f1mic_best = f1mic_val
