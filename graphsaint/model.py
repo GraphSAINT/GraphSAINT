@@ -22,8 +22,10 @@ class GraphSAINT:
         '''
         if "attention" in arch_gcn:
             self.aggregator_cls = layers.AttentionAggregator
+            self.mulhead = int(arch_gcn['attention'])
         else:
             self.aggregator_cls = layers.HighOrderAggregator
+            self.mulhead = 1
         self.lr = train_params['lr']
         self.node_subgraph = placeholders['node_subgraph']
         self.num_layers = len(arch_gcn['arch'].split('-'))
@@ -144,7 +146,8 @@ class GraphSAINT:
             aggregator = self.aggregator_cls(self.dims_weight[layer][0], self.dims_weight[layer][1],
                     dropout=self.placeholders['dropout'],name=name,model_pretrain=model_pretrain[layer],
                     act=self.act_layer[layer],order=self.order_layer[layer],aggr=self.aggr_layer[layer],\
-                    is_train=self.is_train,bias=self.bias_layer[layer],logging=FLAGS.logging,I_vector=self.placeholders['I_vector'])
+                    is_train=self.is_train,bias=self.bias_layer[layer],logging=FLAGS.logging,\
+                    I_vector=self.placeholders['I_vector'],mulhead=self.mulhead)
             aggregators.append(aggregator)
         return aggregators
 
