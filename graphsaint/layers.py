@@ -222,12 +222,12 @@ class HighOrderAggregator(Layer):
 class AttentionAggregator(Layer):
     def __init__(self, dim_in, dim_out,
             dropout=0., act='relu', order=1, aggr='mean', model_pretrain=None, is_train=True, bias='norm', **kwargs):
-        assert order == 1, "now only support attention for order 1 layers"
+        assert order <= 1, "now only support attention for order 0/1 layers"
         super(AttentionAggregator,self).__init__(**kwargs)
         self.dropout = dropout
         self.bias = bias
         self.act = F_ACT[act]
-        self.order = 1      # for attention, right now we only support order 1 (i.e., self + 1-hop neighbor)
+        self.order = order
         self.aggr = aggr
         self.is_train = is_train
         if 'mulhead' in kwargs.keys():
@@ -277,6 +277,14 @@ class AttentionAggregator(Layer):
         vecs_do2 = tf.nn.dropout(vecs, 1-self.dropout)
         vw_self = tf.matmul(vecs_do2,self.vars['order0_weights'])
         ret_self = self.act(vw_self + self.vars['order0_bias'])
+        if self.bias == 'norm':
+            mean,variance = tf.nn.moments(ret_self,axes=[1],keep_dims=True)
+            ret_self = tf.nn.batch_normalization(ret_self,mean,variance,self.vars['order0_offset'],self.vars['order0_scale'],1e-9)
+        if self.order == 0:
+            return ret_self
+        
+        # the aggr below only applies to order 1 layers
+
         ret_neigh_l_subg = list()
         ret_neigh_l_fullg = list()
         offset = 0
@@ -308,8 +316,6 @@ class AttentionAggregator(Layer):
             offset += dim0_adj_sub
         ret_neigh = tf.cond(self.is_train, lambda: tf.concat(ret_neigh_l_subg,axis=1), lambda: tf.concat(ret_neigh_l_fullg,axis=0))
         if self.bias == 'norm':
-            mean,variance = tf.nn.moments(ret_self,axes=[1],keep_dims=True)
-            ret_self = tf.nn.batch_normalization(ret_self,mean,variance,self.vars['order0_offset'],self.vars['order0_scale'],1e-9)
             mean,variance = tf.nn.moments(ret_neigh,axes=[1],keep_dims=True)
             ret_neigh = tf.nn.batch_normalization(ret_neigh,mean,variance,self.vars['order1_offset'],self.vars['order1_scale'],1e-9)
         if self.aggr == 'mean':
