@@ -107,6 +107,9 @@ class Minibatch:
         elif self.method_sample == 'node':
             self.size_subg_budget = train_phases['size_subgraph']
             self.graph_sampler = node_sampling(self.adj_train,self.node_train,self.size_subg_budget)
+        elif self.method_sample == 'full_batch':
+            self.size_subg_budget = self.node_train.size
+            self.graph_sampler = full_batch_sampling(self.adj_train,self.node_train,self.size_subg_budget)
         else:
             raise NotImplementedError
 

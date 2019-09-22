@@ -447,3 +447,28 @@ cdef class Node(Sampler):
             sort(self.node_sampled[idx_subg].begin(),self.node_sampled[idx_subg].end())
             self.node_sampled[idx_subg].erase(unique(self.node_sampled[idx_subg].begin(),self.node_sampled[idx_subg].end()),self.node_sampled[idx_subg].end())
 
+# -----------------------------------------------------
+
+cdef class FullBatch(Sampler):
+    def __cinit__(self, np.ndarray[int,ndim=1,mode='c'] adj_indptr,
+                        np.ndarray[int,ndim=1,mode='c'] adj_indices,
+                        np.ndarray[int,ndim=1,mode='c'] node_train,
+                        int num_proc, int num_sample_per_proc):
+        pass
+
+    cdef void sample(self, int p) nogil:
+        cdef int i = 0
+        cdef int r = 0
+        cdef int idx_subg
+        cdef int sample
+        while r < self.num_sample_per_proc:
+            idx_subg = p*self.num_sample_per_proc+r
+            i = 0
+            while i < self.node_train_vec.size():
+                sample = i
+                self.node_sampled[idx_subg].push_back(self.node_train_vec[sample])
+                i = i + 1
+            r = r + 1
+            sort(self.node_sampled[idx_subg].begin(),self.node_sampled[idx_subg].end())
+            self.node_sampled[idx_subg].erase(unique(self.node_sampled[idx_subg].begin(),self.node_sampled[idx_subg].end()),self.node_sampled[idx_subg].end())
+

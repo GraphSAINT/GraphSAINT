@@ -101,3 +101,11 @@ class node_sampling(graph_sampler):
             self.p_dist /= self.p_dist[-1]/(2**31-1)
         self.p_dist = self.p_dist.astype(np.int32)
 
+
+class full_batch_sampling(graph_sampler):
+    
+    def __init__(self,adj_train,node_train,size_subgraph):
+        super().__init__(adj_train,node_train,size_subgraph,dict())
+        self.cy_sampler = cy.FullBatch(self.adj_train.indptr,self.adj_train.indices,self.node_train,\
+            NUM_PAR_SAMPLER,SAMPLES_PER_PROC)
+
