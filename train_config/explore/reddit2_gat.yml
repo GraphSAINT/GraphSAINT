@@ -2,13 +2,13 @@ network:
   - dim: 128
     aggr: 'concat'
     loss: 'softmax'
-    arch: '1-1'
+    arch: '1-0-1-0'
     attention: 8
     act: 'relu'
     #bias: 'norm'
 params:
   - lr: 0.01  # 0.001
-    dropout: 0.05
+    dropout: 0.2
     weight_decay: 0.0
     sample_coverage: 50
 phase:
@@ -18,4 +18,4 @@ phase:
     depth: 2
     #
     #sampler: 'edge'
-    #size_subg_edge: 2000
+    #size_subg_edge: 3000
