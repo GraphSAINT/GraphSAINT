@@ -7,7 +7,7 @@ network:
     bias: 'norm'
 params:
   - lr: 0.01
-    dropout: 0.1    # dropout of 0.0 also works, but 0.1 is more stable
+    dropout: 0.1
     weight_decay: 0.0
     sample_coverage: 50
 phase:
