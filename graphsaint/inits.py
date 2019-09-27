@@ -7,8 +7,6 @@ import numpy as np
 # https://github.com/tkipf/gcn
 # which is under an identical MIT license as graphsaint
 
-BATCH_MODE = {'tree':0,'subgraph':1}
-
 """
 Initialization of weight matrices.
 """

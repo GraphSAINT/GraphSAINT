@@ -5,7 +5,6 @@ network:
     arch: '1-0-1-0'
     attention: 8
     act: 'relu'
-    #bias: 'norm'
 params:
   - lr: 0.01  # 0.001
     dropout: 0.2

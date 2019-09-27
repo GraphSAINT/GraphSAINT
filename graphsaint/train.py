@@ -98,9 +98,6 @@ def prepare(train_data,train_params,arch_gcn):
     model = GraphSAINT(num_classes, placeholders,
                 feats, arch_gcn, train_params, adj_full_norm, logging=True)
 
-    # config.gpu_options.allow_growth = True
-    # config.allow_soft_placement = True
-
     # Initialize session
     sess = tf.Session(config=tf.ConfigProto(device_count={"CPU":40},inter_op_parallelism_threads=44,intra_op_parallelism_threads=44,log_device_placement=FLAGS.log_device_placement))
     ph_misc_stat = {'val_f1_micro': tf.placeholder(DTYPE, shape=()),
@@ -142,17 +139,13 @@ def train(train_phases,arch_gcn,model,minibatch,\
     f1mic_best = 0
     e_best = 0
     time_calc_f1 = 0
-    time_qest = 0
     time_train = 0
     time_prepare = 0
     options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE,report_tensor_allocations_upon_oom=True)
     run_metadata = tf.RunMetadata()
     many_runs_timeline=[]
     for ip,phase in enumerate(train_phases):
-        tset_start = time.time()
         minibatch.set_sampler(phase)
-        tset_end = time.time()
-        time_qest += tset_end-tset_start
         num_batches = minibatch.num_training_batches()
         printf('START PHASE {:4d}'.format(ip),style='underline')
         for e in range(epoch_ph_start,int(phase['end'])):
@@ -164,31 +157,26 @@ def train(train_phases,arch_gcn,model,minibatch,\
             l_size_subg = list()
             time_train_ep = 0
             time_prepare_ep = 0
-            time_timeline_ep=0
             time_mask = 0
             time_list = 0
             while not minibatch.end():
                 t0 = time.time()
                 feed_dict, labels = minibatch.feed_dict(mode='train')
                 t1 = time.time()
-                if FLAGS.timeline:
+                if FLAGS.timeline:      # profile the code with Tensorflow Timeline
                     _,__,loss_train,pred_train,dbg = sess.run([train_stat[0], \
                             model.opt_op, model.loss, model.preds], feed_dict=feed_dict,
                             options=options, run_metadata=run_metadata)
-                    t2 = time.time()
                     fetched_timeline = timeline.Timeline(run_metadata.step_stats)
                     chrome_trace = fetched_timeline.generate_chrome_trace_format()
                     many_runs_timeline.append(chrome_trace)
-                    t3=time.time()
-                    time_timeline_ep+=t3-t2
                 else:
                     _,__,loss_train,pred_train = sess.run([train_stat[0], model.opt_op, model.loss, model.preds], \
                                             feed_dict=feed_dict,options=tf.RunOptions(report_tensor_allocations_upon_oom=True))
-                    t2 = time.time()
+                t2 = time.time()
                 time_train_ep += t2-t1
                 time_prepare_ep += t1-t0
                 if not minibatch.batch_num % FLAGS.eval_train_every:
-                    t3 = time.time()
                     f1_mic,f1_mac = calc_f1(labels,pred_train,arch_gcn['loss'])
                     #printf("  Iter {:4d}\ttrain loss {:.4f}\tmic {:4f}\tmac {:4f}".format(
                     #    minibatch.batch_num,loss_train,f1_mic,f1_mac))
@@ -196,11 +184,9 @@ def train(train_phases,arch_gcn,model,minibatch,\
                     l_f1mic_tr.append(f1_mic)
                     l_f1mac_tr.append(f1_mac)
                     l_size_subg.append(minibatch.size_subgraph)
-                    t4 = time.time()
-                    time_calc_f1 += t4 - t3
             time_train += time_train_ep
             time_prepare += time_prepare_ep
-            if FLAGS.cpu_eval:
+            if FLAGS.cpu_eval:      # Full batch evaluation using CPU
                 saver.save(sess,'./tmp.chkpt')
                 with tf.device('/cpu:0'):
                     sess_cpu = tf.Session(config=tf.ConfigProto(device_count={'GPU': 0}))
@@ -214,7 +200,6 @@ def train(train_phases,arch_gcn,model,minibatch,\
                 evaluate_full_batch(sess_eval,model,minibatch,many_runs_timeline,mode='val')
             printf(' TRAIN (Ep avg): loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}\ttrain time = {:.4f} sec'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr),time_train_ep))
             printf(' VALIDATION:     loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
-            #printf(' GREP: ({:.4f},{:4f})'.format(time_train,f1mic_val))
             if f1mic_val > f1mic_best:
                 f1mic_best = f1mic_val
                 e_best = e
