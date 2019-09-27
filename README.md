@@ -3,29 +3,27 @@
 This is the open source implementation for the "GraphSAINT" paper.
 
 
-2 layer convergence (Validation F1-Micro w.r.t. Training time) plot
-* The GraphSAINT curves correspond to samplers of RW, RW, RW, Edge for datasets PPI, Flickr, Reddit, Yelp. 
-* For a larger version of the PPI dataset (with 0.995 accuracy), please see the below section. 
+Run configuration in `./train_config/table2/*.yml` to reproduce results in Table 2 of the paper.
 
-![Alt text](converge.png)
+For results using **deeper GCNs** and **alternative architectures**, please see below. 
 
-Comparison of test set accuracy and training time with state-of-the-art methods
+*NOTE*: For all methods compared in the paper (GraphSAINT, GCN, GraphSAGE, FastGCN, S-GCN, AS-GCN, ClusterGCN), sampling or clustering is **only** performed during training. 
+To obtain the validation / test set accuracy, we run the full batch GCN on the full graph (training + validation + test nodes), and calculate F1 score only for the validation / test nodes.
 
-![Alt text](acc.png)
 
-Run configuration in `./train_config/table2/*.yml` to reproduce results in the above table. 
+For simplicity of implementation, during validation / test set evaluation, we perform layer propagation using the full graph adjacency matrix. For Amazon or Yelp, this may cause memory issue for some GPUs. If an out-of-memory error occurs, please use the `--cpu_eval` flag to force the val / test set evaluation to take place on CPU (the minibatch training will still be performed on GPU). See the "Run training" section at the end of this page for other Flags. 
 
-For results using **deeper GCNs** and **other architectures**, please see below. 
 
 ## Highlights in Flexibility
 
-As stated in the paper, GraphSAINT can be easily extended to support various graph samplers, as well as other GCN architectures. 
+GraphSAINT can be easily extended to support various graph samplers, as well as other GCN architectures. 
 To add customized sampler, just implement the new sampler class in `./graphsaint/cython_sampler.pyx`. 
 
 We have integrated the following architecture variants into GraphSAINT in this codebase:
 
-* **Higher order graph convolutional layers**: Just specify the order in the configuration file (see `./train_config/README.md`, and also `./train_config/explore/reddit2_o2_rw.yml` for an example order two GCN reaching 0.967 F1-micro). 
+* **Attention**: We train [GAT](https://arxiv.org/abs/1710.10903) with the minibatches returned by GraphSAINT (the original GAT model only supports full batch training). Use the example configuration `./train_config/explore/reddit2_gat.yml` for a 2 layer GAT on Reddit achieving 0.967 F1-micro.
 * **Jumping Knowledge connection**: The JK-Net in the [original paper](https://arxiv.org/abs/1806.03536) adopts the neighbor sampling strategy of GraphSAGE, where neighbor explosion in deeper layers is **not** resolved. Here, we demonstrate that graph sampling based minibatch of GraphSAINT can be applied to JK-Net architecture to improve training scalability w.r.t. GCN depth. 
+* **Higher order graph convolutional layers**: Just specify the order in the configuration file (see `./train_config/README.md`, and also `./train_config/explore/reddit2_o2_rw.yml` for an example order two GCN reaching 0.967 F1-micro). 
 
 ***New state-of-the-art results on deep models:***
 * Check out `./train_config/explore/reddit4_jk_e.yml` for a 4-layer GraphSAINT-JK-Net achieving **0.970** F1-Micro on Reddit. The total training time (using independent edge sampler) is under 55 seconds, which is even 2x faster than 2-layer S-GCN!
@@ -52,6 +50,7 @@ Currently available datasets:
 * Reddit
 * Flickr
 * Yelp
+* Amazon
   
 They are available via this [Google Drive link](https://drive.google.com/open?id=1zycmmDES39zVlbVCYs88JTJ1Wm5FbfLz). Rename the folder to `data` at the root directory.  The directory structure should be as below:
 
@@ -87,7 +86,7 @@ For example `python convert.py ppi` will convert dataset PPI and save new data i
   
 
 
-## Cython
+## Cython Implemented Parallel Graph Sampler
 
 We have a cython module which need compilation before training can start. Compile the module by running the following from the root directory:
 
@@ -115,5 +114,6 @@ To run the code on gpu
 
 For example `--gpu 0` will run on the first GPU. 
 
-We have also realized dual-GPU training to further speedup runtime. Simply add the flag `--dualGPU`.
+We have also implemented dual-GPU training to further speedup runtime. Simply add the flag `--dualGPU`.
 
+If the full batch validation / test set evaluation throws out-of-memory exception on GPU, please add the `--cpu_eval` flag together with `--gpu <GPU number>`. This way, minibatch training will take place on GPU, while val / test evaluation will be executed on CPU. 

@@ -33,6 +33,7 @@ class GraphSAINT:
         self.jk = None if 'jk' not in arch_gcn else arch_gcn['jk']
         self.arch_gcn = arch_gcn
         self.adj_subgraph = placeholders['adj_subgraph']
+        # adj_subgraph_* are to store row-wise partitioned full graph adj tiles. 
         self.adj_subgraph_0=placeholders['adj_subgraph_0']
         self.adj_subgraph_1=placeholders['adj_subgraph_1']
         self.adj_subgraph_2=placeholders['adj_subgraph_2']

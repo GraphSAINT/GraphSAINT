@@ -150,6 +150,10 @@ class JumpingKnowledge(Layer):
 
 
 class HighOrderAggregator(Layer):
+    """
+    If order == 1, then this layer is the normal GCN layer. If order == 1, this layer is equivalent to a dense layer (only self-to-self propagation).
+    If order > 1, then this layer is a high-order layer propagating multi-hop information.
+    """
     def __init__(self, dim_in, dim_out,
             dropout=0., act='relu', order=1, aggr='mean', model_pretrain=None, is_train=True, bias='norm', **kwargs):
         super(HighOrderAggregator,self).__init__(**kwargs)
@@ -220,6 +224,9 @@ class HighOrderAggregator(Layer):
 
 
 class AttentionAggregator(Layer):
+    """
+    Attention mechanism by GAT. We remove the softmax step since during minibatch training, we cannot see all neighbors of a node.
+    """
     def __init__(self, dim_in, dim_out,
             dropout=0., act='relu', order=1, aggr='mean', model_pretrain=None, is_train=True, bias='norm', **kwargs):
         assert order <= 1, "now only support attention for order 0/1 layers"
