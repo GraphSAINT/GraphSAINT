@@ -7,11 +7,11 @@ network:
     bias: 'norm'
 params:
   - lr: 0.01
-    dropout: 0.1        # adding dropout of 0.1 helps stablizing training
+    dropout: 0.1
     weight_decay: 0.0
     sample_coverage: 50
 phase:
-  - end: 100            # NOTE: within 30 epochs, we can reach 0.646 within 90 sec
+  - end: 100
     sampler: 'mrw'
     size_subgraph: 2500
     size_frontier: 1000
