@@ -1,6 +1,6 @@
-## Hyperparameter Search for Table 2
+## Hyperparameter Search Procedure
 
-* Hidden dimension for each model and dataset: 128, 256, 512
+* Hidden dimension for each method, model and dataset: 128, 256, 512
 * Dropout: 0.0, 0.1, 0.2, 0.3
 * Optimizer: Adam
 * Learning rate: 0.1, 0.01, 0.001, 0.0001

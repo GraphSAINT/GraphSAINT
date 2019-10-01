@@ -1,0 +1,16 @@
+network:
+  - dim: 512
+    aggr: 'concat'
+    loss: 'sigmoid'
+    arch: '1-1-0'
+    act: 'relu'
+    bias: 'norm'
+params:
+  - lr: 0.01
+    dropout: 0.1
+    weight_decay: 0.0
+    sample_coverage: 50
+phase:
+  - end: 30
+    sampler: 'edge'
+    size_subg_edge: 2000

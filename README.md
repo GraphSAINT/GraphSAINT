@@ -7,13 +7,6 @@ Run configuration in `./train_config/table2/*.yml` to reproduce results in Table
 
 For results using **deeper GCNs** and **alternative architectures**, please see below. 
 
-*NOTE*: For all methods compared in the paper (GraphSAINT, GCN, GraphSAGE, FastGCN, S-GCN, AS-GCN, ClusterGCN), sampling or clustering is **only** performed during training. 
-To obtain the validation / test set accuracy, we run the full batch GCN on the full graph (training + validation + test nodes), and calculate F1 score only for the validation / test nodes.
-
-
-For simplicity of implementation, during validation / test set evaluation, we perform layer propagation using the full graph adjacency matrix. For Amazon or Yelp, this may cause memory issue for some GPUs. If an out-of-memory error occurs, please use the `--cpu_eval` flag to force the val / test set evaluation to take place on CPU (the minibatch training will still be performed on GPU). See the "Run training" section at the end of this page for other Flags. 
-
-
 ## Highlights in Flexibility
 
 GraphSAINT can be easily extended to support various graph samplers, as well as other GCN architectures. 
@@ -104,6 +97,12 @@ For detailed description of the configuration file format, please see `./train_c
 
 We suggest looking through the available tensorflow command line flags defined in `./graphsaint/globals.py`. By properly setting the flags, you can maximize CPU utilization in the sampling step (by telling the number of available cores), and turn on / off Tensorboard, etc. 
 
+*NOTE*: For all methods compared in the paper (GraphSAINT, GCN, GraphSAGE, FastGCN, S-GCN, AS-GCN, ClusterGCN), sampling or clustering is **only** performed during training. 
+To obtain the validation / test set accuracy, we run the full batch GCN on the full graph (training + validation + test nodes), and calculate F1 score only for the validation / test nodes.
+
+
+For simplicity of implementation, during validation / test set evaluation, we perform layer propagation using the full graph adjacency matrix. For Amazon or Yelp, this may cause memory issue for some GPUs. If an out-of-memory error occurs, please use the `--cpu_eval` flag to force the val / test set evaluation to take place on CPU (the minibatch training will still be performed on GPU). See below for other Flags. 
+
 To run the code on cpu
 
 `./run_graphsaint.sh <dataset_name> <path to train_config yml>`
@@ -112,8 +111,7 @@ To run the code on gpu
 
 `./run_graphsaint.sh <dataset_name> <path to train_config yml> --gpu <GPU number>`
 
-For example `--gpu 0` will run on the first GPU. 
+For example `--gpu 0` will run on the first GPU. Use `--gpu <GPU number> --cpu_eval` to make GPU perform the minibatch training and CPU to perform the validation / test evaluation. 
 
 We have also implemented dual-GPU training to further speedup runtime. Simply add the flag `--dualGPU`.
 
-If the full batch validation / test set evaluation throws out-of-memory exception on GPU, please add the `--cpu_eval` flag together with `--gpu <GPU number>`. This way, minibatch training will take place on GPU, while val / test evaluation will be executed on CPU. 

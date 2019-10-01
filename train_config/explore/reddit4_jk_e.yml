@@ -2,7 +2,7 @@ network:
   - dim: 128
     aggr: 'concat'
     loss: 'softmax'
-    arch: '1-0-1-0-1-0-1-0'     # we can also use a '1-1-1-1' architecture to achieve high accuracy
+    arch: '1-0-1-0-1-0-1-0'
     jk: 'concat'
     act: 'relu'
     bias: 'norm'
