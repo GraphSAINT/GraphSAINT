@@ -75,7 +75,11 @@ class GraphSAINT:
         idx_conv = np.where(np.array(self.order_layer)>=1)[0]
         idx_conv = list(idx_conv[1:] - 1)
         idx_conv.append(len(self.order_layer)-1)
-        self.idx_conv = idx_conv
+        _o_arr = np.array(self.order_layer)[idx_conv]
+        if np.prod(np.ediff1d(_o_arr)) == 0:
+            self.idx_conv = idx_conv
+        else:
+            self.idx_conv = list(np.where(np.array(self.order_layer)==1)[0])
 
 
     def build(self, model_pretrain=None):

@@ -11,6 +11,6 @@ params:
     weight_decay: 0.0
     sample_coverage: 50
 phase:
-  - end: 100     # setting this to 50 will give you 0.648 F1-micro within the time listed in Table 2
+  - end: 100
     sampler: 'edge'
     size_subg_edge: 2500
