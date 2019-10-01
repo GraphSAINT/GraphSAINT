@@ -2,8 +2,8 @@ network:
   - dim: 128
     aggr: 'concat'
     loss: 'softmax'
-    arch: '1-0-1-0-1-0-1-0'
-    jk: 'concat' #'max_pool'
+    arch: '1-0-1-0-1-0-1-0'     # '1-1-1-1-0' leads to the same accuracy
+    jk: 'concat'
     act: 'relu'
     bias: 'norm'
 params:
