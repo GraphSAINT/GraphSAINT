@@ -113,5 +113,5 @@ To run the code on gpu
 
 For example `--gpu 0` will run on the first GPU. Use `--gpu <GPU number> --cpu_eval` to make GPU perform the minibatch training and CPU to perform the validation / test evaluation. 
 
-We have also implemented dual-GPU training to further speedup runtime. Simply add the flag `--dualGPU`.
+We have also implemented dual-GPU training to further speedup runtime. Simply add the flag `--dualGPU` and assign two GPUs using the `--gpu` flag. Currently this only works for GPUs connected by NvLink and support memory pooling.
 
