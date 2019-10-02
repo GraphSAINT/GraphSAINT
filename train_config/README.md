@@ -5,6 +5,7 @@
 * Optimizer: Adam
 * Learning rate: 0.1, 0.01, 0.001, 0.0001
 
+(For 5-layer PPI-large, we use hidden dimension of 2048 to be consistent with the architecture of ClusterGCN.)
 
 
 ## Training Configuration
