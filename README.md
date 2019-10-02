@@ -14,9 +14,9 @@ To add customized sampler, just implement the new sampler class in `./graphsaint
 
 We have integrated the following architecture variants into GraphSAINT in this codebase:
 
-* **Attention**: We train [GAT](https://arxiv.org/abs/1710.10903) with the minibatches returned by GraphSAINT (the original GAT model only supports full batch training). Use the example configuration `./train_config/explore/reddit2_gat.yml` for a 2 layer GAT on Reddit achieving 0.967 F1-micro.
-* **Jumping Knowledge connection**: The JK-Net in the [original paper](https://arxiv.org/abs/1806.03536) adopts the neighbor sampling strategy of GraphSAGE, where neighbor explosion in deeper layers is **not** resolved. Here, we demonstrate that graph sampling based minibatch of GraphSAINT can be applied to JK-Net architecture to improve training scalability w.r.t. GCN depth. 
-* **Higher order graph convolutional layers**: Just specify the order in the configuration file (see `./train_config/README.md`, and also `./train_config/explore/reddit2_o2_rw.yml` for an example order two GCN reaching 0.967 F1-micro). 
+* **Attention**: We train [GAT](https://arxiv.org/abs/1710.10903) with the minibatches returned by GraphSAINT (the original GAT model only supports full batch training). Use the example configuration `./train_config/explore/reddit2_gat.yml` for a 2-layer GAT-SAINT on Reddit achieving 0.967 F1-micro.
+* **Jumping Knowledge connection**: The JK-Net in the [original paper](https://arxiv.org/abs/1806.03536) adopts the neighbor sampling strategy of GraphSAGE, where neighbor explosion in deeper layers is **not** resolved. Here, we demonstrate that graph sampling based minibatch of GraphSAINT can be applied to JK-Net architecture to improve training scalability w.r.t. GCN depth. See `./train_config/explore/reddit4_jk_e.yml` for a 4-layer JK-SAINT on Reddit achieving 0.970 F1-micro.
+* **Higher order graph convolutional layers**: Normal graph convolutional layers aggregate 1-hop neighbors, and thus is considered as order-1. A natural extension to aggregate k-hop neighbors in a single layer leads to an order-k GCN architecture. Just specify the order in the configuration file (see `./train_config/README.md`, and also `./train_config/explore/reddit2_o2_rw.yml` for an example order two GCN reaching 0.967 F1-micro). 
 
 ***New state-of-the-art results on deep models:***
 * Check out `./train_config/explore/reddit4_jk_e.yml` for a 4-layer GraphSAINT-JK-Net achieving **0.970** F1-Micro on Reddit. The total training time (using independent edge sampler) is under 55 seconds, which is even 2x faster than 2-layer S-GCN!
@@ -95,6 +95,8 @@ For detailed description of the configuration file format, please see `./train_c
 
 ## Run Training
 
+First of all, please compile cython samplers (see above). 
+
 We suggest looking through the available tensorflow command line flags defined in `./graphsaint/globals.py`. By properly setting the flags, you can maximize CPU utilization in the sampling step (by telling the number of available cores), and turn on / off Tensorboard, etc. 
 
 *NOTE*: For all methods compared in the paper (GraphSAINT, GCN, GraphSAGE, FastGCN, S-GCN, AS-GCN, ClusterGCN), sampling or clustering is **only** performed during training. 
@@ -113,5 +115,5 @@ To run the code on gpu
 
 For example `--gpu 0` will run on the first GPU. Use `--gpu <GPU number> --cpu_eval` to make GPU perform the minibatch training and CPU to perform the validation / test evaluation. 
 
-We have also implemented dual-GPU training to further speedup runtime. Simply add the flag `--dualGPU` and assign two GPUs using the `--gpu` flag. Currently this only works for GPUs connected by NvLink and support memory pooling.
+We have also implemented dual-GPU training to further speedup runtime. Simply add the flag `--dualGPU` and assign two GPUs using the `--gpu` flag. Currently this only works for GPUs supporting memory pooling and connected by NvLink.
 
