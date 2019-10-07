@@ -15,6 +15,3 @@ phase:
     sampler: 'rw'
     depth: 2
     num_root: 3000
-# 0.9428   
-# 0.9389
-# 0.9407

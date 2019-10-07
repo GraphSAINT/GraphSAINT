@@ -2,7 +2,7 @@ network:
   - dim: 512
     aggr: 'concat'
     loss: 'sigmoid'
-    arch: '1-0-1-0'
+    arch: '1-0-1-0'     # '1-0-1-0' is the arch used by S-GCN. Changing to '1-1-0' still leads to significantly higher acc than other baselines.
     act: 'relu'
     bias: 'norm'
 params:
