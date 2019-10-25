@@ -27,10 +27,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('num_cpu_core', 20, 'Number of CPU cores for parallel sampling')
 flags.DEFINE_boolean('log_device_placement', False, "Whether to log device placement.")
 flags.DEFINE_string('data_prefix', '', 'prefix identifying training data. must be specified.')
-try:
-    flags.DEFINE_string('log_dir', '.', 'base directory for logging and saving embeddings')
-except Exception:
-    pass        # due to tensorflow version issues
+flags.DEFINE_string('dir_log', '.', 'base directory for logging and saving embeddings') # avoid naming the flag to `log_dir`, as it may cause conflict when using higher version of TF
 flags.DEFINE_string('gpu','-1234', "which gpu to use.")
 flags.DEFINE_integer('eval_train_every', 15, "How often to evaluate training subgraph accuracy.")
 

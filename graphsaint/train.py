@@ -204,10 +204,10 @@ def train(train_phases,arch_gcn,model,minibatch,\
                 f1mic_best = f1mic_val
                 e_best = e
                 tsave=time.time()
-                if not os.path.exists(FLAGS.log_dir+'/models'):
-                    os.makedirs(FLAGS.log_dir+'/models')
+                if not os.path.exists(FLAGS.dir_log+'/models'):
+                    os.makedirs(FLAGS.dir_log+'/models')
                 print('  Saving models ...')
-                savepath = saver.save(sess, '{}/models/saved_model_{}.chkpt'.format(FLAGS.log_dir,timestamp),write_meta_graph=False,write_state=False)
+                savepath = saver.save(sess, '{}/models/saved_model_{}.chkpt'.format(FLAGS.dir_log,timestamp),write_meta_graph=False,write_state=False)
  
             if FLAGS.tensorboard:
                 misc_stat = sess.run([train_stat[1]],feed_dict={\
@@ -226,7 +226,7 @@ def train(train_phases,arch_gcn,model,minibatch,\
     for tl in many_runs_timeline:
         timelines.update_timeline(tl)
     timelines.save('timeline.json')
-    saver.restore(sess_eval, '{}/models/saved_model_{}.chkpt'.format(FLAGS.log_dir,timestamp))
+    saver.restore(sess_eval, '{}/models/saved_model_{}.chkpt'.format(FLAGS.dir_log,timestamp))
     loss_val, f1mic_val, f1mac_val, duration = evaluate_full_batch(sess_eval,model,minibatch,many_runs_timeline,mode='val')
     printf("Full validation (Epoch {:4d}): \n  F1_Micro = {:.4f}\tF1_Macro = {:.4f}".format(e_best,f1mic_val,f1mac_val),style='red')
     loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess_eval,model,minibatch,many_runs_timeline,mode='test')

@@ -94,7 +94,7 @@ def parse_n_prepare(flags):
 
 def log_dir(f_train_config,prefix,git_branch,git_rev,timestamp):
     import getpass
-    log_dir = FLAGS.log_dir+"/tf_log/" + prefix.split("/")[-1]
+    log_dir = FLAGS.dir_log+"/tf_log/" + prefix.split("/")[-1]
     log_dir += "/{ts}-{model}-{gitrev:s}/".format(
             model='graphsaint',
             gitrev=git_rev.strip(),
