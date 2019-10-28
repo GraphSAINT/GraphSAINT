@@ -97,7 +97,7 @@ For detailed description of the configuration file format, please see `./train_c
 
 First of all, please compile cython samplers (see above). 
 
-We suggest looking through the available tensorflow command line flags defined in `./graphsaint/globals.py`. By properly setting the flags, you can maximize CPU utilization in the sampling step (by telling the number of available cores), and turn on / off Tensorboard, etc. 
+We suggest looking through the available tensorflow command line flags defined in `./graphsaint/globals.py`. By properly setting the flags, you can maximize CPU utilization in the sampling step (by telling the number of available cores), select the directory to place log files, and turn on / off Tensorboard, etc. 
 
 *NOTE*: For all methods compared in the paper (GraphSAINT, GCN, GraphSAGE, FastGCN, S-GCN, AS-GCN, ClusterGCN), sampling or clustering is **only** performed during training. 
 To obtain the validation / test set accuracy, we run the full batch GCN on the full graph (training + validation + test nodes), and calculate F1 score only for the validation / test nodes.
@@ -105,15 +105,15 @@ To obtain the validation / test set accuracy, we run the full batch GCN on the f
 
 For simplicity of implementation, during validation / test set evaluation, we perform layer propagation using the full graph adjacency matrix. For Amazon or Yelp, this may cause memory issue for some GPUs. If an out-of-memory error occurs, please use the `--cpu_eval` flag to force the val / test set evaluation to take place on CPU (the minibatch training will still be performed on GPU). See below for other Flags. 
 
-To run the code on cpu
+To run the code on CPU
 
-`./run_graphsaint.sh <dataset_name> <path to train_config yml>`
+`./run_graphsaint.sh <dataset_name> <path to train_config yml> --gpu -1`
 
-To run the code on gpu
+To run the code on GPU
 
 `./run_graphsaint.sh <dataset_name> <path to train_config yml> --gpu <GPU number>`
 
-For example `--gpu 0` will run on the first GPU. Use `--gpu <GPU number> --cpu_eval` to make GPU perform the minibatch training and CPU to perform the validation / test evaluation. 
+For example `--gpu 0` will run on the first GPU. Also, use `--gpu <GPU number> --cpu_eval` to make GPU perform the minibatch training and CPU to perform the validation / test evaluation. 
 
 We have also implemented dual-GPU training to further speedup runtime. Simply add the flag `--dualGPU` and assign two GPUs using the `--gpu` flag. Currently this only works for GPUs supporting memory pooling and connected by NvLink.
 
