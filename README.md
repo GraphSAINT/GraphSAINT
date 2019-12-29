@@ -2,18 +2,15 @@
 
 Hanqing Zeng*, Hongkuan Zhou*, Ajitesh Srivastava, Rajgopal Kannan, Viktor Prasanna
 
-**Update: accepted by ICLR 2020**
-
-Contact (for issues of code): 
+Contact: 
 
 Hanqing Zeng (zengh@usc.edu), Hongkuan Zhou (hongkuaz@usc.edu)
 
 Citation:
 
 ```
-@inproceedings{
-graphsaint,
-title={Graph{\{}SAINT{\}}: Graph Sampling Based Inductive Learning Method},
+@inproceedings{graphsaint,
+title={{GraphSAINT}: Graph Sampling Based Inductive Learning Method},
 author={Hanqing Zeng and Hongkuan Zhou and Ajitesh Srivastava and Rajgopal Kannan and Viktor Prasanna},
 booktitle={International Conference on Learning Representations},
 year={2020},
