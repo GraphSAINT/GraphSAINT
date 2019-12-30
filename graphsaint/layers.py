@@ -151,7 +151,7 @@ class JumpingKnowledge(Layer):
 
 class HighOrderAggregator(Layer):
     """
-    If order == 1, then this layer is the normal GCN layer. If order == 1, this layer is equivalent to a dense layer (only self-to-self propagation).
+    If order == 1, then this layer is the normal GCN layer. If order == 0, this layer is equivalent to a dense layer (only self-to-self propagation).
     If order > 1, then this layer is a high-order layer propagating multi-hop information.
     """
     def __init__(self, dim_in, dim_out,
