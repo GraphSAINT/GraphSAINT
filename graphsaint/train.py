@@ -177,9 +177,7 @@ def train(train_phases,arch_gcn,model,minibatch,\
                 time_train_ep += t2-t1
                 time_prepare_ep += t1-t0
                 if not minibatch.batch_num % FLAGS.eval_train_every:
-                    f1_mic,f1_mac = calc_f1(labels,pred_train,arch_gcn['loss'])
-                    #printf("  Iter {:4d}\ttrain loss {:.4f}\tmic {:4f}\tmac {:4f}".format(
-                    #    minibatch.batch_num,loss_train,f1_mic,f1_mac))
+                    f1_mic,f1_mac = calc_f1(labels,pred_train,model.sigmoid_loss)
                     l_loss_tr.append(loss_train)
                     l_f1mic_tr.append(f1_mic)
                     l_f1mac_tr.append(f1_mac)
