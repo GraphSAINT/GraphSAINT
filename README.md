@@ -8,13 +8,27 @@ Hanqing Zeng (zengh@usc.edu), Hongkuan Zhou (hongkuaz@usc.edu)
 
 Citation:
 
+* ICLR 2020:
+
 ```
-@inproceedings{graphsaint,
+@inproceedings{graphsaint-iclr20,
 title={{GraphSAINT}: Graph Sampling Based Inductive Learning Method},
 author={Hanqing Zeng and Hongkuan Zhou and Ajitesh Srivastava and Rajgopal Kannan and Viktor Prasanna},
 booktitle={International Conference on Learning Representations},
 year={2020},
 url={https://openreview.net/forum?id=BJe8pkHFwS}
+}
+```
+
+* IEEE/IPDPS 2019:
+
+```
+@INPROCEEDINGS{graphsaint-ipdps19,
+author={Hanqing Zeng and Hongkuan Zhou and Ajitesh Srivastava and Rajgopal Kannan and Viktor Prasanna},
+booktitle={2019 IEEE International Parallel and Distributed Processing Symposium (IPDPS)},
+title={Accurate, Efficient and Scalable Graph Embedding},
+year={2019},
+month={May},
 }
 ```
 
