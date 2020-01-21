@@ -113,16 +113,16 @@ void load_data(char *data, s_data2d_sp &adj_full, s_data2d_sp &adj_train,
     char file_adj_train_indices[1024],file_adj_train_indptr[1024],file_adj_full_indices[1024],file_adj_full_indptr[1024];
     char file_node_test[1024],file_node_train[1024],file_node_val[1024],file_input[1024],file_output[1024],file_dims[1024];
   
-    snprintf(file_dims,1024,"../data/%s/dims.bin",data);
-    snprintf(file_adj_train_indices,1024,"../data/%s/adj_train_indices.bin",data);
-    snprintf(file_adj_train_indptr,1024,"../data/%s/adj_train_indptr.bin",data);
-    snprintf(file_adj_full_indices,1024,"../data/%s/adj_full_indices.bin",data);
-    snprintf(file_adj_full_indptr,1024,"../data/%s/adj_full_indptr.bin",data);
-    snprintf(file_node_train,1024,"../data/%s/node_train.bin",data);
-    snprintf(file_node_test,1024,"../data/%s/node_test.bin",data);
-    snprintf(file_node_val,1024,"../data/%s/node_val.bin",data);
-    snprintf(file_input,1024,"../data/%s/feats_norm_col.bin",data);
-    snprintf(file_output, 1024,"../data/%s/labels_col.bin",data);
+    snprintf(file_dims,1024,"../data_cpp/%s/dims.bin",data);
+    snprintf(file_adj_train_indices,1024,"../data_cpp/%s/adj_train_indices.bin",data);
+    snprintf(file_adj_train_indptr,1024,"../data_cpp/%s/adj_train_indptr.bin",data);
+    snprintf(file_adj_full_indices,1024,"../data_cpp/%s/adj_full_indices.bin",data);
+    snprintf(file_adj_full_indptr,1024,"../data_cpp/%s/adj_full_indptr.bin",data);
+    snprintf(file_node_train,1024,"../data_cpp/%s/node_train.bin",data);
+    snprintf(file_node_test,1024,"../data_cpp/%s/node_test.bin",data);
+    snprintf(file_node_val,1024,"../data_cpp/%s/node_val.bin",data);
+    snprintf(file_input,1024,"../data_cpp/%s/feats_norm_col.bin",data);
+    snprintf(file_output, 1024,"../data_cpp/%s/labels_col.bin",data);
     t_idx dims[11];
     std::ifstream ifs;
 

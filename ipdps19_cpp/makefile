@@ -1,8 +1,8 @@
 CC=icc
 IDIR=./include
 ODIR=./obj
-LIBS=-L/home/intel/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 
-CFLAGS=-I$(IDIR) -I/home/intel/mkl/include -fopenmp -pthread -Wall -O3 --std=c++11
+LIBS=-L${MKLROOT}/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 
+CFLAGS=-I${IDIR} -I${MKLROOT}/include -fopenmp -pthread -Wall -O3 --std=c++11
 
 _DEPS=global.h optm.h		# global dependencies
 DEPS=$(patsubst %,$(IDIR)/%,$(_DEPS))
@@ -12,6 +12,7 @@ OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
 
 
 $(ODIR)/%.o: %.cpp $(IDIR)/%.h $(DEPS)
+	@mkdir -p $(@D)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 train: train.cpp $(OBJ)
@@ -21,4 +22,4 @@ train: train.cpp $(OBJ)
 
 clean:
 	rm -f $(ODIR)/*.o
-	rm train
+

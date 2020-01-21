@@ -10,7 +10,6 @@
 #pragma once
 
 
-#define NUM_CORE_PHYSICAL 40
 #define SAMPLE_FRONTIER 0
 
 #define DEFAULT_NUM_LAYER 2
