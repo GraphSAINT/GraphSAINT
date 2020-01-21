@@ -2,13 +2,15 @@
 
 Hanqing Zeng*, Hongkuan Zhou*, Ajitesh Srivastava, Rajgopal Kannan, Viktor Prasanna
 
-Contact: 
+#### IMPORTANT: This a self-contained directory for the C++ implementation of our parallel algorithm proposed in IEEE/IPDPS '19. If you are only interested in the GraphSAINT minibatch algorithm itself (ICLR '20), but not the parallelization techniques, please ignore this directory. 
+
+
+**Contact**
 
 Hanqing Zeng (zengh@usc.edu), Hongkuan Zhou (hongkuaz@usc.edu)
 
-Citation:
+**Citation**
 
-* IEEE/IPDPS 2019:
 
 ```
 @INPROCEEDINGS{graphsaint-ipdps19,
@@ -17,6 +19,7 @@ booktitle={2019 IEEE International Parallel and Distributed Processing Symposium
 title={Accurate, Efficient and Scalable Graph Embedding},
 year={2019},
 month={May},
+doi={10.1109/IPDPS.2019.00056}, 
 }
 ```
 
