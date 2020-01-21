@@ -57,10 +57,11 @@ void sample_frontier(s_data2d_sp adj_train, s_idx1d_ds node_train, s_data2d_sp *
         t_idx *sama=(t_idx*)malloc(sizeof(t_idx)*(1+1));    // intra_thread = 1
         t_idx choose,neigh_v,newsize;
         set<t_idx> st;
-        #pragma omp for
+        // #pragma omp for
         for (int i=0;i<size_frontier;i++)
         {
             IA3[i]=node_train.arr[rand_r(&myseed)%node_train.dim1];
+            st.insert(IA3[i]);
             IA0[i]=adj_train.indptr[IA3[i]+1]-adj_train.indptr[IA3[i]];
             IA0[i]=(IA0[i]>SAMPLE_CLIP)?SAMPLE_CLIP:IA0[i];
             IA1[i]=1;
