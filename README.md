@@ -2,11 +2,11 @@
 
 Hanqing Zeng*, Hongkuan Zhou*, Ajitesh Srivastava, Rajgopal Kannan, Viktor Prasanna
 
-Contact: 
+**Contact** 
 
 Hanqing Zeng (zengh@usc.edu), Hongkuan Zhou (hongkuaz@usc.edu)
 
-Citation:
+**Citation**
 
 * ICLR 2020:
 
@@ -32,7 +32,9 @@ month={May},
 }
 ```
 
-Run configuration in `./train_config/table2/*.yml` to reproduce results in Table 2 of the paper.
+The `./ipdps19_cpp` directory contains the C++ implementation of the parallel training techniques described in IEEE/IPDPS '19 (see `./ipdps19_cpp/README.md`). The rest of this repository are for GraphSAINT in ICLR '20 (see the following sections of this `README`). 
+
+To reproduce the Table 2 results (ICLR '20), run configuration in `./train_config/table2/*.yml`.
 
 For results using **deeper GCNs** and **alternative architectures**, please see below. 
 
