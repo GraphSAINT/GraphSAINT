@@ -96,17 +96,27 @@ void sample_frontier(s_data2d_sp adj_train, s_idx1d_ds node_train, s_data2d_sp *
                         choose=tmp;
             }
             choose=(DB1[choose]<0)?choose:(choose-DB1[choose]);
-            neigh_v=(adj_train.indptr[DB0[choose]+1]-adj_train.indptr[DB0[choose]]!=0)?rand_r(&myseed)%(adj_train.indptr[DB0[choose]+1]-adj_train.indptr[DB0[choose]]):IA3[DB2[choose]-1];
-            neigh_v=adj_train.indices[adj_train.indptr[DB0[choose]]+neigh_v];
-            st.insert(neigh_v);
-            IA1[DB2[choose]-1]=0;
-            IA0[DB2[choose]-1]=0;
-            for (int i=choose;i<choose-DB1[choose];i++)
+            neigh_v=(adj_train.indptr[DB0[choose]+1]-adj_train.indptr[DB0[choose]]!=0)?rand_r(&myseed)%(adj_train.indptr[DB0[choose]+1]-adj_train.indptr[DB0[choose]]):-1;
+            // printf("%d ",choose);
+            // printf("%d %d=%d ",adj_train.indptr[DB0[choose]],neigh_v,IA3[DB2[choose]-1]);
+            // printf("%d<%d?\n",adj_train.indptr[DB0[choose]]+neigh_v,adj_train.num_e);
+            if (neigh_v!=-1)
             {
-                DB0[i]=-1;
+                neigh_v=adj_train.indices[adj_train.indptr[DB0[choose]]+neigh_v];
+                st.insert(neigh_v);
+                IA1[DB2[choose]-1]=0;
+                IA0[DB2[choose]-1]=0;
+                for (int i=choose;i<choose-DB1[choose];i++)
+                {
+                    DB0[i]=-1;
+                }
+                newsize=adj_train.indptr[adj_train.indices[neigh_v]+1]-adj_train.indptr[adj_train.indices[neigh_v]];
+                newsize=(newsize>SAMPLE_CLIP)?SAMPLE_CLIP:newsize;
             }
-            newsize=adj_train.indptr[adj_train.indices[neigh_v]+1]-adj_train.indptr[adj_train.indices[neigh_v]];
-            newsize=(newsize>SAMPLE_CLIP)?SAMPLE_CLIP:newsize;
+            else
+            {
+                newsize=0;
+            }
             //shrink DB to remove sampled nodes, also shrink IA accordingly
             bool cond=DB0.size()+newsize>DB0.capacity();
             if (cond)
@@ -222,9 +232,11 @@ void sample_frontier(s_data2d_sp adj_train, s_idx1d_ds node_train, s_data2d_sp *
         memcpy(subgs[thread].arr,&arr_v[0],arr_v.size()*sizeof(t_data));
         double t2=omp_get_wtime();
         printf("thread %d finish in %dms while pre use %dms and post use %dms.\n",thread,(int)((t2-t1)*1000),(int)((tpre-t1)*1000),(int)((t2-tpost)*1000));
+        // printf("\t num_e:%lu numv:%lu\n",st.size(),indices_v.size());
     }
     double tt2=omp_get_wtime();
     printf("Sampling: total time %.8lfs.\n",tt2-tt1);
+    return;
 }
 
 
