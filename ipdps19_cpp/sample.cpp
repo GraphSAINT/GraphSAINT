@@ -97,9 +97,6 @@ void sample_frontier(s_data2d_sp adj_train, s_idx1d_ds node_train, s_data2d_sp *
             }
             choose=(DB1[choose]<0)?choose:(choose-DB1[choose]);
             neigh_v=(adj_train.indptr[DB0[choose]+1]-adj_train.indptr[DB0[choose]]!=0)?rand_r(&myseed)%(adj_train.indptr[DB0[choose]+1]-adj_train.indptr[DB0[choose]]):-1;
-            // printf("%d ",choose);
-            // printf("%d %d=%d ",adj_train.indptr[DB0[choose]],neigh_v,IA3[DB2[choose]-1]);
-            // printf("%d<%d?\n",adj_train.indptr[DB0[choose]]+neigh_v,adj_train.num_e);
             if (neigh_v!=-1)
             {
                 neigh_v=adj_train.indices[adj_train.indptr[DB0[choose]]+neigh_v];
