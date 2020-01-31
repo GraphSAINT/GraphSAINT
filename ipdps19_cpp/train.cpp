@@ -7,7 +7,9 @@
 #include "init.h"
 #include "sample.h"
 #include "operation.h"
-#include "mkl.h"
+#ifdef USE_MKL
+    #include "mkl.h"
+#endif
 #include "optm.h"
 #include "layer.h"
 
@@ -93,9 +95,11 @@ int main(int argc, char* argv[]) {
     // SETUP THREADS 
     // ======================
     omp_set_num_threads(num_thread);
+    omp_set_dynamic(0);
+#ifdef USE_MKL
     mkl_set_num_threads(num_thread);
     mkl_set_dynamic(0);
-    omp_set_dynamic(0);
+#endif
 
     #pragma omp parallel default (shared) 
     {   
@@ -149,8 +153,8 @@ int main(int argc, char* argv[]) {
                 subgs_trans[i].num_e = subgs[i].num_e;
                 subgs_trans[i].indptr = subgs[i].indptr;
                 subgs_trans[i].indices = subgs[i].indices;
-                if (subgs_trans[i].arr != NULL) {mkl_free(subgs_trans[i].arr);}
-                subgs_trans[i].arr = (t_data*)mkl_malloc(subgs[i].num_e*sizeof(t_data),64);
+                if (subgs_trans[i].arr != NULL) {_free(subgs_trans[i].arr);}
+                subgs_trans[i].arr = (t_data*)_malloc(subgs[i].num_e*sizeof(t_data));
                 transpose_adj(subgs[i],subgs_trans[i].arr);
             }
             num_subg_remain = num_thread;

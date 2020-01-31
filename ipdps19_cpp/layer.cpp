@@ -8,7 +8,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
+#ifdef USE_MKL
 #include "mkl.h"
+#endif
 #include "layer.h"
 #include "init.h"
 #include <algorithm>

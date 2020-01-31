@@ -7,11 +7,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <vector>
-#include "mkl.h"
+#ifdef USE_MKL
+    #include "mkl.h"
+#endif
 
 
 void transpose_adj(s_data2d_sp adj, t_data *arr_adj_trans) {
-    t_idx* ptr_arr = (t_idx*)mkl_malloc(adj.num_v*sizeof(t_idx),64);
+    t_idx* ptr_arr = (t_idx*)_malloc(adj.num_v*sizeof(t_idx));
     memcpy(ptr_arr, adj.indptr, adj.num_v*sizeof(t_idx));
     for (int i=0; i<adj.num_v; i++) {
         int v_start = adj.indptr[i];
@@ -22,7 +24,7 @@ void transpose_adj(s_data2d_sp adj, t_data *arr_adj_trans) {
             ptr_arr[row_new] ++;
         }
     }
-    mkl_free(ptr_arr);
+    _free(ptr_arr);
 }
 
 void lookup_feats(s_idx1d_ds v_subg, s_data2d_ds feat_fullg, s_data2d_ds &feat_subg) {
@@ -83,8 +85,13 @@ void sparseMM(s_data2d_sp adj, s_data2d_ds X, s_data2d_ds &ret, int num_thread) 
     time_ops[OP_SPARSE] += t2-t1;
 }
 
+inline t_data get_val(s_data2d_ds X, int r, int c, bool trans) {
+    return X.arr[(trans?r:c)*X.dim1+(trans?c:r)];
+}
+
 void denseMM(s_data2d_ds X, s_data2d_ds W, s_data2d_ds &ret, bool trans1, bool trans2, bool accum) {
     double t1 = omp_get_wtime();
+#ifdef USE_MKL
     if ((!trans1)&&(!trans2)) {assert(X.dim2 == W.dim1);}
     else if ((trans1)&&(!trans2)) {assert(X.dim1 == W.dim1);}
     cblas_dgemm(CblasColMajor,
@@ -101,6 +108,27 @@ void denseMM(s_data2d_ds X, s_data2d_ds W, s_data2d_ds &ret, bool trans1, bool t
                 (int)accum,
                 ret.arr,
                 ret.dim1);
+#else
+    int dim1_out = trans1?X.dim2:X.dim1;
+    int dim2_out = trans2?W.dim1:W.dim2;
+    int dim_mid = trans1?X.dim1:X.dim2;
+    ret.dim1 = dim1_out;
+    ret.dim2 = dim2_out;
+    if (!accum) {
+        #pragma omp parallel for
+        for (int i=0; i<dim1_out*dim2_out; i++) {
+            ret.arr[i] = 0;
+        }
+    }
+    #pragma omp parallel for
+    for (int i=0; i<dim1_out; i++) {
+        for (int j=0; j<dim2_out; j++) {
+            for (int k=0; k<dim_mid; k++) {
+                ret.arr[i+j*ret.dim1] += get_val(X,i,k,trans1)*get_val(W,k,j,trans2);
+            }
+        }
+    }
+#endif
     double t2 = omp_get_wtime();
     time_ops[OP_DENSE] += t2-t1;
 }
