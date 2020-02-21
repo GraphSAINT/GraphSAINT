@@ -1,6 +1,8 @@
 #include "global.h"
 #include "sample.h"
+#ifdef USE_MKL
 #include "mkl.h"
+#endif
 #include <omp.h>
 #include <stdlib.h>
 #include <vector>

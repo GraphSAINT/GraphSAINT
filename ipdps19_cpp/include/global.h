@@ -39,7 +39,18 @@
 #define OP_SIGMOID 'i'
 #define OP_SOFTMAX 'j'
 
+#define USE_MKL
+#include <cstddef>
+#include <cstdlib>
+#ifdef USE_MKL
 #include "mkl.h"
+inline void* _malloc(size_t size) {return mkl_malloc(size,64);}
+inline void _free(void* ptr) {return mkl_free(ptr);}
+#else
+inline void* _malloc(size_t size) {return malloc(size);}
+inline void _free(void* ptr) {return free(ptr);}
+#endif
+
 #include "string.h"
 #include <map>
 
@@ -63,7 +74,7 @@ typedef int t_idx;          // use this type to denote all the indices (e.g., in
 struct s_idx1d_ds {
     s_idx1d_ds() : dim1(0), arr(NULL) {};
     s_idx1d_ds(t_idx dim1_) : dim1(dim1_) {
-            arr = (t_idx*)mkl_malloc(dim1*sizeof(t_idx),64);
+            arr = (t_idx*)_malloc(dim1*sizeof(t_idx));
             memset(arr, 0, dim1*sizeof(t_idx));};
     t_idx dim1;
     t_idx *arr;
@@ -72,7 +83,7 @@ struct s_idx1d_ds {
 struct s_data1d_ds {
     s_data1d_ds() : dim1(0), arr(NULL) {};
     s_data1d_ds(t_idx dim1_) : dim1(dim1_) {
-            arr = (t_data*)mkl_malloc(dim1*sizeof(t_data),64);
+            arr = (t_data*)_malloc(dim1*sizeof(t_data));
             memset(arr, 0, dim1*sizeof(t_data));};
     t_idx dim1;
     t_data *arr;
@@ -82,9 +93,9 @@ struct s_data1d_ds {
 struct s_idx2d_sp {
     s_idx2d_sp() : num_v(0), num_e(0), indptr(NULL), indices(NULL), arr(NULL) {};
     s_idx2d_sp(t_idx num_v_, t_idx num_e_) : num_v(num_v_), num_e(num_e_) {
-            indptr = (t_idx*)mkl_malloc((num_v+1)*sizeof(t_idx),64);
-            indices = (t_idx*)mkl_malloc(num_e*sizeof(t_idx),64);
-            arr = (t_idx*)mkl_malloc(num_e*sizeof(t_idx),64);
+            indptr = (t_idx*)_malloc((num_v+1)*sizeof(t_idx));
+            indices = (t_idx*)_malloc(num_e*sizeof(t_idx));
+            arr = (t_idx*)_malloc(num_e*sizeof(t_idx));
             memset(indptr, 0, (num_v+1)*sizeof(t_idx));
             memset(indices, 0, num_e*sizeof(t_idx));
             memset(arr, 0, num_e*sizeof(t_idx));};
@@ -99,9 +110,9 @@ struct s_idx2d_sp {
 struct s_data2d_sp {
     s_data2d_sp() : num_v(0), num_e(0), indptr(NULL), indices(NULL), arr(NULL) {};
     s_data2d_sp(t_idx num_v_, t_idx num_e_) : num_v(num_v_), num_e(num_e_) {
-            indptr = (t_idx*)mkl_malloc((num_v+1)*sizeof(t_idx),64);
-            indices = (t_idx*)mkl_malloc(num_e*sizeof(t_idx),64);
-            arr = (t_data*)mkl_malloc(num_e*sizeof(t_data),64);
+            indptr = (t_idx*)_malloc((num_v+1)*sizeof(t_idx));
+            indices = (t_idx*)_malloc(num_e*sizeof(t_idx));
+            arr = (t_data*)_malloc(num_e*sizeof(t_data));
             memset(indptr, 0, (num_v+1)*sizeof(t_idx));
             memset(indices, 0, num_e*sizeof(t_idx));
             memset(arr, 0, num_e*sizeof(t_data));};
@@ -115,7 +126,7 @@ struct s_data2d_sp {
 struct s_idx2d_ds {
     s_idx2d_ds() : dim1(0), dim2(0), arr(NULL) {};
     s_idx2d_ds(t_idx dim1_, t_idx dim2_) : dim1(dim1_), dim2(dim2_) {
-            arr = (t_idx*)mkl_malloc(dim1*dim2*sizeof(t_idx),64);
+            arr = (t_idx*)_malloc(dim1*dim2*sizeof(t_idx));
             memset(arr, 0, dim1*dim2*sizeof(t_idx));};
     t_idx dim1;
     t_idx dim2;
@@ -125,7 +136,7 @@ struct s_idx2d_ds {
 struct s_data2d_ds {
     s_data2d_ds() : dim1(0), dim2(0), arr(NULL) {};
     s_data2d_ds(t_idx dim1_, t_idx dim2_) : dim1(dim1_), dim2(dim2_) {
-            arr = (t_data*)mkl_malloc(dim1*dim2*sizeof(t_data),64);
+            arr = (t_data*)_malloc(dim1*dim2*sizeof(t_data));
             memset(arr, 0, dim1*dim2*sizeof(t_data));};
     t_idx dim1;
     t_idx dim2;

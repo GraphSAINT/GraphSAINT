@@ -9,7 +9,9 @@
 #include <iomanip>
 #include <vector>
 #include <algorithm>
-#include "mkl.h"
+#ifdef USE_MKL
+    #include "mkl.h"
+#endif
 #include "global.h"
 #include "util.h"
 #include <numeric>
@@ -139,7 +141,7 @@ void load_data(char *data, s_data2d_sp &adj_full, s_data2d_sp &adj_train,
     ifs.close();
     adj_train.num_v = dims[1]-1;
     adj_train.num_e = dims[0];
-    adj_train.arr = (t_data*)mkl_malloc(dims[0]*sizeof(t_data),64);
+    adj_train.arr = (t_data*)_malloc(dims[0]*sizeof(t_data));
     norm_adj(adj_train);
 
     adj_full.indices=new t_idx[dims[2]];
@@ -152,7 +154,7 @@ void load_data(char *data, s_data2d_sp &adj_full, s_data2d_sp &adj_train,
     ifs.close();
     adj_full.num_v = dims[3]-1;
     adj_full.num_e = dims[2];
-    adj_full.arr = (t_data*)mkl_malloc(dims[2]*sizeof(t_data),64);
+    adj_full.arr = (t_data*)_malloc(dims[2]*sizeof(t_data));
     norm_adj(adj_full);
 
     node_train.arr=new t_idx[dims[4]];
@@ -200,8 +202,8 @@ void load_data(char *data, s_data2d_sp &adj_full, s_data2d_sp &adj_train,
 
 
 void free_data2d_sp(s_data2d_sp adj) {
-    mkl_free(adj.indices);
-    mkl_free(adj.indptr);
-    mkl_free(adj.arr);
+    _free(adj.indices);
+    _free(adj.indptr);
+    _free(adj.arr);
 }
 
