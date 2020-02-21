@@ -18,11 +18,6 @@ void transpose_adj(s_data2d_sp adj, t_data *arr_adj_trans) {
         int v_end = adj.indptr[i+1];
         for (int j=v_start; j<v_end; j++) {
             int row_new = adj.indices[j];
-            // if (row_new==3986)
-            //     printf("node %d has 3986 as neighbor\n",i);
-            // assert(row_new>=0 && row_new<adj.num_v);
-            // printf("%d %d %d %d\n",adj.num_v,row_new,ptr_arr[row_new],adj.num_e);
-            // assert(ptr_arr[row_new]>=0 && ptr_arr[row_new]<adj.num_e);
             arr_adj_trans[ptr_arr[row_new]] = adj.arr[j];
             ptr_arr[row_new] ++;
         }
