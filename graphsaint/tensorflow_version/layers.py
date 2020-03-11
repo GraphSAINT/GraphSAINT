@@ -1,6 +1,11 @@
 import tensorflow as tf
-from graphsaint.inits import glorot,zeros,trained,ones,xavier,uniform
+from graphsaint.tensorflow_version.inits import glorot,zeros,trained,ones,xavier,uniform
 from graphsaint.globals import *
+
+F_ACT = {'I': lambda x:x,
+         'relu': tf.nn.relu,
+         'leaky_relu': tf.nn.leaky_relu}
+
 
 # global unique layer ID dictionary for layer name assignment
 _LAYER_UIDS = {}
@@ -63,46 +68,6 @@ class Layer:
             tf.summary.histogram(self.name + '/vars/' + var, self.vars[var])
 
 
-class Dense(Layer):
-    """Dense layer."""
-    # dense should not act as relu
-    def __init__(self, dim_in, dim_out, weight_decay, dropout=0.,
-                 act=lambda x:x, bias=True, model_pretrain=None, **kwargs):
-        """
-        model_pretrain is not None if you want to load the trained model
-        model_pretrain[0] is weights
-        model_pretrain[1] is bias
-        """
-        super(Dense, self).__init__(**kwargs)
-        self.dropout = dropout
-        self.act = F_ACT[act]
-        self.bias = bias
-        self.dim_in = dim_in
-        self.dim_out = dim_out
-        self.weight_decay = weight_decay
-
-        with tf.variable_scope(self.name + '_vars'):
-            if model_pretrain is None:
-                self.vars['weights'] = tf.get_variable('weights', shape=(dim_in, dim_out),
-                                         dtype=DTYPE,
-                                         initializer=tf.contrib.layers.xavier_initializer(),
-                                         regularizer=tf.contrib.layers.l2_regularizer(self.weight_decay))
-                if self.bias:
-                    self.vars['bias'] = zeros([dim_out],name='bias')
-            else:
-                self.vars['weights'] = trained(model_pretrain[0], name='weight')
-                if self.bias:
-                    self.vars['bias'] = trained(model_pretrain[1], name='bias')
-        if self.logging:
-            self._log_vars()
-
-    def _call(self, inputs):
-        x = tf.nn.dropout(inputs, 1-self.dropout)
-        output = tf.matmul(x, self.vars['weights'])
-        if self.bias:
-            output += self.vars['bias']
-        return self.act(output)
-
 
 class JumpingKnowledge(Layer):
     def __init__(self, arch_gcn, dim_input_jk, mode=None, **kwargs):
@@ -155,7 +120,7 @@ class HighOrderAggregator(Layer):
     If order > 1, then this layer is a high-order layer propagating multi-hop information.
     """
     def __init__(self, dim_in, dim_out,
-            dropout=0., act='relu', order=1, aggr='mean', model_pretrain=None, is_train=True, bias='norm', **kwargs):
+            dropout=0., act='relu', order=1, aggr='mean', is_train=True, bias='norm', **kwargs):
         super(HighOrderAggregator,self).__init__(**kwargs)
         self.dropout = dropout
         self.bias = bias
@@ -165,14 +130,9 @@ class HighOrderAggregator(Layer):
         self.is_train = is_train
         if dim_out > 0:
             with tf.variable_scope(self.name + '_vars'):
-                if model_pretrain is None:
-                    for o in range(self.order+1):
-                        _k = 'order{}_weights'.format(o)
-                        self.vars[_k] = glorot([dim_in,dim_out],name=_k)
-                else:
-                    for o in range(self.order+1):
-                        _k = 'order{}_weights'.format(o)
-                        self.vars[_k] = trained(model_pretrain[0], name=_k)
+                for o in range(self.order+1):
+                    _k = 'order{}_weights'.format(o)
+                    self.vars[_k] = glorot([dim_in,dim_out],name=_k)
                 for o in range(self.order+1):
                     _k = 'order{}_bias'.format(o)
                     self.vars[_k] = zeros([dim_out],name=_k)
@@ -228,7 +188,7 @@ class AttentionAggregator(Layer):
     Attention mechanism by GAT. We remove the softmax step since during minibatch training, we cannot see all neighbors of a node.
     """
     def __init__(self, dim_in, dim_out,
-            dropout=0., act='relu', order=1, aggr='mean', model_pretrain=None, is_train=True, bias='norm', **kwargs):
+            dropout=0., act='relu', order=1, aggr='mean', is_train=True, bias='norm', **kwargs):
         assert order <= 1, "now only support attention for order 0/1 layers"
         super(AttentionAggregator,self).__init__(**kwargs)
         self.dropout = dropout

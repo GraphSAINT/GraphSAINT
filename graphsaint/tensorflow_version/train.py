@@ -1,7 +1,7 @@
 from graphsaint.globals import *
-from graphsaint.inits import *
-from graphsaint.model import GraphSAINT
-from graphsaint.minibatch import Minibatch
+from graphsaint.tensorflow_version.inits import *
+from graphsaint.tensorflow_version.model import GraphSAINT
+from graphsaint.tensorflow_version.minibatch import Minibatch
 from graphsaint.utils import *
 from graphsaint.metric import *
 from tensorflow.python.client import timeline
@@ -45,7 +45,7 @@ def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,mode):
     t1 = time.time()
     num_cls = minibatch_iter.class_arr.shape[-1]
     feed_dict, labels = minibatch_iter.feed_dict(mode)
-    if FLAGS.timeline:
+    if args_global.timeline:
         preds,loss = sess.run([model.preds, model.loss], feed_dict=feed_dict, options=options, run_metadata=run_metadata)
         fetched_timeline = timeline.Timeline(run_metadata.step_stats)
         chrome_trace = fetched_timeline.generate_chrome_trace_format()
@@ -99,7 +99,7 @@ def prepare(train_data,train_params,arch_gcn):
                 feats, arch_gcn, train_params, adj_full_norm, logging=True)
 
     # Initialize session
-    sess = tf.Session(config=tf.ConfigProto(device_count={"CPU":40},inter_op_parallelism_threads=44,intra_op_parallelism_threads=44,log_device_placement=FLAGS.log_device_placement))
+    sess = tf.Session(config=tf.ConfigProto(device_count={"CPU":40},inter_op_parallelism_threads=44,intra_op_parallelism_threads=44,log_device_placement=args_global.log_device_placement))
     ph_misc_stat = {'val_f1_micro': tf.placeholder(DTYPE, shape=()),
                     'val_f1_macro': tf.placeholder(DTYPE, shape=()),
                     'train_f1_micro': tf.placeholder(DTYPE, shape=()),
@@ -118,7 +118,7 @@ def prepare(train_data,train_params,arch_gcn):
 
     misc_stats = tf.summary.merge([_misc_val_f1_micro,_misc_val_f1_macro,_misc_train_f1_micro,_misc_train_f1_macro,
                     _misc_time_per_epoch,_misc_size_subgraph])
-    summary_writer = tf.summary.FileWriter(log_dir(FLAGS.train_config,FLAGS.data_prefix,git_branch,git_rev,timestamp), sess.graph)
+    summary_writer = tf.summary.FileWriter(log_dir(args_global.train_config,args_global.data_prefix,git_branch,git_rev,timestamp), sess.graph)
     # Init variables
     sess.run(tf.global_variables_initializer())
     return model,minibatch, sess, [merged,misc_stats],ph_misc_stat, summary_writer
@@ -163,7 +163,7 @@ def train(train_phases,arch_gcn,model,minibatch,\
                 t0 = time.time()
                 feed_dict, labels = minibatch.feed_dict(mode='train')
                 t1 = time.time()
-                if FLAGS.timeline:      # profile the code with Tensorflow Timeline
+                if args_global.timeline:      # profile the code with Tensorflow Timeline
                     _,__,loss_train,pred_train,dbg = sess.run([train_stat[0], \
                             model.opt_op, model.loss, model.preds], feed_dict=feed_dict,
                             options=options, run_metadata=run_metadata)
@@ -176,7 +176,7 @@ def train(train_phases,arch_gcn,model,minibatch,\
                 t2 = time.time()
                 time_train_ep += t2-t1
                 time_prepare_ep += t1-t0
-                if not minibatch.batch_num % FLAGS.eval_train_every:
+                if not minibatch.batch_num % args_global.eval_train_every:
                     f1_mic,f1_mac = calc_f1(labels,pred_train,model.sigmoid_loss)
                     l_loss_tr.append(loss_train)
                     l_f1mic_tr.append(f1_mic)
@@ -184,7 +184,7 @@ def train(train_phases,arch_gcn,model,minibatch,\
                     l_size_subg.append(minibatch.size_subgraph)
             time_train += time_train_ep
             time_prepare += time_prepare_ep
-            if FLAGS.cpu_eval:      # Full batch evaluation using CPU
+            if args_global.cpu_eval:      # Full batch evaluation using CPU
                 saver.save(sess,'./tmp.chkpt')
                 with tf.device('/cpu:0'):
                     sess_cpu = tf.Session(config=tf.ConfigProto(device_count={'GPU': 0}))
@@ -202,12 +202,12 @@ def train(train_phases,arch_gcn,model,minibatch,\
                 f1mic_best = f1mic_val
                 e_best = e
                 tsave=time.time()
-                if not os.path.exists(FLAGS.dir_log+'/models'):
-                    os.makedirs(FLAGS.dir_log+'/models')
+                if not os.path.exists(args_global.dir_log+'/models'):
+                    os.makedirs(args_global.dir_log+'/models')
                 print('  Saving models ...')
-                savepath = saver.save(sess, '{}/models/saved_model_{}.chkpt'.format(FLAGS.dir_log,timestamp),write_meta_graph=False,write_state=False)
+                savepath = saver.save(sess, '{}/models/saved_model_{}.chkpt'.format(args_global.dir_log,timestamp),write_meta_graph=False,write_state=False)
  
-            if FLAGS.tensorboard:
+            if args_global.tensorboard:
                 misc_stat = sess.run([train_stat[1]],feed_dict={\
                                         ph_misc_stat['val_f1_micro']: f1mic_val,
                                         ph_misc_stat['val_f1_macro']: f1mac_val,
@@ -224,7 +224,7 @@ def train(train_phases,arch_gcn,model,minibatch,\
     for tl in many_runs_timeline:
         timelines.update_timeline(tl)
     timelines.save('timeline.json')
-    saver.restore(sess_eval, '{}/models/saved_model_{}.chkpt'.format(FLAGS.dir_log,timestamp))
+    saver.restore(sess_eval, '{}/models/saved_model_{}.chkpt'.format(args_global.dir_log,timestamp))
     loss_val, f1mic_val, f1mac_val, duration = evaluate_full_batch(sess_eval,model,minibatch,many_runs_timeline,mode='val')
     printf("Full validation (Epoch {:4d}): \n  F1_Micro = {:.4f}\tF1_Macro = {:.4f}".format(e_best,f1mic_val,f1mac_val),style='red')
     loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess_eval,model,minibatch,many_runs_timeline,mode='test')
@@ -242,7 +242,7 @@ def train(train_phases,arch_gcn,model,minibatch,\
 ########
 
 def train_main(argv=None):
-    train_params,train_phases,train_data,arch_gcn = parse_n_prepare(FLAGS)
+    train_params,train_phases,train_data,arch_gcn = parse_n_prepare(args_global)
     model,minibatch,sess,train_stat,ph_misc_stat,summary_writer = prepare(train_data,train_params,arch_gcn)
     ret = train(train_phases,arch_gcn,model,minibatch,sess,train_stat,ph_misc_stat,summary_writer)
     return ret

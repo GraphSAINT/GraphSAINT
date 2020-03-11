@@ -13,3 +13,6 @@ tf_log/
 models/
 *ignore*
 *.pyc
+data_cpp
+obj/
+ipdps19_cpp/train

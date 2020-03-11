@@ -1,6 +1,5 @@
 from sklearn import metrics
 import numpy as np
-import tensorflow as tf
 
 
 def calc_f1(y_true, y_pred,is_sigmoid):

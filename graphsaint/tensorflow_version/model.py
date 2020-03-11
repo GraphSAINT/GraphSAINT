@@ -1,8 +1,8 @@
 import tensorflow as tf
 from collections import namedtuple
 from graphsaint.globals import *
-from graphsaint.inits import *
-import graphsaint.layers as layers
+from graphsaint.tensorflow_version.inits import *
+import graphsaint.tensorflow_version.layers as layers
 from graphsaint.utils import *
 import pdb
 
@@ -10,7 +10,7 @@ import pdb
 class GraphSAINT:
 
     def __init__(self, num_classes, placeholders, features,
-            arch_gcn, train_params, adj_full_norm, model_pretrain=None, **kwargs):
+            arch_gcn, train_params, adj_full_norm, **kwargs):
         '''
         Args:
             - placeholders: TensorFlow placeholder object.
@@ -18,7 +18,6 @@ class GraphSAINT:
             - adj: Numpy array with adjacency lists (padded with random re-samples)
             - degrees: Numpy array with node degrees.
             - sigmoid_loss: Set to true if nodes can belong to multiple classes
-            - model_pretrain: contains pre-trained weights, if you are doing inferencing
         '''
         if "attention" in arch_gcn:
             self.aggregator_cls = layers.AttentionAggregator
@@ -44,7 +43,7 @@ class GraphSAINT:
         self.adj_subgraph_7=placeholders['adj_subgraph_7']
         self.dim0_adj_sub = placeholders['dim0_adj_sub'] #adj_full_norm.shape[0]/8
         self.features = tf.Variable(tf.constant(features, dtype=DTYPE), trainable=False)
-        self.dualGPU=FLAGS.dualGPU
+        self.dualGPU=args_global.dualGPU
         _indices = np.column_stack(adj_full_norm.nonzero())
         _data = adj_full_norm.data
         _shape = adj_full_norm.shape
@@ -65,7 +64,7 @@ class GraphSAINT:
         self.norm_loss = placeholders['norm_loss']
         self.is_train = placeholders['is_train']
         
-        self.build(model_pretrain=model_pretrain)
+        self.build()
 
     def set_dims(self,dims):
         self.dims_feat = [dims[0]] + [((self.aggr_layer[l]=='concat')*self.order_layer[l]+1)*dims[l+1] for l in range(len(dims)-1)]
@@ -82,14 +81,12 @@ class GraphSAINT:
             self.idx_conv = list(np.where(np.array(self.order_layer)==1)[0])
 
 
-    def build(self, model_pretrain=None):
+    def build(self):
         """
         Build the sample graph with adj info in self.sample()
         directly feed the sampled support vectors to tf placeholder
         """
-        model_pretrain_aggr = model_pretrain['meanaggr'] if model_pretrain else None
-        model_pretrain_dense = model_pretrain['dense'] if model_pretrain else None
-        self.aggregators = self.get_aggregators(model_pretrain=model_pretrain_aggr)
+        self.aggregators = self.get_aggregators()
         _outputs_l = self.aggregate_subgraph()
         if self.jk == 'concat':
             _dim_input_jk = np.array(self.dims_feat)[np.array(self.idx_conv)+1].sum()
@@ -100,9 +97,9 @@ class GraphSAINT:
         # OUPTUT LAYER
         self.outputs = tf.nn.l2_normalize(self.outputs, 1)
         _dim_final = self.arch_gcn['dim'] if self.jk else self.dims_feat[-1]
-        self.layer_pred = layers.Dense(_dim_final, self.num_classes, self.weight_decay,
-                dropout=self.placeholders['dropout'], act='I', model_pretrain=model_pretrain_dense)
-        self.node_preds = self.layer_pred(self.outputs)
+        self.layer_pred = layers.HighOrderAggregator(_dim_final,self.num_classes,act="I",\
+                    order=0,dropout=self.placeholders["dropout"],bias="bias")
+        self.node_preds = self.layer_pred((self.outputs,None,None,None,None))
 
         # BACK PROP
         self._loss()
@@ -142,15 +139,13 @@ class GraphSAINT:
                 else tf.nn.softmax(self.node_preds)
 
 
-    def get_aggregators(self,name=None,model_pretrain=None):
+    def get_aggregators(self,name=None):
         aggregators = []
-        if model_pretrain is None:
-            model_pretrain = [None]*self.num_layers
         for layer in range(self.num_layers):
             aggregator = self.aggregator_cls(self.dims_weight[layer][0], self.dims_weight[layer][1],
-                    dropout=self.placeholders['dropout'],name=name,model_pretrain=model_pretrain[layer],
+                    dropout=self.placeholders['dropout'],name=name,
                     act=self.act_layer[layer],order=self.order_layer[layer],aggr=self.aggr_layer[layer],\
-                    is_train=self.is_train,bias=self.bias_layer[layer],logging=FLAGS.logging,\
+                    is_train=self.is_train,bias=self.bias_layer[layer],\
                     mulhead=self.mulhead)
             aggregators.append(aggregator)
         return aggregators
@@ -166,7 +161,7 @@ class GraphSAINT:
         ret_l = list()
         _adj_sub_l = [self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,self.adj_subgraph_3,
                       self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7]
-        if not FLAGS.dualGPU:
+        if not args_global.dualGPU:
             for layer in range(self.num_layers):
                 hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],_adj_sub_l,self.dim0_adj_sub))
                 ret_l.append(hidden)

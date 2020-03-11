@@ -1,8 +1,7 @@
-import tensorflow as tf
 import numpy as np
 import os,sys,time,datetime
 from os.path import expanduser
-import pdb
+import argparse
 
 
 import subprocess
@@ -21,35 +20,36 @@ timestamp = datetime.datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d %
 #tf.set_random_seed(seed)
 
 
-flags = tf.app.flags
-FLAGS = flags.FLAGS
-# Settings
-flags.DEFINE_integer('num_cpu_core', 20, 'Number of CPU cores for parallel sampling')
-flags.DEFINE_boolean('log_device_placement', False, "Whether to log device placement.")
-flags.DEFINE_string('data_prefix', '', 'prefix identifying training data. must be specified.')
-flags.DEFINE_string('dir_log', '.', 'base directory for logging and saving embeddings') # avoid naming the flag to `log_dir`, as it may cause conflict when using higher version of TF
-flags.DEFINE_string('gpu','-1234', "which gpu to use.")
-flags.DEFINE_integer('eval_train_every', 15, "How often to evaluate training subgraph accuracy.")
+parser = argparse.ArgumentParser(description="argument for GraphSAINT training")
+parser.add_argument("--num_cpu_core",default=20,type=int,help="Number of CPU cores for parallel sampling")
+parser.add_argument("--log_device_placement",default=False,action="store_true",help="Whether to log device placement")
+parser.add_argument("--data_prefix",required=True,type=str,help="prefix identifying training data")
+parser.add_argument("--dir_log",default=".",type=str,help="base directory for logging and saving embeddings")
+parser.add_argument("--gpu",default="-1234",type=str,help="which GPU to use")
+parser.add_argument("--eval_train_every",default=15,type=int,help="How often to evaluate training subgraph accuracy")
+parser.add_argument("--train_config",required=True,type=str,help="path to the configuration of training (*.yml)")
+parser.add_argument("--dtype",default="s",type=str,help="d for double, s for single precision floating point")
+parser.add_argument("--timeline",default=False,action="store_true",help="to save timeline.json or not")
+parser.add_argument("--tensorboard",default=False,action="store_true",help="to save data to tensorboard or not")
+parser.add_argument("--dualGPU",default=False,action="store_true",help="whether to distribute the model to two GPUs")
+parser.add_argument("--cpu_eval",default=False,action="store_true",help="whether to use CPU to do evaluation")
+args_global = parser.parse_args()
 
-flags.DEFINE_string('train_config', '', "path to the configuration of training (*.yml)")
-flags.DEFINE_string('model','','pretrained model')
-flags.DEFINE_string('dtype','s','d for double, s for single precision floating point')
-flags.DEFINE_boolean('timeline',False,'to save timeline.json or not')
-flags.DEFINE_boolean('tensorboard',False,'to save data to tensorboard or not')
-flags.DEFINE_boolean('logging',False,'log input and output histogram of each layer')
-flags.DEFINE_boolean('dualGPU',False,'whether to distribute the model to two GPU')
-flags.DEFINE_boolean('cpu_eval',False,'whether to use CPU to do evaulation')
 
-NUM_PAR_SAMPLER = FLAGS.num_cpu_core
+
+
+NUM_PAR_SAMPLER = args_global.num_cpu_core
 SAMPLES_PER_PROC = -(-(200 // NUM_PAR_SAMPLER)) # round up division
 
 
-if FLAGS.data_prefix.split('/')[-1]=='amazon':
-    FLAGS.cpu_eval=True
+# amazon dataset is too large, so we cannot perform full-batch
+# evaluation on GPU. We change its validation/test evaluation to CPU. 
+if args_global.data_prefix.split('/')[-1]=='amazon':
+    args_global.cpu_eval=True
 
 
 # auto choosing available NVIDIA GPU
-gpu_selected = FLAGS.gpu
+gpu_selected = args_global.gpu
 if gpu_selected == '-1234':
     # auto detect gpu by filtering on the nvidia-smi command output
     gpu_stat = subprocess.Popen("nvidia-smi",shell=True,stdout=subprocess.PIPE,universal_newlines=True).communicate()[0]
@@ -78,8 +78,4 @@ else:
 
 f_mean = lambda l: sum(l)/len(l)
 
-F_ACT = {'I': lambda x:x,
-         'relu': tf.nn.relu,
-         'leaky_relu': tf.nn.leaky_relu}
-
-DTYPE = tf.float32 if FLAGS.dtype=='s' else tf.float64
+DTYPE = "float32" if args_global.dtype=='s' else "float64"

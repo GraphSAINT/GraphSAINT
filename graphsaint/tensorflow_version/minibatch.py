@@ -1,6 +1,6 @@
 from graphsaint.globals import *
 import math
-from graphsaint.inits import *
+from graphsaint.tensorflow_version.inits import *
 from graphsaint.utils import *
 from graphsaint.graph_samplers import *
 from graphsaint.norm_aggr import *
@@ -188,7 +188,7 @@ class Minibatch:
             D = self.deg_train[self.node_subgraph]
             tt1 = time.time()
             assert len(self.node_subgraph) == adj.shape[0]
-            norm_aggr(adj.data,adj_edge_index,self.norm_aggr_train,num_proc=FLAGS.num_cpu_core)
+            norm_aggr(adj.data,adj_edge_index,self.norm_aggr_train,num_proc=args_global.num_cpu_core)
             #adj.data = self.norm_aggr_train[adj_edge_index]
 
             tt2 = time.time()
