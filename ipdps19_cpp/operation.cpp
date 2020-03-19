@@ -62,7 +62,7 @@ void sparseMM(s_data2d_sp adj, s_data2d_ds X, s_data2d_ds &ret, int num_thread) 
     double t1 = omp_get_wtime();
     assert(adj.num_v == X.dim1);
     assert(X.dim2 == ret.dim2 && X.dim1 == ret.dim1);
-    int part_feat = floor(X.dim2/(float)num_thread);
+    double part_feat = (float)X.dim2/(float)num_thread;
     int num_v = adj.num_v;
     #pragma omp parallel for
     for (int i=0; i<ret.dim1*ret.dim2; i++) {
@@ -70,12 +70,12 @@ void sparseMM(s_data2d_sp adj, s_data2d_ds X, s_data2d_ds &ret, int num_thread) 
     }
     #pragma omp parallel for num_threads(num_thread)
     for (int i=0; i<num_thread; i++) {
-        int _end_idx = (i==num_thread-1) ? ret.dim2:(i+1)*part_feat;
+        int _end_idx = (i==num_thread-1) ? ret.dim2:(int)floor((i+1)*part_feat);
         for (int row=0; row<num_v; row++) {
             for (int idx_v=adj.indptr[row]; idx_v<adj.indptr[row+1]; idx_v++) {
                 int id_neigh = adj.indices[idx_v];
                 assert(id_neigh <= adj.num_v-1);
-                for (int idx_feat=i*part_feat; idx_feat<_end_idx; idx_feat++) {
+                for (int idx_feat=(int)floor(i*part_feat); idx_feat<_end_idx; idx_feat++) {
                     ret.arr[idx_feat*num_v+row] += X.arr[idx_feat*num_v+id_neigh]*adj.arr[idx_v];
                 }
             }
