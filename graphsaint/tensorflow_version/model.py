@@ -1,5 +1,4 @@
 import tensorflow as tf
-from collections import namedtuple
 from graphsaint.globals import *
 from graphsaint.tensorflow_version.inits import *
 import graphsaint.tensorflow_version.layers as layers
@@ -159,21 +158,21 @@ class GraphSAINT:
             hidden = self.features
             adj = self.adj_full_norm
         ret_l = list()
-        _adj_sub_l = [self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,self.adj_subgraph_3,
+        _adj_partition_list = [self.adj_subgraph_0,self.adj_subgraph_1,self.adj_subgraph_2,self.adj_subgraph_3,
                       self.adj_subgraph_4,self.adj_subgraph_5,self.adj_subgraph_6,self.adj_subgraph_7]
         if not args_global.dualGPU:
             for layer in range(self.num_layers):
-                hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],_adj_sub_l,self.dim0_adj_sub))
+                hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],_adj_partition_list,self.dim0_adj_sub))
                 ret_l.append(hidden)
         else:
             split=int(self.num_layers/2)
             with tf.device('/gpu:0'):
                 for layer in range(split):
-                    hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],_adj_sub_l,self.dim0_adj_sub))
+                    hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],_adj_partition_list,self.dim0_adj_sub))
                     ret_l.append(hidden)
             with tf.device('/gpu:1'):
                 for layer in range(split,self.num_layers):
-                    hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],_adj_sub_l,self.dim0_adj_sub))
+                    hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],_adj_partition_list,self.dim0_adj_sub))
                     ret_l.append(hidden)
         return ret_l
 

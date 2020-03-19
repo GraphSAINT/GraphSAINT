@@ -64,6 +64,7 @@ if gpu_selected == '-1234':
                 gpu_selected = sorted(list(gpu_avail))[0]
     if gpu_selected == -1:
         gpu_selected = '0'
+    args_global.gpu = int(gpu_selected)
 if str(gpu_selected).startswith('nvlink'):
     os.environ["CUDA_VISIBLE_DEVICES"]=str(gpu_selected).split('nvlink')[1]
 elif int(gpu_selected) >= 0:
@@ -72,7 +73,7 @@ elif int(gpu_selected) >= 0:
     GPU_MEM_FRACTION = 0.8
 else:
     os.environ["CUDA_VISIBLE_DEVICES"]="-1"
-
+args_global.gpu = int(args_global.gpu)
 
 # global vars
 

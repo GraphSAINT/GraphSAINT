@@ -21,20 +21,18 @@ class Minibatch:
     This minibatch iterator iterates over nodes for supervised learning.
     """
 
-    def __init__(self, adj_full, adj_full_norm, adj_train, role, class_arr, placeholders, train_params, **kwargs):
+    def __init__(self, adj_full_norm, adj_train, role, class_arr, placeholders, train_params, **kwargs):
         """
         role:       array of string (length |V|)
                     storing role of the node ('tr'/'va'/'te')
         class_arr: array of float (shape |V|xf)
                     storing initial feature vectors
         """
-        self.num_proc = 1
         self.node_train = np.array(role['tr'])
         self.node_val = np.array(role['va'])
         self.node_test = np.array(role['te'])
 
         self.class_arr = class_arr
-        self.adj_full = adj_full
         self.adj_full_norm = adj_full_norm
         s1=int(adj_full_norm.shape[0]/8*1)
         s2=int(adj_full_norm.shape[0]/8*2)
@@ -54,7 +52,7 @@ class Minibatch:
         self.adj_full_norm_7=adj_full_norm[s7:,:]
         self.adj_train = adj_train
 
-        assert self.class_arr.shape[0] == self.adj_full.shape[0]
+        assert self.class_arr.shape[0] == self.adj_full_norm.shape[0]
 
         # below: book-keeping for mini-batch
         self.placeholders = placeholders
@@ -71,11 +69,11 @@ class Minibatch:
         
         self.norm_loss_train = np.zeros(self.adj_train.shape[0])
         # norm_loss_test is used in full batch evaluation (without sampling). so neighbor features are simply averaged.
-        self.norm_loss_test = np.zeros(self.adj_full.shape[0])
+        self.norm_loss_test = np.zeros(self.adj_full_norm.shape[0])
         _denom = len(self.node_train) + len(self.node_val) +  len(self.node_test)
-        self.norm_loss_test[self.node_train] = 1/_denom     
-        self.norm_loss_test[self.node_val] = 1/_denom
-        self.norm_loss_test[self.node_test] = 1/_denom
+        self.norm_loss_test[self.node_train] = 1./_denom
+        self.norm_loss_test[self.node_val] = 1./_denom
+        self.norm_loss_test[self.node_test] = 1./_denom
         self.norm_aggr_train = np.zeros(self.adj_train.size)
        
         self.sample_coverage = train_params['sample_coverage']

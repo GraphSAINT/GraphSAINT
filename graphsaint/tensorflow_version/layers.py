@@ -119,8 +119,8 @@ class HighOrderAggregator(Layer):
     If order == 1, then this layer is the normal GCN layer. If order == 0, this layer is equivalent to a dense layer (only self-to-self propagation).
     If order > 1, then this layer is a high-order layer propagating multi-hop information.
     """
-    def __init__(self, dim_in, dim_out,
-            dropout=0., act='relu', order=1, aggr='mean', is_train=True, bias='norm', **kwargs):
+    def __init__(self, dim_in, dim_out, dropout=0., act='relu', \
+            order=1, aggr='mean', is_train=True, bias='norm', **kwargs):
         super(HighOrderAggregator,self).__init__(**kwargs)
         self.dropout = dropout
         self.bias = bias
@@ -162,14 +162,17 @@ class HighOrderAggregator(Layer):
         return vw
 
     def _call(self, inputs):
-        vecs, adj_norm, len_feat, adj_sub_l, _ = inputs
+        # vecs: input feature of the current layer. 
+        # adj_partition_list: the row partitions of the full graph adj 
+        #       (only used in full-batch evaluation on the val/test sets)
+        vecs, adj_norm, len_feat, adj_partition_list, _ = inputs
         vecs = tf.nn.dropout(vecs, 1-self.dropout)
         vecs_hop = [tf.identity(vecs) for o in range(self.order+1)]
         for o in range(self.order):
             for a in range(o+1):
                 ans1 = tf.sparse_tensor_dense_matmul(adj_norm,vecs_hop[o+1])
-                ans_l = [tf.sparse_tensor_dense_matmul(adj,vecs_hop[o+1]) for adj in adj_sub_l]
-                ans2 = tf.concat(ans_l,0)
+                ans_partition = [tf.sparse_tensor_dense_matmul(adj,vecs_hop[o+1]) for adj in adj_partition_list]
+                ans2 = tf.concat(ans_partition,0)
                 vecs_hop[o+1]=tf.cond(self.is_train,lambda: tf.identity(ans1),lambda: tf.identity(ans2))
         vecs_hop = [self._F_nonlinear(v,o) for o,v in enumerate(vecs_hop)]    
         if self.aggr == 'mean':
@@ -238,8 +241,8 @@ class AttentionAggregator(Layer):
 
     def _call(self, inputs):
     
-        vecs, adj_norm, len_feat, adj_sub_l, dim0_adj_sub = inputs
-        adj_norm = tf.cond(self.is_train,lambda: adj_norm,lambda: tf.sparse.concat(0,adj_sub_l))
+        vecs, adj_norm, len_feat, adj_partition_list, dim0_adj_sub = inputs
+        adj_norm = tf.cond(self.is_train,lambda: adj_norm,lambda: tf.sparse.concat(0,adj_partition_list))
         vecs_do1 = tf.nn.dropout(vecs, 1-self.dropout)
         vecs_do2 = tf.nn.dropout(vecs, 1-self.dropout)
         vw_self = tf.matmul(vecs_do2,self.vars['order0_weights'])
@@ -272,7 +275,7 @@ class AttentionAggregator(Layer):
             ret_neigh_l_subg.append(ret_neigh_i)
 
     
-        for _adj in adj_sub_l:
+        for _adj in adj_partition_list:
             ret_neigh_la = list()
             for i in range(self.mulhead):
                 adj_weighted = self._F_edge_weight(_adj,vw_neigh_att[i],vw_self_att[i],offset=offset)

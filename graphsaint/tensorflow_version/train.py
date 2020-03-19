@@ -39,7 +39,6 @@ def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,mode):
     NOTE: HERE GCN RUNS THROUGH THE FULL GRAPH. HOWEVER, WE CALCULATE F1 SCORE
         FOR VALIDATION / TEST NODES ONLY. 
     """
-    #return 0,0,0,0
     options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
     run_metadata = tf.RunMetadata()
     t1 = time.time()
@@ -94,7 +93,7 @@ def prepare(train_data,train_params,arch_gcn):
     num_classes = class_arr.shape[1]
 
     placeholders = construct_placeholders(num_classes)
-    minibatch = Minibatch(adj_full, adj_full_norm, adj_train, role, class_arr, placeholders, train_params)
+    minibatch = Minibatch(adj_full_norm, adj_train, role, class_arr, placeholders, train_params)
     model = GraphSAINT(num_classes, placeholders,
                 feats, arch_gcn, train_params, adj_full_norm, logging=True)
 
@@ -125,54 +124,47 @@ def prepare(train_data,train_params,arch_gcn):
 
 
 
-def train(train_phases,arch_gcn,model,minibatch,\
+def train(train_phases,model,minibatch,\
             sess,train_stat,ph_misc_stat,summary_writer):
     import time
-    avg_time = 0.0
-    timing_steps = 0
 
     # saver = tf.train.Saver(var_list=tf.trainable_variables())
     saver=tf.train.Saver()
-    #global_variables())
 
     epoch_ph_start = 0
-    f1mic_best = 0
-    e_best = 0
-    time_calc_f1 = 0
-    time_train = 0
-    time_prepare = 0
+    f1mic_best, e_best = 0, 0
+    time_calc_f1, time_train, time_prepare = 0, 0, 0
     options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE,report_tensor_allocations_upon_oom=True)
     run_metadata = tf.RunMetadata()
-    many_runs_timeline=[]
+    many_runs_timeline=[]       # only used when TF timeline is enabled
     for ip,phase in enumerate(train_phases):
+        # We normally only have a single phase of training (see README for defn of 'phase').
+        # On the other hand, our implementation does support multi-phase training. 
+        # e.g., you can use smaller subgraphs during initial epochs and larger subgraphs
+        #       when closer to convergence. -- This might speed up convergence. 
         minibatch.set_sampler(phase)
         num_batches = minibatch.num_training_batches()
         printf('START PHASE {:4d}'.format(ip),style='underline')
         for e in range(epoch_ph_start,int(phase['end'])):
             printf('Epoch {:4d}'.format(e),style='bold')
             minibatch.shuffle()
-            l_loss_tr = list()
-            l_f1mic_tr = list()
-            l_f1mac_tr = list()
-            l_size_subg = list()
-            time_train_ep = 0
-            time_prepare_ep = 0
-            time_mask = 0
-            time_list = 0
+            l_loss_tr, l_f1mic_tr, l_f1mac_tr, l_size_subg = [], [], [], []
+            time_train_ep, time_prepare_ep = 0, 0
             while not minibatch.end():
                 t0 = time.time()
                 feed_dict, labels = minibatch.feed_dict(mode='train')
                 t1 = time.time()
                 if args_global.timeline:      # profile the code with Tensorflow Timeline
-                    _,__,loss_train,pred_train,dbg = sess.run([train_stat[0], \
-                            model.opt_op, model.loss, model.preds], feed_dict=feed_dict,
+                    _,__,loss_train,pred_train = sess.run([train_stat[0], \
+                            model.opt_op, model.loss, model.preds], feed_dict=feed_dict, \
                             options=options, run_metadata=run_metadata)
                     fetched_timeline = timeline.Timeline(run_metadata.step_stats)
                     chrome_trace = fetched_timeline.generate_chrome_trace_format()
                     many_runs_timeline.append(chrome_trace)
                 else:
-                    _,__,loss_train,pred_train = sess.run([train_stat[0], model.opt_op, model.loss, model.preds], \
-                                            feed_dict=feed_dict,options=tf.RunOptions(report_tensor_allocations_upon_oom=True))
+                    _,__,loss_train,pred_train = sess.run([train_stat[0], \
+                            model.opt_op, model.loss, model.preds], feed_dict=feed_dict, \
+                            options=tf.RunOptions(report_tensor_allocations_upon_oom=True))
                 t2 = time.time()
                 time_train_ep += t2-t1
                 time_prepare_ep += t1-t0
@@ -185,6 +177,8 @@ def train(train_phases,arch_gcn,model,minibatch,\
             time_train += time_train_ep
             time_prepare += time_prepare_ep
             if args_global.cpu_eval:      # Full batch evaluation using CPU
+                # we have to start a new session so that CPU can perform full-batch eval.
+                # current model params are communicated to the new session via tmp.chkpt
                 saver.save(sess,'./tmp.chkpt')
                 with tf.device('/cpu:0'):
                     sess_cpu = tf.Session(config=tf.ConfigProto(device_count={'GPU': 0}))
@@ -199,9 +193,7 @@ def train(train_phases,arch_gcn,model,minibatch,\
             printf(' TRAIN (Ep avg): loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}\ttrain time = {:.4f} sec'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr),time_train_ep))
             printf(' VALIDATION:     loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
             if f1mic_val > f1mic_best:
-                f1mic_best = f1mic_val
-                e_best = e
-                tsave=time.time()
+                f1mic_best, e_best = f1mic_val, e
                 if not os.path.exists(args_global.dir_log+'/models'):
                     os.makedirs(args_global.dir_log+'/models')
                 print('  Saving models ...')
@@ -230,11 +222,11 @@ def train(train_phases,arch_gcn,model,minibatch,\
     loss_test, f1mic_test, f1mac_test, duration = evaluate_full_batch(sess_eval,model,minibatch,many_runs_timeline,mode='test')
     printf("Full test stats: \n  F1_Micro = {:.4f}\tF1_Macro = {:.4f}".format(f1mic_test,f1mac_test),style='red')
     printf('Total training time: {:6.2f} sec'.format(time_train),style='red')
-    ret = {'loss_val_opt':loss_val,'f1mic_val_opt':f1mic_val,'f1mac_val_opt':f1mac_val,\
-            'loss_test_opt':loss_test,'f1mic_test_opt':f1mic_test,'f1mac_test_opt':f1mac_test,\
-            'epoch_best':e_best,
-            'time_train': time_train}
-    return
+    #ret = {'loss_val_opt':loss_val,'f1mic_val_opt':f1mic_val,'f1mac_val_opt':f1mac_val,\
+    #        'loss_test_opt':loss_test,'f1mic_test_opt':f1mic_test,'f1mac_test_opt':f1mac_test,\
+    #        'epoch_best':e_best,
+    #        'time_train': time_train}
+    return      # everything is logged by TF. no need to return anything
 
 
 ########
@@ -244,7 +236,7 @@ def train(train_phases,arch_gcn,model,minibatch,\
 def train_main(argv=None):
     train_params,train_phases,train_data,arch_gcn = parse_n_prepare(args_global)
     model,minibatch,sess,train_stat,ph_misc_stat,summary_writer = prepare(train_data,train_params,arch_gcn)
-    ret = train(train_phases,arch_gcn,model,minibatch,sess,train_stat,ph_misc_stat,summary_writer)
+    ret = train(train_phases,model,minibatch,sess,train_stat,ph_misc_stat,summary_writer)
     return ret
 
 
