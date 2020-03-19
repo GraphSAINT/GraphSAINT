@@ -6,6 +6,8 @@ Hanqing Zeng*, Hongkuan Zhou*, Ajitesh Srivastava, Rajgopal Kannan, Viktor Prasa
 
 Hanqing Zeng (zengh@usc.edu), Hongkuan Zhou (hongkuaz@usc.edu)
 
+Feel free to report bugs or tell us your suggestions!
+
 **Citation**
 
 * ICLR 2020:
@@ -32,7 +34,10 @@ month={May},
 }
 ```
 
-The `./ipdps19_cpp` directory contains the C++ implementation of the parallel training techniques described in IEEE/IPDPS '19 (see `./ipdps19_cpp/README.md`). The rest of this repository are for GraphSAINT in ICLR '20 (see the following sections of this `README`). 
+The `./graphsaint` directory contains the Python implemention of the minibatch training algorithm in ICLR '20. We provide two implementations, one in Tensorflow and the other in PyTorch. The two versions follow the same algorithm. Note that: 1). The experiments in our paper are based on the Tensorflow implementation; 2). We haven't perform careful parameter tuning on the PyTorch version since it is only meant to be a reference implementation. However, accuracy and speed of the two versions should be very similar; 3). The PyTorch version is currently under construction. Some features implemented in the Tensorflow version haven't been added to the PyTorch version yet (but will be added soon). 
+
+
+The `./ipdps19_cpp` directory contains the C++ implementation of the parallel training techniques described in IEEE/IPDPS '19 (see `./ipdps19_cpp/README.md`). All the rest of this repository are for GraphSAINT in ICLR '20 (see the following sections of this `README` for the ICLR code). 
 
 To reproduce the Table 2 results (ICLR '20), run configuration in `./train_config/table2/*.yml`.
 
@@ -56,7 +61,7 @@ We have integrated the following architecture variants into GraphSAINT in this c
 ## Dependencies
 
 * python >= 3.6.8
-* tensorflow >=1.12.0
+* tensorflow >=1.12.0  / pytorch >= 1.1.0
 * cython >=0.29.2
 * numpy >= 1.14.3
 * scipy >= 1.1.0
@@ -67,7 +72,7 @@ We have integrated the following architecture variants into GraphSAINT in this c
 
 ## Dataset
 
-Currently available datasets:
+All datasets used in our papers are available for download:
 
 * PPI
 * PPI-large (a larger version of PPI)
@@ -85,10 +90,20 @@ GraphSAINT/
 │   ... 
 │
 └───graphsaint/
-│   │   models.py
-│   │   train.py
-│   │   ...
-│   
+│   │   globals.py
+│   │   cython_sampler.pyx
+│   │   ...  
+│   │ 
+│   └───tensorflow_version/
+│   │   │    train.py
+│   │   │    model.py
+│   │   │    ...
+│   │  
+│   └───pytorch_version/
+│       │    train.py
+│       │    model.py
+│       │    ...
+│ 
 └───data/
 │   └───ppi/
 │   │   │    adj_train.npz
@@ -128,21 +143,21 @@ For detailed description of the configuration file format, please see `./train_c
 
 First of all, please compile cython samplers (see above). 
 
-We suggest looking through the available tensorflow command line flags defined in `./graphsaint/globals.py`. By properly setting the flags, you can maximize CPU utilization in the sampling step (by telling the number of available cores), select the directory to place log files, and turn on / off Tensorboard, etc. 
+We suggest looking through the available command line arguments defined in `./graphsaint/globals.py` (shared by both the Tensorflow and PyTorch versions). By properly setting the flags, you can maximize CPU utilization in the sampling step (by telling the number of available cores), select the directory to place log files, and turn on / off loggers (Tensorboard, Timeline, ...), etc. 
 
 *NOTE*: For all methods compared in the paper (GraphSAINT, GCN, GraphSAGE, FastGCN, S-GCN, AS-GCN, ClusterGCN), sampling or clustering is **only** performed during training. 
 To obtain the validation / test set accuracy, we run the full batch GCN on the full graph (training + validation + test nodes), and calculate F1 score only for the validation / test nodes.
 
 
-For simplicity of implementation, during validation / test set evaluation, we perform layer propagation using the full graph adjacency matrix. For Amazon or Yelp, this may cause memory issue for some GPUs. If an out-of-memory error occurs, please use the `--cpu_eval` flag to force the val / test set evaluation to take place on CPU (the minibatch training will still be performed on GPU). See below for other Flags. 
+For simplicity of implementation, during validation / test set evaluation, we perform layer propagation using the full graph adjacency matrix. For Amazon or Yelp, this may cause memory issue for some GPUs. If an out-of-memory error occurs, please use the `--cpu_eval` flag (currently only available for Tensorflow version) to force the val / test set evaluation to take place on CPU (the minibatch training will still be performed on GPU). See below for other Flags. 
 
 To run the code on CPU
 
-`./run_graphsaint.sh <dataset_name> <path to train_config yml> --gpu -1`
+`python -m graphsaint.<tensorflow/pytorch>_version.train --data_prefix ./data/<dataset_name> --train_config <path to train_config yml> --gpu -1`
 
 To run the code on GPU
 
-`./run_graphsaint.sh <dataset_name> <path to train_config yml> --gpu <GPU number>`
+`python -m graphsaint.<tensorflow/pytorch>_version.train --data_prefix ./data/<dataset_name> --train_config <path to train_config yml> --gpu <GPU number>`
 
 For example `--gpu 0` will run on the first GPU. Also, use `--gpu <GPU number> --cpu_eval` to make GPU perform the minibatch training and CPU to perform the validation / test evaluation. 
 
