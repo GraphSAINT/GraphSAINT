@@ -16,3 +16,5 @@ models/
 data_cpp
 obj/
 ipdps19_cpp/train
+pytorch_models
+log_train
