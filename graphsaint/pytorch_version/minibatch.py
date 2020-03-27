@@ -29,12 +29,14 @@ class Minibatch:
     This minibatch iterator iterates over nodes for supervised learning.
     """
 
-    def __init__(self, adj_full_norm, adj_train, role, train_params):
+    def __init__(self, adj_full_norm, adj_train, role, train_params, cpu_eval=False):
         """
         role:       array of string (length |V|)
                     storing role of the node ('tr'/'va'/'te')
         """
         self.use_cuda = (args_global.gpu >= 0)
+        if cpu_eval:
+            self.use_cuda=False
 
         self.node_train = np.array(role['tr'])
         self.node_val = np.array(role['va'])

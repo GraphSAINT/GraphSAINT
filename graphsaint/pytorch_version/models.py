@@ -6,7 +6,7 @@ from graphsaint.utils import *
 import graphsaint.pytorch_version.layers as layers
 
 class GraphSAINT(nn.Module):
-    def __init__(self, num_classes, arch_gcn, train_params, feat_full, label_full):
+    def __init__(self, num_classes, arch_gcn, train_params, feat_full, label_full, cpu_eval=False):
         """
         Inputs:
             arch_gcn            parsed arch of GCN
@@ -14,6 +14,8 @@ class GraphSAINT(nn.Module):
         """
         super(GraphSAINT,self).__init__()
         self.use_cuda = (args_global.gpu >= 0)
+        if cpu_eval:
+            self.use_cuda=False
         self.aggregator_cls = layers.HighOrderAggregator
         self.num_layers = len(arch_gcn['arch'].split('-'))
         self.weight_decay = train_params['weight_decay']
