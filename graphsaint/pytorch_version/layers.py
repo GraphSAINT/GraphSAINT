@@ -17,13 +17,15 @@ class HighOrderAggregator(nn.Module):
         self.f_bias = list()
         for o in range(self.order+1):
             self.f_lin.append(nn.Linear(dim_in,dim_out,bias=False))
+            nn.init.xavier_uniform_(self.f_lin[-1].weight)
             self.f_bias.append(nn.Parameter(torch.zeros(dim_out)))
         self.f_lin = nn.ModuleList(self.f_lin)
         self.f_bias = nn.ParameterList(self.f_bias)
         self.f_dropout = nn.Dropout(p=self.dropout)
         if self.bias == 'norm':
             final_dim_out = dim_out*((aggr=='concat')*(order+1)+(aggr=='mean'))
-            self.f_norm = nn.BatchNorm1d(final_dim_out)
+            self.f_norm = nn.BatchNorm1d(final_dim_out,eps=1e-9,track_running_stats=False)
+            # self.f_norm=nn.LayerNorm(final_dim_out,elementwise_affine=True,eps=1e-9)
 
     def _spmm(self, adj_norm, _feat):
         # alternative ways: use geometric.propagate or torch.mm

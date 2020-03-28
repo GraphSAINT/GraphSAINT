@@ -34,7 +34,7 @@ month={May},
 }
 ```
 
-The `./graphsaint` directory contains the Python implemention of the minibatch training algorithm in ICLR '20. We provide two implementations, one in Tensorflow and the other in PyTorch. The two versions follow the same algorithm. Note that: 1). The experiments in our paper are based on the Tensorflow implementation; 2). We haven't perform careful parameter tuning on the PyTorch version since it is only meant to be a reference implementation. However, accuracy and speed of the two versions should be very similar; 3). The PyTorch version is currently under construction. Some features implemented in the Tensorflow version haven't been added to the PyTorch version yet (but will be added soon). 
+The `./graphsaint` directory contains the Python implemention of the minibatch training algorithm in ICLR '20. We provide two implementations, one in Tensorflow and the other in PyTorch. The two versions follow the same algorithm. Note that: 1). **All experiments in our paper are based on the Tensorflow implementation**; 2). We haven't perform careful parameter tuning on the PyTorch version yet, so at the current stage it is only meant to be a reference implementation. However, accuracy and speed of the two versions should be very similar; 3). The PyTorch version is currently under construction. Some features implemented in the Tensorflow version haven't been added to the PyTorch version yet (but will be added soon). 
 
 
 The `./ipdps19_cpp` directory contains the C++ implementation of the parallel training techniques described in IEEE/IPDPS '19 (see `./ipdps19_cpp/README.md`). All the rest of this repository are for GraphSAINT in ICLR '20 (see the following sections of this `README` for the ICLR code). 
