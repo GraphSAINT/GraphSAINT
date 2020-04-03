@@ -48,7 +48,6 @@ class GraphSAINT(nn.Module):
         self.classifier = layers.HighOrderAggregator(self.dims_feat[-1], self.num_classes,\
                             act='I', order=0, dropout=self.dropout, bias='bias')
         self.optimizer = torch.optim.Adam(self.parameters(),lr=self.lr)
-       
 
     def set_dims(self,dims):
         self.dims_feat = [dims[0]] + [((self.aggr_layer[l]=='concat')*self.order_layer[l]+1)*dims[l+1] for l in range(len(dims)-1)]
