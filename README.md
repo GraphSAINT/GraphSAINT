@@ -81,7 +81,7 @@ All datasets used in our papers are available for download:
 * Yelp
 * Amazon
   
-They are available via this [Google Drive link](https://drive.google.com/open?id=1zycmmDES39zVlbVCYs88JTJ1Wm5FbfLz). Rename the folder to `data` at the root directory.  The directory structure should be as below:
+They are available on [Google Drive link](https://drive.google.com/open?id=1zycmmDES39zVlbVCYs88JTJ1Wm5FbfLz) and [BaiduYun link (code: f1ao)](https://pan.baidu.com/s/1SOb0SiSAXavwAcNqkttwcg). Rename the folder to `data` at the root directory.  The directory structure should be as below:
 
 ```
 GraphSAINT/
