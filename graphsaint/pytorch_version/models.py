@@ -117,4 +117,6 @@ class GraphSAINT(nn.Module):
         with torch.no_grad():
             preds,labels,labels_converted = self(node_subgraph, adj_subgraph)
             loss = self._loss(preds,labels_converted,norm_loss_subgraph)
+        if self.sigmoid_loss:
+            preds=nn.Sigmoid()(preds)
         return loss,preds,labels
