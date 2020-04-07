@@ -94,6 +94,9 @@ class GraphSAINT(nn.Module):
                     aggr=self.aggr_layer[l], bias=self.bias_layer[l])
             aggregators.append(aggrr)
         return aggregators
+
+    def predict(self, preds):
+        return nn.Sigmoid()(preds) if self.sigmoid_loss else F.softmax(preds, dim=1)
         
         
     def train_step(self, node_subgraph, adj_subgraph, norm_loss_subgraph):
@@ -107,7 +110,7 @@ class GraphSAINT(nn.Module):
         loss.backward()
         torch.nn.utils.clip_grad_norm(self.parameters(), 5)
         self.optimizer.step()
-        return loss,preds,labels
+        return loss,self.predict(preds),labels
 
     def eval_step(self, node_subgraph, adj_subgraph, norm_loss_subgraph):
         """
@@ -117,6 +120,4 @@ class GraphSAINT(nn.Module):
         with torch.no_grad():
             preds,labels,labels_converted = self(node_subgraph, adj_subgraph)
             loss = self._loss(preds,labels_converted,norm_loss_subgraph)
-        if self.sigmoid_loss:
-            preds=nn.Sigmoid()(preds)
-        return loss,preds,labels
+        return loss,self.predict(preds),labels
