@@ -1,0 +1,19 @@
+network:
+  - dim: 128
+    aggr: 'concat'
+    loss: 'softmax'
+    arch: '1-0-1-0' # '1-1-0' leads to the same test F1-mic
+    attention: 8
+    gated_attention: True
+    act: 'relu'
+    bias: 'norm'
+params:
+  - lr: 0.01
+    dropout: 0.2
+    weight_decay: 0.0
+    sample_coverage: 50
+phase:
+  - end: 40
+    sampler: 'rw'
+    num_root: 3000
+    depth: 2

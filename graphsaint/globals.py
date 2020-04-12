@@ -9,7 +9,7 @@ git_rev = subprocess.Popen("git rev-parse --short HEAD", shell=True, stdout=subp
 git_branch = subprocess.Popen("git symbolic-ref --short -q HEAD", shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()[0]
 
 timestamp = time.time()
-timestamp = datetime.datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d %H:%M:%S')
+timestamp = datetime.datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d %H-%M-%S')
 
 
 

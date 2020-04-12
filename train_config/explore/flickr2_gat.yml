@@ -1,0 +1,18 @@
+network:
+  - dim: 256
+    aggr: 'concat'
+    loss: 'softmax'
+    arch: '1-0-1-0' 
+    attention: 8
+    act: 'relu'
+    bias: 'norm'
+params:
+  - lr: 0.01
+    dropout: 0.2
+    weight_decay: 0.0
+    sample_coverage: 50
+phase:
+  - end: 20
+    sampler: 'rw'
+    num_root: 6000
+    depth: 2

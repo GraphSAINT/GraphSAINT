@@ -16,7 +16,17 @@ class GraphSAINT(nn.Module):
         self.use_cuda = (args_global.gpu >= 0)
         if cpu_eval:
             self.use_cuda=False
-        self.aggregator_cls = layers.HighOrderAggregator
+        if "attention" in arch_gcn:
+            if "gated_attention" in arch_gcn:
+                if arch_gcn['gated_attention']:
+                    self.aggregator_cls=layers.GatedAttentionAggregator
+                    self.mulhead=int(arch_gcn['attention'])
+            else:
+                self.aggregator_cls=layers.AttentionAggregator
+                self.mulhead=int(arch_gcn['attention'])
+        else:
+            self.aggregator_cls=layers.HighOrderAggregator
+            self.mulhead=1
         self.num_layers = len(arch_gcn['arch'].split('-'))
         self.weight_decay = train_params['weight_decay']
         self.dropout = train_params['dropout']
@@ -91,7 +101,7 @@ class GraphSAINT(nn.Module):
         for l in range(self.num_layers):
             aggrr = self.aggregator_cls(*self.dims_weight[l],dropout=self.dropout,\
                     act=self.act_layer[l], order=self.order_layer[l], \
-                    aggr=self.aggr_layer[l], bias=self.bias_layer[l])
+                    aggr=self.aggr_layer[l], bias=self.bias_layer[l], mulhead=self.mulhead)
             aggregators.append(aggrr)
         return aggregators
 

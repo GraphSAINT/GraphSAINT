@@ -5,6 +5,7 @@ network:
     arch: '1-0-1-0' # '1-1-0' leads to the same test F1-mic
     attention: 8
     act: 'relu'
+    bias: 'norm'
 params:
   - lr: 0.01
     dropout: 0.2
