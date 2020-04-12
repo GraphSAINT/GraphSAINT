@@ -39,7 +39,7 @@ class GraphSAINT(nn.Module):
             self.feat_full = self.feat_full.cuda()
             self.label_full = self.label_full.cuda()
         if not self.sigmoid_loss:
-            self.label_full_cat = torch.from_numpy(label_full.argmax(axis=1).astype(np.int))
+            self.label_full_cat = torch.from_numpy(label_full.argmax(axis=1).astype(np.int64))
             if self.use_cuda:
                 self.label_full_cat = self.label_full_cat.cuda()
         self.num_classes = num_classes
