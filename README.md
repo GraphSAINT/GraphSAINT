@@ -3,7 +3,6 @@
 
 Hanqing Zeng*, Hongkuan Zhou*, Ajitesh Srivastava, Rajgopal Kannan, Viktor Prasanna
 
-
 **Contact** 
 
 
@@ -213,5 +212,5 @@ We have also implemented dual-GPU training to further speedup runtime. Simply ad
 
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNzc5NTQ3Njk4XX0=
+eyJoaXN0b3J5IjpbLTM4ODI1MTMyMl19
 -->
