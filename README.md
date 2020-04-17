@@ -14,7 +14,8 @@ Feel free to report bugs or tell us your suggestions!
 ## Overview
 
 
-This repo contains source code of our two papers (ICLR '20 and IEEE/IPDPS '19, see )
+This repo contains source code of our two papers (ICLR '20 and IEEE/IPDPS '19, see the citation Section). 
+
 The `./graphsaint` directory contains the Python implementation of the minibatch training algorithm in ICLR '20. We provide two implementations, one in Tensorflow and the other in PyTorch. The two versions follow the same algorithm. Note that: 1). **All experiments in our paper are based on the Tensorflow implementation**; 2). We haven't perform careful parameter tuning on the PyTorch version yet, so at the current stage it is only meant to be a reference implementation. However, accuracy and speed of the two versions should be very similar; 3). The PyTorch version is currently under construction. Some features implemented in the Tensorflow version haven't been added to the PyTorch version yet (but will be added soon). 
 
 
@@ -213,5 +214,6 @@ month={May},
 }
 ```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTQ2ODM3MTcxMSwtMzg4MjUxMzIyXX0=
+eyJoaXN0b3J5IjpbODU3ODQwNDU2LDE0NjgzNzE3MTEsLTM4OD
+I1MTMyMl19
 -->
