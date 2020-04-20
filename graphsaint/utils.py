@@ -30,17 +30,6 @@ def load_data(prefix, normalize=True):
 def process_graph_data(adj_full, adj_train, feats, class_map, role):
     """
     setup vertex property map for output classes, train/val/test masks, and feats
-    INPUT:
-        G           graph-tool graph, full graph including training,val,testing
-        feats       ndarray of shape |V|xf
-        class_map   dictionary {vertex_id: class_id}
-        val_nodes   index of validation nodes
-        test_nodes  index of testing nodes
-    OUTPUT:
-        G           graph-tool graph unchanged
-        role        array of size |V|, indicating 'train'/'val'/'test'
-        class_arr   array of |V|x|C|, converted by class_map
-        feats       array of features unchanged
     """
     num_vertices = adj_full.shape[0]
     if isinstance(list(class_map.values())[0],list):
@@ -119,7 +108,7 @@ def sess_dir(dims,train_config,prefix,git_branch,git_rev,timestamp):
     return sess_dir
 
 
-def adj_norm(adj):
+def adj_norm(adj, deg=None, sort_indices=True):
     """
     Normalize adj according to two methods: symmetric normalization and rw normalization.
     sym norm is used in the original GCN paper (kipf)
@@ -128,12 +117,16 @@ def adj_norm(adj):
     # Procedure: 
     #       1. adj add self-connection --> adj'
     #       2. D' deg matrix from adj'
-    #       3. norm by (D')^(-1/2) x adj' x (D')^(-1/2)
+    #       3. norm by D^{-1} x adj'
+    if sort_indices is True, we re-sort the indices of the returned adj
+    Note that after 'dot' the indices of a node would be in descending order rather than ascending order
     """
     diag_shape = (adj.shape[0],adj.shape[1])
-    D = adj.sum(1).flatten()
+    D = adj.sum(1).flatten() if deg is None else deg
     norm_diag = sp.dia_matrix((1/D,0),shape=diag_shape)
     adj_norm = norm_diag.dot(adj)
+    if sort_indices:
+        adj_norm.sort_indices()
     return adj_norm
 
 
