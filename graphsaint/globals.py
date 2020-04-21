@@ -38,7 +38,7 @@ args_global = parser.parse_args()
 
 
 NUM_PAR_SAMPLER = args_global.num_cpu_core
-SAMPLES_PER_PROC = -(-(200 // NUM_PAR_SAMPLER)) # round up division
+SAMPLES_PER_PROC = -(-200 // NUM_PAR_SAMPLER) # round up division
 
 
 # amazon dataset is too large, so we cannot perform full-batch
