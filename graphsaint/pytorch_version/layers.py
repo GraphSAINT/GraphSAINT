@@ -137,7 +137,7 @@ class AttentionAggregator(nn.Module):
     def _aggregate_attention(self,adj,feat_neigh,feat_self,attention):
         attention_self=self.att_act(attention[:,:feat_self.shape[1]].mm(feat_self.t())).squeeze()
         attention_neigh=self.att_act(attention[:,feat_neigh.shape[1]:].mm(feat_neigh.t())).squeeze()
-        att_adj=torch.sparse.FloatTensor(adj._indices(),attention_self[adj._indices()[0]]+attention_neigh[adj._indices()[1]],torch.Size(adj.shape))
+        att_adj=torch.sparse.FloatTensor(adj._indices(),(attention_self[adj._indices()[0]]+attention_neigh[adj._indices()[1]])*adj._values(),torch.Size(adj.shape))
         return self._spmm(att_adj,feat_neigh)
 
     def _batch_norm(self,feat):
@@ -244,7 +244,7 @@ class GatedAttentionAggregator(nn.Module):
     def _aggregate_attention(self,adj,feat_neigh,feat_self,attention):
         attention_self=self.att_act(attention[:,:feat_self.shape[1]].mm(feat_self.t())).squeeze()
         attention_neigh=self.att_act(attention[:,feat_neigh.shape[1]:].mm(feat_neigh.t())).squeeze()
-        att_adj=torch.sparse.FloatTensor(adj._indices(),attention_self[adj._indices()[0]]+attention_neigh[adj._indices()[1]],torch.Size(adj.shape))
+        att_adj=torch.sparse.FloatTensor(adj._indices(),(attention_self[adj._indices()[0]]+attention_neigh[adj._indices()[1]])*adj._values(),torch.Size(adj.shape))
         return self._spmm(att_adj,feat_neigh)
 
     def _batch_norm(self,feat):
