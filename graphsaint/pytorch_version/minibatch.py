@@ -54,7 +54,6 @@ class Minibatch:
         self.method_sample = None
         self.subgraphs_remaining_indptr = []
         self.subgraphs_remaining_indices = []
-        self.subgraphs_remaining_indices_orig = []
         self.subgraphs_remaining_data = []
         self.subgraphs_remaining_nodes = []
         self.subgraphs_remaining_edge_index = []
@@ -78,9 +77,9 @@ class Minibatch:
     def set_sampler(self,train_phases):
         self.subgraphs_remaining_indptr = list()
         self.subgraphs_remaining_indices = list()
-        self.subgraphs_remaining_indices_orig = list()
         self.subgraphs_remaining_data = list()
         self.subgraphs_remaining_nodes = list()
+        self.subgraphs_remaining_edge_index = list()
         self.method_sample = train_phases['sampler']
         if self.method_sample == 'mrw':
             if 'deg_clip' in train_phases:
@@ -141,13 +140,11 @@ class Minibatch:
 
     def par_graph_sample(self,phase):
         t0 = time.time()
-        # _indices_orig: subgraph with indices in the original graph
-        _indptr,_indices,_indices_orig,_data,_v,_edge_index= self.graph_sampler.par_sample(phase)
+        _indptr,_indices,_data,_v,_edge_index= self.graph_sampler.par_sample(phase)
         t1 = time.time()
         print('sampling 200 subgraphs:   time = {:.3f} sec'.format(t1-t0), end="\r")
         self.subgraphs_remaining_indptr.extend(_indptr)
         self.subgraphs_remaining_indices.extend(_indices)
-        self.subgraphs_remaining_indices_orig.extend(_indices_orig)
         self.subgraphs_remaining_data.extend(_data)
         self.subgraphs_remaining_nodes.extend(_v)
         self.subgraphs_remaining_edge_index.extend(_edge_index)
@@ -170,9 +167,8 @@ class Minibatch:
                                  shape=(self.size_subgraph,self.size_subgraph))
             adj_edge_index=self.subgraphs_remaining_edge_index.pop()
             #print("{} nodes, {} edges, {} degree".format(self.node_subgraph.size,adj.size,adj.size/self.node_subgraph.size))
-            D = self.deg_train[self.node_subgraph]
             norm_aggr(adj.data,adj_edge_index,self.norm_aggr_train,num_proc=args_global.num_cpu_core)
-            adj = sp.dia_matrix((1/D,0),shape=(adj.shape[0],adj.shape[1])).dot(adj)
+            adj = adj_norm(adj, deg=self.deg_train[self.node_subgraph])
             adj = _coo_scipy2torch(adj.tocoo())
             if self.use_cuda:
                 adj = adj.cuda()
