@@ -32,7 +32,7 @@ You can open any `*.yml` file in `./train_config/` to better understand the belo
 * *lr*: `[float]` learning rate for Adam optimizer
 * *sample\_coverage*: `[int]` the `N` number in the paper (indicates how many samples to estimate edge / node probability)
 * *dropout*: `[float]` dropout value
-* *eval_val_every* (optional): run evaluation on the validation set every n epochs. For large datasets, validation set evaluation is a bit time-consuming, so it is not necessary to run evaluation every epoch. 
+* *eval_val_every* (optional): `[int]` run evaluation on the validation set every `n` epochs. For large datasets, validation set evaluation is a bit time-consuming, so it is not necessary to run evaluation every epoch. 
 
 #### Phase:
 
