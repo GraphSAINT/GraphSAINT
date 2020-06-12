@@ -14,11 +14,26 @@ def evaluate_full_batch(model, minibatch, mode='val'):
     """
     Full batch evaluation: for validation and test sets only.
     When calculating the F1 score, we will mask the relevant root nodes.
+
+    if mode == 'both', then we will return acc stat for both val and test sets
     """
     loss,preds,labels = model.eval_step(*minibatch.one_batch(mode=mode))
-    node_val_test = minibatch.node_val if mode=='val' else minibatch.node_test
-    f1_scores = calc_f1(to_numpy(labels[node_val_test]),to_numpy(preds[node_val_test]),model.sigmoid_loss)
-    return loss, f1_scores[0], f1_scores[1]
+    if mode == 'val':
+        node_target = [minibatch.node_val]
+    elif mode == 'test':
+        node_target = [minibatch.node_test]
+    else:
+        assert mode == 'valtest'
+        node_target = [minibatch.node_val, minibatch.node_test]
+    f1mic, f1mac = [], []
+    for n in node_target:
+        f1_scores = calc_f1(to_numpy(labels[n]), to_numpy(preds[n]), model.sigmoid_loss)
+        f1mic.append(f1_scores[0])
+        f1mac.append(f1_scores[1])
+    f1mic = f1mic[0] if len(f1mic)==1 else f1mic
+    f1mac = f1mac[0] if len(f1mac)==1 else f1mac
+    # loss is not very accurate in this case, since loss is also contributed by training nodes
+    return loss, f1mic, f1mac
 
 
 
@@ -38,7 +53,7 @@ def prepare(train_data,train_params,arch_gcn):
     return model, minibatch, minibatch_eval, model_eval
 
 
-def train(train_phases, model, minibatch, minibatch_eval, model_eval):
+def train(train_phases, model, minibatch, minibatch_eval, model_eval, eval_val_every):
     if not args_global.cpu_eval:
         minibatch_eval=minibatch
     epoch_ph_start = 0
@@ -64,20 +79,21 @@ def train(train_phases, model, minibatch, minibatch_eval, model_eval):
                     l_loss_tr.append(loss_train)
                     l_f1mic_tr.append(f1_mic)
                     l_f1mac_tr.append(f1_mac)
-            if args_global.cpu_eval:
-                torch.save(model.state_dict(),'tmp.pkl')
-                model_eval.load_state_dict(torch.load('tmp.pkl',map_location=lambda storage, loc: storage))
-            else:
-                model_eval=model
-            loss_val, f1mic_val, f1mac_val = evaluate_full_batch(model_eval, minibatch_eval, mode='val')
-            printf(' TRAIN (Ep avg): loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}\ttrain time = {:.4f} sec'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr),time_train_ep))
-            printf(' VALIDATION:     loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
-            if f1mic_val > f1mic_best:
-                f1mic_best, ep_best = f1mic_val, e
-                if not os.path.exists(dir_saver):
-                    os.makedirs(dir_saver)
-                printf('  Saving model ...',style='yellow')
-                torch.save(model.state_dict(), path_saver)
+            if (e+1)%eval_val_every == 0:
+                if args_global.cpu_eval:
+                    torch.save(model.state_dict(),'tmp.pkl')
+                    model_eval.load_state_dict(torch.load('tmp.pkl',map_location=lambda storage, loc: storage))
+                else:
+                    model_eval = model
+                loss_val, f1mic_val, f1mac_val = evaluate_full_batch(model_eval, minibatch_eval, mode='val')
+                printf(' TRAIN (Ep avg): loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}\ttrain time = {:.4f} sec'.format(f_mean(l_loss_tr),f_mean(l_f1mic_tr),f_mean(l_f1mac_tr),time_train_ep))
+                printf(' VALIDATION:     loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow')
+                if f1mic_val > f1mic_best:
+                    f1mic_best, ep_best = f1mic_val, e
+                    if not os.path.exists(dir_saver):
+                        os.makedirs(dir_saver)
+                    printf('  Saving model ...',style='yellow')
+                    torch.save(model.state_dict(), path_saver)
             time_train += time_train_ep
         epoch_ph_start = int(phase['end']) 
     printf("Optimization Finished!", style="yellow")
@@ -88,14 +104,18 @@ def train(train_phases, model, minibatch, minibatch_eval, model_eval):
             model.load_state_dict(torch.load(path_saver))
             model_eval=model
         printf('  Restoring model ...', style='yellow')
-    loss_val, f1mic_val, f1mac_val = evaluate_full_batch(model_eval, minibatch_eval, mode='val')
+    loss, f1mic_both, f1mac_both = evaluate_full_batch(model_eval, minibatch_eval, mode='valtest')
+    f1mic_val, f1mic_test = f1mic_both
+    f1mac_val, f1mac_test = f1mac_both
     printf("Full validation (Epoch {:4d}): \n  F1_Micro = {:.4f}\tF1_Macro = {:.4f}".format(ep_best, f1mic_val, f1mac_val), style='red')
-    loss_test, f1mic_test, f1mac_test = evaluate_full_batch(model_eval, minibatch_eval, mode='test')
     printf("Full test stats: \n  F1_Micro = {:.4f}\tF1_Macro = {:.4f}".format(f1mic_test, f1mac_test), style='red')
     printf("Total training time: {:6.2f} sec".format(time_train), style='red')
 
 
 if __name__ == '__main__':
+    log_dir(args_global.train_config, args_global.data_prefix, git_branch, git_rev, timestamp)
     train_params, train_phases, train_data, arch_gcn = parse_n_prepare(args_global)
+    if 'eval_val_every' not in train_params:
+        train_params['eval_val_every'] = EVAL_VAL_EVERY_EP
     model, minibatch, minibatch_eval, model_eval = prepare(train_data, train_params, arch_gcn)
-    train(train_phases, model, minibatch, minibatch_eval, model_eval)
+    train(train_phases, model, minibatch, minibatch_eval, model_eval, train_params['eval_val_every'])

@@ -44,6 +44,19 @@ class Minibatch:
 
         self.adj_full_norm = _coo_scipy2torch(adj_full_norm.tocoo())
         self.adj_train = adj_train
+        # -----------------------
+        # sanity check (optional)
+        # -----------------------
+        #for role_set in [self.node_val, self.node_test]:
+        #    for v in role_set:
+        #        assert self.adj_train.indptr[v+1] == self.adj_train.indptr[v]
+        #_adj_train_T = sp.csr_matrix.tocsc(self.adj_train)
+        #assert np.abs(_adj_train_T.indices - self.adj_train.indices).sum() == 0
+        #assert np.abs(_adj_train_T.indptr - self.adj_train.indptr).sum() == 0
+        #_adj_full_T = sp.csr_matrix.tocsc(adj_full_norm)
+        #assert np.abs(_adj_full_T.indices - adj_full_norm.indices).sum() == 0
+        #assert np.abs(_adj_full_T.indptr - adj_full_norm.indptr).sum() == 0
+        #printf("SANITY CHECK PASSED", style="yellow")
         if self.use_cuda:       # now i put everything on GPU. Ideally, full graph adj/feat should be optionally placed on CPU
             self.adj_full_norm = self.adj_full_norm.cuda()
 
@@ -150,7 +163,7 @@ class Minibatch:
         self.subgraphs_remaining_edge_index.extend(_edge_index)
 
     def one_batch(self,mode='train'):
-        if mode in ['val','test']:
+        if mode in ['val','test','valtest']:
             self.node_subgraph = np.arange(self.adj_full_norm.shape[0])
             adj = self.adj_full_norm
         else:

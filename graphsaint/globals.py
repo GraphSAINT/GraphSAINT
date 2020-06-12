@@ -40,6 +40,8 @@ args_global = parser.parse_args()
 NUM_PAR_SAMPLER = args_global.num_cpu_core
 SAMPLES_PER_PROC = -(-200 // NUM_PAR_SAMPLER) # round up division
 
+EVAL_VAL_EVERY_EP = 1       # get accuracy on the validation set every this # epochs
+
 
 # amazon dataset is too large, so we cannot perform full-batch
 # evaluation on GPU. We change its validation/test evaluation to CPU. 
@@ -78,4 +80,4 @@ args_global.gpu = int(args_global.gpu)
 
 f_mean = lambda l: sum(l)/len(l)
 
-DTYPE = "float32" if args_global.dtype=='s' else "float64"
+DTYPE = "float32" if args_global.dtype=='s' else "float64"      # NOTE: currently not supporting float64 yet
