@@ -260,6 +260,7 @@ Supported by DARPA under FA8750-17-C-0086, NSF under CCF-1919289 and OAC-1911229
 
 We thank Matthias Fey for providing a [reference implementation](https://pytorch-geometric.readthedocs.io/en/latest/modules/data.html#torch_geometric.data.GraphSAINTSampler) in the PyTorch Geometric library. 
 
+We thank the [OGB team](https://ogb.stanford.edu/) for using GraphSAINT on large scale experiments. 
 
 * ICLR 2020:
 
