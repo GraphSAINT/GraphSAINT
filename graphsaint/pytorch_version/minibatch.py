@@ -186,7 +186,7 @@ class Minibatch:
             if self.use_cuda:
                 adj = adj.cuda()
             self.batch_num += 1
-        norm_loss = self.norm_loss_test if mode in ['val','test'] else self.norm_loss_train
+        norm_loss = self.norm_loss_test if mode in ['val','test', 'valtest'] else self.norm_loss_train
         norm_loss = norm_loss[self.node_subgraph]
         return self.node_subgraph, adj, norm_loss
 
