@@ -1,4 +1,4 @@
-## Hyperparameter Search Procedure
+## Hyperparameter Search Procedure for ICLR '20 Experiments
 
 * Hidden dimension for each method, model and dataset: 128, 256, 512
 * Dropout: 0.0, 0.1, 0.2, 0.3
@@ -19,7 +19,7 @@ You can open any `*.yml` file in `./train_config/` to better understand the belo
 * *aggr*: `['concat' / 'mean']` how to aggregate the self feature and neighbor features
 * *loss*: `['sigmoid' / 'softmax']` loss function to choose (sigmoid for multi-label / softmax for single label)
 * *arch*: `['<int>-<int>-...']` network architecture. `1` means an order 1 layer (self feature plus 1-hop neighbor feature), and `0` means an order 0 layer (self feature only). Following the convention in the literature, an L-layer GCN contains L number of layers with order *at least 1*. 
-  * **NOTE**: a graph conv layer in [S-GCN](https://arxiv.org/abs/1710.10568) is equivalent to a `1-0` structure in GraphSAINT; a graph conv layer in other baselines is equivalent to a `1` layer in GraphSAINT. 
+  * **NOTE**: a graph conv layer in [S-GCN](https://arxiv.org/abs/1710.10568) (a.k.a. VR-GCN) is equivalent to a `1-0` structure in GraphSAINT; a graph conv layer in other baselines is equivalent to a `1` layer in GraphSAINT. 
   * For the above reason, when evaluating PPI and Reddit (which are also evaluated in the S-GCN paper), GraphSAINT uses `1-0-1-0` architecture. When evaluating Flickr, Yelp and Amazon, GraphSAINT uses `1-1-0` (where the last `0` is for the dense layer of the node classifier).
   * Alternatively for PPI and Reddit, you can simply replace `1-0-1-0` with `1-1-0`, and the resulting GraphSAINT still has significant accuracy improvement compared with other baselines. 
 * *act*: `['I' / 'relu' / 'leaky_relu']` activation function, where `I` is for linear activation. For `leaky_relu`, the current version of the code supports only the default alpha value.
@@ -32,6 +32,7 @@ You can open any `*.yml` file in `./train_config/` to better understand the belo
 * *lr*: `[float]` learning rate for Adam optimizer
 * *sample\_coverage*: `[int]` the `N` number in the paper (indicates how many samples to estimate edge / node probability)
 * *dropout*: `[float]` dropout value
+* *eval_val_every* (optional): `[int]` run evaluation on the validation set every `n` epochs. For large datasets, validation set evaluation is a bit time-consuming, so it is not necessary to run evaluation every epoch. 
 
 #### Phase:
 
