@@ -121,36 +121,41 @@ class AttentionAggregator(nn.Module):
         self._f_lin = []
         self._offset, self._scale = [], []
         self._attention = []
+        # mostly we have order = 1 for GAT
+        # "+1" since we do batch norm of order-0 and order-1 outputs separately
         for o in range(self.order+1):
             for i in range(self.mulhead):
-                self._f_lin.append(nn.Linear(dim_in,int(dim_out/self.mulhead),bias=True))
+                self._f_lin.append(nn.Linear(dim_in, int(dim_out/self.mulhead), bias=True))
                 nn.init.xavier_uniform_(self._f_lin[-1].weight)
+                # _offset and _scale are for 'norm' type of batch norm
                 self._offset.append(nn.Parameter(torch.zeros(int(dim_out/self.mulhead))))
                 self._scale.append(nn.Parameter(torch.ones(int(dim_out/self.mulhead))))
                 if o < self.order:
-                    self._attention.append(nn.Parameter(torch.ones(1,int(dim_out/self.mulhead*2))))
+                    self._attention.append(nn.Parameter(torch.ones(1, int(dim_out/self.mulhead*2))))
                     nn.init.xavier_uniform_(self._attention[-1])
         self.mods = nn.ModuleList(self._f_lin)
         self.f_dropout = nn.Dropout(p=self.dropout)
-        self.params = nn.ParameterList(self._offset+self._scale+self._attention)
+        self.params = nn.ParameterList(self._offset + self._scale + self._attention)
         self.f_lin = []
         self.offset, self.scale = [], []
         self.attention = []
+        # Reshaping the params: we need to explicitly reshape this since nn.ParameterList cannot cannot
+        # convert nested list of nn parameters. 
         for o in range(self.order+1):
             self.f_lin.append([])
             self.offset.append([])
             self.scale.append([])
             self.attention.append([])
             for i in range(self.mulhead):
-                self.f_lin[-1].append(self.mods[o*self.mulhead+i])
+                self.f_lin[-1].append(self.mods[o*self.mulhead + i])
                 if self.bias == 'norm':     # not used in 'norm-nn' mode
-                    self.offset[-1].append(self.params[o*self.mulhead+i])
-                    self.scale[-1].append(self.params[len(self._offset)+o*self.mulhead+i])
-                if o < self.order:
-                    self.attention[-1].append(self.params[len(self._offset)*2+o*self.mulhead+i])
+                    self.offset[-1].append(self.params[o*self.mulhead + i])
+                    self.scale[-1].append(self.params[len(self._offset) + o*self.mulhead + i])
+                if o < self.order:      # excluding the order-0 part
+                    self.attention[-1].append(self.params[len(self._offset)*2 + o*self.mulhead + i])
         if self.bias == 'norm-nn':
-            final_dim_out = dim_out*((aggr=='concat')*(order+1)+(aggr=='mean'))
-            self.f_norm = nn.BatchNorm1d(final_dim_out,eps=1e-9,track_running_stats=True)
+            final_dim_out = dim_out*((aggr=='concat')*(order+1) + (aggr=='mean'))
+            self.f_norm = nn.BatchNorm1d(final_dim_out, eps=1e-9, track_running_stats=True)
 
     def _spmm(self, adj_norm, _feat):
         return torch.sparse.mm(adj_norm, _feat)
@@ -161,11 +166,12 @@ class AttentionAggregator(nn.Module):
             feat_out.append(self.act(f_lin[i](_feat)))
         return feat_out
 
-    def _aggregate_attention(self,adj,feat_neigh,feat_self,attention):
-        attention_self=self.att_act(attention[:,:feat_self.shape[1]].mm(feat_self.t())).squeeze()
-        attention_neigh=self.att_act(attention[:,feat_neigh.shape[1]:].mm(feat_neigh.t())).squeeze()
-        att_adj=torch.sparse.FloatTensor(adj._indices(),(attention_self[adj._indices()[0]]+attention_neigh[adj._indices()[1]])*adj._values(),torch.Size(adj.shape))
-        return self._spmm(att_adj,feat_neigh)
+    def _aggregate_attention(self, adj, feat_neigh, feat_self, attention):
+        attention_self = self.att_act(attention[:, :feat_self.shape[1]].mm(feat_self.t())).squeeze()
+        attention_neigh = self.att_act(attention[:, feat_neigh.shape[1]:].mm(feat_neigh.t())).squeeze()
+        attention_norm = (attention_self[adj._indices()[0]] + attention_neigh[adj._indices()[1]]) * adj._values()
+        att_adj = torch.sparse.FloatTensor(adj._indices(), attention_norm, torch.Size(adj.shape))
+        return self._spmm(att_adj, feat_neigh)
 
     def forward(self, inputs):
         """
@@ -177,26 +183,27 @@ class AttentionAggregator(nn.Module):
         # generate A^i X
         feat_partial=list()
         for o in range(self.order+1):
-            feat_partial.append(self._f_feat_trans(feat_in,self.f_lin[o]))
+            feat_partial.append(self._f_feat_trans(feat_in, self.f_lin[o]))
         for o in range(1,self.order+1):
             for s in range(o):
                 for i in range(self.mulhead):
                     feat_partial[o][i] = self._aggregate_attention(adj_norm,feat_partial[o][i],feat_partial[o-s-1][i],self.attention[o-1][i])
         if self.bias == 'norm':
-            for o in range(self.order+1):
+            # normalize per-order, per-head
+            for o in range(self.order + 1):
                 for i in range(self.mulhead):
                     mean = feat_partial[o][i].mean(dim=1).unsqueeze(1)
-                    var = feat_partial[o][i].var(dim=1,unbiased=False).unsqueeze(1)+1e-9
-                    feat_partial[o][i] = (feat_partial[o][i]-mean)*self.scale[o][i]*torch.rsqrt(var)+self.offset[o][i]
+                    var = feat_partial[o][i].var(dim=1, unbiased=False).unsqueeze(1) + 1e-9
+                    feat_partial[o][i] = (feat_partial[o][i] - mean) * self.scale[o][i] * torch.rsqrt(var) + self.offset[o][i]
  
-        for o in range(self.order+1):
-            feat_partial[o] = torch.cat(feat_partial[o],1)
+        for o in range(self.order + 1):
+            feat_partial[o] = torch.cat(feat_partial[o], 1)
         if self.aggr == 'mean':
             feat_out = feat_partial[0]
-            for o in range(len(feat_partial)-1):
-                feat_out += feat_partial[o+1]
+            for o in range(len(feat_partial) - 1):
+                feat_out += feat_partial[o + 1]
         elif self.aggr == 'concat':
-            feat_out = torch.cat(feat_partial,1)
+            feat_out = torch.cat(feat_partial, 1)
         else:
             raise NotImplementedError
         if self.bias == 'norm-nn':

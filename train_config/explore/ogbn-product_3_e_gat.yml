@@ -1,0 +1,18 @@
+network:
+  - dim: 256
+    aggr: 'mean'
+    loss: 'softmax'
+    arch: '1-1-1'
+    attention: 4
+    act: 'relu'
+    bias: 'norm'
+params:
+  - lr: 0.01
+    dropout: 0.3
+    weight_decay: 0.0
+    sample_coverage: 1000
+    eval_val_every: 10      # [optional] how often do you run on validation set
+phase:
+  - end: 200
+    sampler: 'edge'
+    size_subg_edge: 20000
