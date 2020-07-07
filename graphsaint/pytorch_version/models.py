@@ -5,12 +5,25 @@ import numpy as np
 from graphsaint.utils import *
 import graphsaint.pytorch_version.layers as layers
 
+
 class GraphSAINT(nn.Module):
     def __init__(self, num_classes, arch_gcn, train_params, feat_full, label_full, cpu_eval=False):
         """
+        Build the multi-layer GNN architecture.
+
         Inputs:
-            arch_gcn            parsed arch of GCN
-            train_params        parameters for training
+            num_classes         int, number of classes a node can belong to
+            arch_gcn            dict, config for each GNN layer
+            train_params        dict, training hyperparameters (e.g., learning rate)
+            feat_full           np array of shape N x f, where N is the total num of
+                                nodes and f is the dimension for input node feature
+            label_full          np array, for single-class classification, the shape
+                                is N x 1 and for multi-class classification, the
+                                shape is N x c (where c = num_classes)
+            cpu_eval            bool, if True, will put the model on CPU.
+
+        Outputs:
+            None
         """
         super(GraphSAINT,self).__init__()
         self.use_cuda = (args_global.gpu >= 0)
@@ -32,7 +45,7 @@ class GraphSAINT(nn.Module):
         self.dropout = train_params['dropout']
         self.lr = train_params['lr']
         self.arch_gcn = arch_gcn
-        self.sigmoid_loss = (arch_gcn['loss']=='sigmoid')
+        self.sigmoid_loss = (arch_gcn['loss'] == 'sigmoid')
         self.feat_full = torch.from_numpy(feat_full.astype(np.float32))
         self.label_full = torch.from_numpy(label_full.astype(np.float32))
         if self.use_cuda:
@@ -43,8 +56,8 @@ class GraphSAINT(nn.Module):
             if self.use_cuda:
                 self.label_full_cat = self.label_full_cat.cuda()
         self.num_classes = num_classes
-        _dims,self.order_layer,self.act_layer,self.bias_layer,self.aggr_layer \
-                        = parse_layer_yml(arch_gcn,self.feat_full.shape[1])
+        _dims,self.order_layer,self.act_layer, self.bias_layer, self.aggr_layer \
+                        = parse_layer_yml(arch_gcn, self.feat_full.shape[1])
         # get layer index for each conv layer, useful for jk net last layer aggregation
         self.set_idx_conv()
         self.set_dims(_dims)
@@ -52,26 +65,44 @@ class GraphSAINT(nn.Module):
         self.loss = 0
         self.opt_op = None
 
-        # build the model below        
+        # build the model below
         self.aggregators = self.get_aggregators()
         self.conv_layers = nn.Sequential(*self.aggregators)
         self.classifier = layers.HighOrderAggregator(self.dims_feat[-1], self.num_classes,\
                             act='I', order=0, dropout=self.dropout, bias='bias')
-        self.optimizer = torch.optim.Adam(self.parameters(),lr=self.lr)
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
 
-    def set_dims(self,dims):
-        self.dims_feat = [dims[0]] + [((self.aggr_layer[l]=='concat')*self.order_layer[l]+1)*dims[l+1] for l in range(len(dims)-1)]
+    def set_dims(self, dims):
+        """
+        Set the feature dimension / weight dimension for each GNN or MLP layer.
+        We will use the dimensions set here to initialize PyTorch layers.
+
+        Inputs:
+            dims        list, length of node feature for each hidden layer
+
+        Outputs:
+            None
+        """
+        self.dims_feat = [dims[0]] + [
+            ((self.aggr_layer[l]=='concat') * self.order_layer[l] + 1) * dims[l+1]
+            for l in range(len(dims) - 1)
+        ]
         self.dims_weight = [(self.dims_feat[l],dims[l+1]) for l in range(len(dims)-1)]
 
     def set_idx_conv(self):
-        idx_conv = np.where(np.array(self.order_layer)>=1)[0]
+        """
+        Set the index of GNN layers for the full neural net. For example, if
+        the full NN is having 1-0-1-0 arch (1-hop graph conv, followed by 0-hop
+        MLP, ...). Then the layer indices will be 0, 2.
+        """
+        idx_conv = np.where(np.array(self.order_layer) >= 1)[0]
         idx_conv = list(idx_conv[1:] - 1)
-        idx_conv.append(len(self.order_layer)-1)
+        idx_conv.append(len(self.order_layer) - 1)
         _o_arr = np.array(self.order_layer)[idx_conv]
         if np.prod(np.ediff1d(_o_arr)) == 0:
             self.idx_conv = idx_conv
         else:
-            self.idx_conv = list(np.where(np.array(self.order_layer)==1)[0])
+            self.idx_conv = list(np.where(np.array(self.order_layer) == 1)[0])
 
 
     def forward(self, node_subgraph, adj_subgraph):
@@ -85,6 +116,9 @@ class GraphSAINT(nn.Module):
 
 
     def _loss(self, preds, labels, norm_loss):
+        """
+        The predictor performs sigmoid (for multi-class) or softmax (for single-class)
+        """
         if self.sigmoid_loss:
             norm_loss = norm_loss.unsqueeze(1)
             return torch.nn.BCEWithLogitsLoss(weight=norm_loss,reduction='sum')(preds, labels)
@@ -99,28 +133,34 @@ class GraphSAINT(nn.Module):
         """
         aggregators = []
         for l in range(self.num_layers):
-            aggrr = self.aggregator_cls(*self.dims_weight[l],dropout=self.dropout,\
-                    act=self.act_layer[l], order=self.order_layer[l], \
-                    aggr=self.aggr_layer[l], bias=self.bias_layer[l], mulhead=self.mulhead)
-            aggregators.append(aggrr)
+            aggr = self.aggregator_cls(
+                    *self.dims_weight[l],
+                    dropout=self.dropout,
+                    act=self.act_layer[l],
+                    order=self.order_layer[l],
+                    aggr=self.aggr_layer[l],
+                    bias=self.bias_layer[l],
+                    mulhead=self.mulhead,
+            )
+            aggregators.append(aggr)
         return aggregators
 
     def predict(self, preds):
         return nn.Sigmoid()(preds) if self.sigmoid_loss else F.softmax(preds, dim=1)
-        
-        
+
+
     def train_step(self, node_subgraph, adj_subgraph, norm_loss_subgraph):
         """
         Forward and backward propagation
         """
         self.train()
         self.optimizer.zero_grad()
-        preds,labels,labels_converted = self(node_subgraph, adj_subgraph)    # will call the forward function
-        loss = self._loss(preds,labels_converted,norm_loss_subgraph) # labels.squeeze()?
+        preds, labels, labels_converted = self(node_subgraph, adj_subgraph)
+        loss = self._loss(preds, labels_converted, norm_loss_subgraph) # labels.squeeze()?
         loss.backward()
         torch.nn.utils.clip_grad_norm(self.parameters(), 5)
         self.optimizer.step()
-        return loss,self.predict(preds),labels
+        return loss, self.predict(preds), labels
 
     def eval_step(self, node_subgraph, adj_subgraph, norm_loss_subgraph):
         """
@@ -130,4 +170,4 @@ class GraphSAINT(nn.Module):
         with torch.no_grad():
             preds,labels,labels_converted = self(node_subgraph, adj_subgraph)
             loss = self._loss(preds,labels_converted,norm_loss_subgraph)
-        return loss,self.predict(preds),labels
+        return loss, self.predict(preds), labels
