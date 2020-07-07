@@ -51,6 +51,7 @@ def prepare(train_data,train_params,arch_gcn):
 
     minibatch = Minibatch(adj_full_norm, adj_train, role, train_params)
     model = GraphSAINT(num_classes, arch_gcn, train_params, feat_full, class_arr)
+    printf("TOTAL NUM OF PARAMS = {}".format(model.num_params), style="yellow")
     minibatch_eval=Minibatch(adj_full_norm, adj_train, role, train_params, cpu_eval=True)
     model_eval=GraphSAINT(num_classes, arch_gcn, train_params, feat_full, class_arr, cpu_eval=True)
     if args_global.gpu >= 0:

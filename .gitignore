@@ -1,7 +1,11 @@
 build/
 *.so
 __pycache__
-data
+data/ppi/
+data/reddit
+data/yelp
+data/amazon
+data/flickr
 cython_sampler.cpp
 cython_utils.cpp
 norm_aggr.cpp

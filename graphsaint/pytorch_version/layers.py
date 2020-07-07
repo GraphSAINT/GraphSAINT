@@ -66,12 +66,17 @@ class HighOrderAggregator(nn.Module):
         self.dropout = dropout
         self.f_lin, self.f_bias = [], []
         self.offset, self.scale = [], []
+        self.num_param = 0
         for o in range(self.order + 1):
             self.f_lin.append(nn.Linear(dim_in, dim_out, bias=False))
             nn.init.xavier_uniform_(self.f_lin[-1].weight)
             self.f_bias.append(nn.Parameter(torch.zeros(dim_out)))
+            self.num_param += dim_in * dim_out
+            self.num_param += dim_out
             self.offset.append(nn.Parameter(torch.zeros(dim_out)))
             self.scale.append(nn.Parameter(torch.ones(dim_out)))
+            if self.bias == 'norm' or self.bias == 'norm-nn':
+                self.num_param += 2 * dim_out
         self.f_lin = nn.ModuleList(self.f_lin)
         self.f_dropout = nn.Dropout(p=self.dropout)
         self.params = nn.ParameterList(self.f_bias + self.offset + self.scale)
@@ -82,6 +87,7 @@ class HighOrderAggregator(nn.Module):
         elif self.bias == 'norm-nn':
             final_dim_out = dim_out * ((aggr=='concat') * (order + 1) + (aggr=='mean'))
             self.f_norm = nn.BatchNorm1d(final_dim_out, eps=1e-9, track_running_stats=True)
+        self.num_param = int(self.num_param)
 
     def _spmm(self, adj_norm, _feat):
         """ sparce feature matrix multiply dense feature matrix """
@@ -173,10 +179,11 @@ class AttentionAggregator(nn.Module):
             order=1, aggr='mean', bias='norm', mulhead=1):
         super(AttentionAggregator,self).__init__()
         assert bias in ['bias', 'norm', 'norm-nn']
-        self.mulhead=mulhead
-        self.order,self.aggr = order,aggr
+        self.num_param = 0
+        self.mulhead = mulhead
+        self.order, self.aggr = order, aggr
         self.act, self.bias = F_ACT[act], bias
-        self.att_act=nn.LeakyReLU(negative_slope=0.2)
+        self.att_act = nn.LeakyReLU(negative_slope=0.2)
         self.dropout = dropout
         self._f_lin = []
         self._offset, self._scale = [], []
@@ -190,9 +197,11 @@ class AttentionAggregator(nn.Module):
                 # _offset and _scale are for 'norm' type of batch norm
                 self._offset.append(nn.Parameter(torch.zeros(int(dim_out / self.mulhead))))
                 self._scale.append(nn.Parameter(torch.ones(int(dim_out / self.mulhead))))
+                self.num_param += dim_in * dim_out / self.mulhead + 2 * dim_out / self.mulhead
                 if o < self.order:
                     self._attention.append(nn.Parameter(torch.ones(1, int(dim_out / self.mulhead * 2))))
                     nn.init.xavier_uniform_(self._attention[-1])
+                    self.num_param += dim_out / self.mulhead * 2
         self.mods = nn.ModuleList(self._f_lin)
         self.f_dropout = nn.Dropout(p=self.dropout)
         self.params = nn.ParameterList(self._offset + self._scale + self._attention)
@@ -209,15 +218,16 @@ class AttentionAggregator(nn.Module):
             self.scale.append([])
             self.attention.append([])
             for i in range(self.mulhead):
-                self.f_lin[-1].append(self.mods[o*self.mulhead + i])
+                self.f_lin[-1].append(self.mods[o * self.mulhead + i])
                 if self.bias == 'norm':     # not used in 'norm-nn' mode
-                    self.offset[-1].append(self.params[o*self.mulhead + i])
-                    self.scale[-1].append(self.params[len(self._offset) + o*self.mulhead + i])
+                    self.offset[-1].append(self.params[o * self.mulhead + i])
+                    self.scale[-1].append(self.params[len(self._offset) + o * self.mulhead + i])
                 if o < self.order:      # excluding the order-0 part
-                    self.attention[-1].append(self.params[len(self._offset)*2 + o*self.mulhead + i])
+                    self.attention[-1].append(self.params[len(self._offset) * 2 + o * self.mulhead + i])
         if self.bias == 'norm-nn':
             final_dim_out = dim_out*((aggr=='concat')*(order+1) + (aggr=='mean'))
             self.f_norm = nn.BatchNorm1d(final_dim_out, eps=1e-9, track_running_stats=True)
+        self.num_param = int(self.num_param)
 
     def _spmm(self, adj_norm, _feat):
         return torch.sparse.mm(adj_norm, _feat)
@@ -326,6 +336,7 @@ class GatedAttentionAggregator(nn.Module):
         dim_gate=64,
     ):
         super(GatedAttentionAggregator, self).__init__()
+        self.num_param = 0      # TODO: update param count
         self.multi_head = mulhead
         assert self.multi_head > 0 and dim_out % self.multi_head == 0
         self.order, self.aggr = order, aggr

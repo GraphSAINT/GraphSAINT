@@ -32,14 +32,14 @@ class GraphSAINT(nn.Module):
         if "attention" in arch_gcn:
             if "gated_attention" in arch_gcn:
                 if arch_gcn['gated_attention']:
-                    self.aggregator_cls=layers.GatedAttentionAggregator
-                    self.mulhead=int(arch_gcn['attention'])
+                    self.aggregator_cls = layers.GatedAttentionAggregator
+                    self.mulhead = int(arch_gcn['attention'])
             else:
-                self.aggregator_cls=layers.AttentionAggregator
-                self.mulhead=int(arch_gcn['attention'])
+                self.aggregator_cls = layers.AttentionAggregator
+                self.mulhead = int(arch_gcn['attention'])
         else:
-            self.aggregator_cls=layers.HighOrderAggregator
-            self.mulhead=1
+            self.aggregator_cls = layers.HighOrderAggregator
+            self.mulhead = 1
         self.num_layers = len(arch_gcn['arch'].split('-'))
         self.weight_decay = train_params['weight_decay']
         self.dropout = train_params['dropout']
@@ -56,7 +56,7 @@ class GraphSAINT(nn.Module):
             if self.use_cuda:
                 self.label_full_cat = self.label_full_cat.cuda()
         self.num_classes = num_classes
-        _dims,self.order_layer,self.act_layer, self.bias_layer, self.aggr_layer \
+        _dims, self.order_layer, self.act_layer, self.bias_layer, self.aggr_layer \
                         = parse_layer_yml(arch_gcn, self.feat_full.shape[1])
         # get layer index for each conv layer, useful for jk net last layer aggregation
         self.set_idx_conv()
@@ -66,10 +66,13 @@ class GraphSAINT(nn.Module):
         self.opt_op = None
 
         # build the model below
-        self.aggregators = self.get_aggregators()
+        self.num_params = 0
+        self.aggregators, num_param = self.get_aggregators()
+        self.num_params += num_param
         self.conv_layers = nn.Sequential(*self.aggregators)
         self.classifier = layers.HighOrderAggregator(self.dims_feat[-1], self.num_classes,\
                             act='I', order=0, dropout=self.dropout, bias='bias')
+        self.num_params += self.classifier.num_param
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
 
     def set_dims(self, dims):
@@ -131,6 +134,7 @@ class GraphSAINT(nn.Module):
         """
         Return a list of aggregator instances. to be used in self.build()
         """
+        num_param = 0
         aggregators = []
         for l in range(self.num_layers):
             aggr = self.aggregator_cls(
@@ -142,8 +146,9 @@ class GraphSAINT(nn.Module):
                     bias=self.bias_layer[l],
                     mulhead=self.mulhead,
             )
+            num_param += aggr.num_param
             aggregators.append(aggr)
-        return aggregators
+        return aggregators, num_param
 
     def predict(self, preds):
         return nn.Sigmoid()(preds) if self.sigmoid_loss else F.softmax(preds, dim=1)
