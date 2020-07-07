@@ -105,13 +105,22 @@ cdef class Sampler:
             r = r + 1
 
     def get_return(self):
-        # prepare return values
+        """
+        Convert the subgraph related data structures from C++ to python. So that cython
+        can return them to the PyTorch trainer.
+
+        Inputs:
+            None
+
+        Outputs:
+            see outputs of the `par_sample()` function.
+        """
         num_subg = self.num_proc*self.num_sample_per_proc
-        l_subg_indptr = list()
-        l_subg_indices = list()
-        l_subg_data = list()
-        l_subg_nodes = list()
-        l_subg_edge_index = list()
+        l_subg_indptr = []
+        l_subg_indices = []
+        l_subg_data = []
+        l_subg_nodes = []
+        l_subg_edge_index = []
         offset_nodes = [0]
         offset_indptr = [0]
         offset_indices = [0]
@@ -172,6 +181,30 @@ cdef class Sampler:
     @cython.boundscheck(False)
     @cython.wraparound(False)
     def par_sample(self):
+        """
+        The main function for the sampler class. It launches multiple independent samplers
+        in parallel (task parallelism by openmp), where the serial sampling function is defined
+        in the corresponding sub-class. Then it returns node-induced subgraph by `_adj_extract()`,
+        and convert C++ vectors to python lists / numpy arrays by `_get_return()`.
+
+        Suppose we sample P subgraphs in parallel. Each subgraph has n nodes and e edges.
+
+        Inputs:
+            None
+
+        Outputs (elements in the list of `ret`):
+            l_subg_indptr       list of np array, length of list = P and length of each array is n+1
+            l_subg_indices      list of np array, length of list = P and length of each array is m.
+                                node IDs in the array are renamed to be subgraph ID (range: 0 ~ n-1)
+            l_subg_data         list of np array, length of list = P and length of each array is m.
+                                Normally, values in the array should be all 1.
+            l_subg_nodes        list of np array, length of list = P and length of each array is n.
+                                Element i in the array shows the training graph node ID of the i-th
+                                subgraph node.
+            l_subg_edge_index   list of np array, length of list = P and length of each array is m.
+                                Element i in the array shows the training graph edge index of the
+                                i-the subgraph edge.
+        """
         cdef int p = 0
         with nogil, parallel(num_threads=self.num_proc):
             for p in prange(self.num_proc,schedule='dynamic'):
@@ -297,7 +330,7 @@ cdef class RW(Sampler):
                         int size_root, int size_depth):
         self.size_root = size_root
         self.size_depth = size_depth
-    
+
     cdef void sample(self, int p) nogil:
         cdef int iroot = 0
         cdef int idepth = 0
@@ -324,7 +357,7 @@ cdef class RW(Sampler):
             sort(self.node_sampled[idx_subg].begin(),self.node_sampled[idx_subg].end())
             self.node_sampled[idx_subg].erase(unique(self.node_sampled[idx_subg].begin(),self.node_sampled[idx_subg].end()),self.node_sampled[idx_subg].end())
 
-           
+
 
 
 # ----------------------------------------------------
@@ -421,7 +454,7 @@ cdef class Node(Sampler):
                         int size_subg):
         self.size_subg = size_subg
         cutils.npy2vec_int(p_dist_cumsum,self.p_dist_cumsum_vec)
-    
+
     cdef void sample(self, int p) nogil:
         cdef int i = 0
         cdef int r = 0
@@ -463,4 +496,3 @@ cdef class FullBatch(Sampler):
             r = r + 1
             sort(self.node_sampled[idx_subg].begin(),self.node_sampled[idx_subg].end())
             self.node_sampled[idx_subg].erase(unique(self.node_sampled[idx_subg].begin(),self.node_sampled[idx_subg].end()),self.node_sampled[idx_subg].end())
-

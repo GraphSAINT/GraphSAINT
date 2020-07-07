@@ -43,12 +43,6 @@ SAMPLES_PER_PROC = -(-200 // NUM_PAR_SAMPLER) # round up division
 EVAL_VAL_EVERY_EP = 1       # get accuracy on the validation set every this # epochs
 
 
-# amazon dataset is too large, so we cannot perform full-batch
-# evaluation on GPU. We change its validation/test evaluation to CPU. 
-if args_global.data_prefix.split('/')[-1]=='amazon':
-    args_global.cpu_eval=True
-
-
 # auto choosing available NVIDIA GPU
 gpu_selected = args_global.gpu
 if gpu_selected == '-1234':

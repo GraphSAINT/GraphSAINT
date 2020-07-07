@@ -10,6 +10,53 @@ from graphsaint.globals import *
 
 
 def load_data(prefix, normalize=True):
+    """
+    Load the various data files residing in the `prefix` directory.
+    Files to be loaded:
+        adj_full.npz        sparse matrix in CSR format, stored as scipy.sparse.csr_matrix
+                            The shape is N by N. Non-zeros in the matrix correspond to all
+                            the edges in the full graph. It doesn't matter if the two nodes
+                            connected by an edge are training, validation or test nodes.
+                            For unweighted graph, the non-zeros are all 1.
+        adj_train.npz       sparse matrix in CSR format, stored as a scipy.sparse.csr_matrix
+                            The shape is also N by N. However, non-zeros in the matrix only
+                            correspond to edges connecting two training nodes. The graph
+                            sampler only picks nodes/edges from this adj_train, not adj_full.
+                            Therefore, neither the attribute information nor the structural
+                            information are revealed during training. Also, note that only
+                            a x N rows and cols of adj_train contains non-zeros. For
+                            unweighted graph, the non-zeros are all 1.
+        role.json           a dict of three keys. Key 'tr' corresponds to the list of all
+                              'tr':     list of all training node indices
+                              'va':     list of all validation node indices
+                              'te':     list of all test node indices
+                            Note that in the raw data, nodes may have string-type ID. You
+                            need to re-assign numerical ID (0 to N-1) to the nodes, so that
+                            you can index into the matrices of adj, features and class labels.
+        class_map.json      a dict of length N. Each key is a node index, and each value is
+                            either a length C binary list (for multi-class classification)
+                            or an integer scalar (0 to C-1, for single-class classification).
+        feats.npz           a numpy array of shape N by F. Row i corresponds to the attribute
+                            vector of node i.
+
+    Inputs:
+        prefix              string, directory containing the above graph related files
+        normalize           bool, whether or not to normalize the node features
+
+    Outputs:
+        adj_full            scipy sparse CSR (shape N x N, |E| non-zeros), the adj matrix of
+                            the full graph, with N being total num of train + val + test nodes.
+        adj_train           scipy sparse CSR (shape N x N, |E'| non-zeros), the adj matrix of
+                            the training graph. While the shape is the same as adj_full, the
+                            rows/cols corresponding to val/test nodes in adj_train are all-zero.
+        feats               np array (shape N x f), the node feature matrix, with f being the
+                            length of each node feature vector.
+        class_map           dict, where key is the node ID and value is the classes this node
+                            belongs to.
+        role                dict, where keys are: 'tr' for train, 'va' for validation and 'te'
+                            for test nodes. The value is the list of IDs of nodes belonging to
+                            the train/val/test sets.
+    """
     adj_full = scipy.sparse.load_npz('./{}/adj_full.npz'.format(prefix)).astype(np.bool)
     adj_train = scipy.sparse.load_npz('./{}/adj_train.npz'.format(prefix)).astype(np.bool)
     role = json.load(open('./{}/role.json'.format(prefix)))
@@ -47,6 +94,9 @@ def process_graph_data(adj_full, adj_train, feats, class_map, role):
 
 
 def parse_layer_yml(arch_gcn,dim_input):
+    """
+    Parse the *.yml config file to retrieve the GNN structure.
+    """
     num_layers = len(arch_gcn['arch'].split('-'))
     # set default values, then update by arch_gcn
     bias_layer = [arch_gcn['bias']]*num_layers
@@ -57,15 +107,26 @@ def parse_layer_yml(arch_gcn,dim_input):
     return [dim_input]+dims_layer,order_layer,act_layer,bias_layer,aggr_layer
 
 
-
-
-
 def parse_n_prepare(flags):
     with open(flags.train_config) as f_train_config:
         train_config = yaml.load(f_train_config)
-    arch_gcn = {'dim':-1,'aggr':'concat','loss':'softmax','arch':'1','act':'I','bias':'norm'}
+    arch_gcn = {
+        'dim': -1,
+        'aggr': 'concat',
+        'loss': 'softmax',
+        'arch': '1',
+        'act': 'I',
+        'bias': 'norm'
+    }
     arch_gcn.update(train_config['network'][0])
-    train_params = {'lr':0.01,'weight_decay':0.,'norm_loss':True,'norm_aggr':True,'q_threshold':50,'q_offset':0}
+    train_params = {
+        'lr': 0.01,
+        'weight_decay': 0.,
+        'norm_loss': True,
+        'norm_aggr': True,
+        'q_threshold': 50,
+        'q_offset': 0
+    }
     train_params.update(train_config['params'][0])
     train_phases = train_config['phase']
     for ph in train_phases:
@@ -110,16 +171,19 @@ def sess_dir(dims,train_config,prefix,git_branch,git_rev,timestamp):
 
 def adj_norm(adj, deg=None, sort_indices=True):
     """
-    Normalize adj according to two methods: symmetric normalization and rw normalization.
-    sym norm is used in the original GCN paper (kipf)
-    rw norm is used in graphsage and some other variants.
+    Normalize adj according to the method of rw normalization.
+    Note that sym norm is used in the original GCN paper (kipf),
+    while rw norm is used in GraphSAGE and some other variants.
+    Here we don't perform sym norm since it doesn't seem to
+    help with accuracy improvement.
 
-    # Procedure: 
+    # Procedure:
     #       1. adj add self-connection --> adj'
     #       2. D' deg matrix from adj'
     #       3. norm by D^{-1} x adj'
     if sort_indices is True, we re-sort the indices of the returned adj
-    Note that after 'dot' the indices of a node would be in descending order rather than ascending order
+    Note that after 'dot' the indices of a node would be in descending order
+    rather than ascending order
     """
     diag_shape = (adj.shape[0],adj.shape[1])
     D = adj.sum(1).flatten() if deg is None else deg
@@ -150,5 +214,3 @@ def printf(msg,style=''):
         print(msg)
     else:
         print("{color1}{msg}{color2}".format(color1=_bcolors[style],msg=msg,color2='\033[0m'))
-
-
