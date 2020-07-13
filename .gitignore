@@ -6,6 +6,7 @@ data/reddit
 data/yelp
 data/amazon
 data/flickr
+data/open_graph_benchmark/ogbn-products
 cython_sampler.cpp
 cython_utils.cpp
 norm_aggr.cpp
