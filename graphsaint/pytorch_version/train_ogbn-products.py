@@ -1,14 +1,23 @@
+"""
+See README in the root directory of GraphSAINT for training instructions. 
+
+Contact: 
+
+Hanqing Zeng (zengh@usc.edu);   Hongkuan Zhou (hongkuaz@usc.edu)
+"""
+
 from graphsaint.globals import *
 from graphsaint.pytorch_version.models import GraphSAINT
 from graphsaint.pytorch_version.minibatch import Minibatch
 from graphsaint.utils import *
 from graphsaint.metric import *
 from graphsaint.pytorch_version.utils import *
-
+from  ogb.nodeproppred import Evaluator
 
 import torch
 import time
 
+evaluator=Evaluator(name='ogbn-products')
 
 def evaluate_full_batch(model, minibatch, mode='val'):
     """
@@ -24,11 +33,13 @@ def evaluate_full_batch(model, minibatch, mode='val'):
     else:
         assert mode == 'valtest'
         node_target = [minibatch.node_val, minibatch.node_test]
+    labels = labels.argmax(dim=-1, keepdim=True)
+    preds = preds.argmax(dim=-1, keepdim=True)
     f1mic, f1mac = [], []
     for n in node_target:
-        f1_scores = calc_f1(to_numpy(labels[n]), to_numpy(preds[n]), model.sigmoid_loss)
-        f1mic.append(f1_scores[0])
-        f1mac.append(f1_scores[1])
+        acc = evaluator.eval({'y_true': labels[n], 'y_pred': preds[n]})['acc']
+        f1mic.append(acc)
+        f1mac.append(acc)
     f1mic = f1mic[0] if len(f1mic)==1 else f1mic
     f1mac = f1mac[0] if len(f1mac)==1 else f1mac
     # loss is not very accurate in this case, since loss is also contributed by training nodes
@@ -120,6 +131,7 @@ def train(train_phases, model, minibatch, minibatch_eval, model_eval, eval_val_e
     printf("Full test stats: \n  F1_Micro = {:.4f}\tF1_Macro = {:.4f}"\
             .format(f1mic_test, f1mac_test), style='red')
     printf("Total training time: {:6.2f} sec".format(time_train), style='red')
+    return f1mic_test
 
 
 if __name__ == '__main__':
@@ -127,5 +139,17 @@ if __name__ == '__main__':
     train_params, train_phases, train_data, arch_gcn = parse_n_prepare(args_global)
     if 'eval_val_every' not in train_params:
         train_params['eval_val_every'] = EVAL_VAL_EVERY_EP
-    model, minibatch, minibatch_eval, model_eval = prepare(train_data, train_params, arch_gcn)
-    train(train_phases, model, minibatch, minibatch_eval, model_eval, train_params['eval_val_every'])
+    test_accs = list()
+    for run in range(10):
+        print(f'>>>>>> Run {run:02d}:')
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+        print('memory allocated:', torch.cuda.memory_allocated())
+        print('memory reserved: ', torch.cuda.max_memory_reserved())
+        model, minibatch, minibatch_eval, model_eval = prepare(train_data, train_params, arch_gcn)
+        test_acc = train(train_phases, model, minibatch, minibatch_eval, model_eval,train_params['eval_val_every'])
+        test_accs.append(test_acc)
+    test_acc = torch.tensor(test_accs)
+    print('============================')
+    print(f'Final Test: {test_acc.mean():.4f} ± {test_acc.std():.4f}')
+    

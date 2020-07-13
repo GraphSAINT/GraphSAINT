@@ -33,7 +33,7 @@ GraphSAINT performs "*graph sampling*" based training, whereas others perform "*
 
 This repo contains source code of our two papers (ICLR '20 and IEEE/IPDPS '19, see the [Citation](#Citation-&-Acknowledgement) Section).
 
-The `./graphsaint` directory contains the Python implementation of the minibatch training algorithm in ICLR '20. We provide two implementations, one in Tensorflow and the other in PyTorch. The two versions follow the same algorithm. Note that **all experiments in our paper are based on the Tensorflow implementation**.
+The `./graphsaint` directory contains the Python implementation of the minibatch training algorithm in ICLR '20. We provide two implementations, one in Tensorflow and the other in PyTorch. The two versions follow the same algorithm. Note that all experiments in our paper are based on the Tensorflow implementation. New experiments on open graph benchmark are based on the PyTorch version. 
 
 
 The `./ipdps19_cpp` directory contains the C++ implementation of the parallel training techniques described in IEEE/IPDPS '19 (see `./ipdps19_cpp/README.md`). All the rest of this repository are for GraphSAINT in ICLR '20.
@@ -227,6 +227,12 @@ For example `--gpu 0` will run on the first GPU. Also, use `--gpu <GPU number> -
 
 
 We have also implemented dual-GPU training to further speedup runtime. Simply add the flag `--dualGPU` and assign two GPUs using the `--gpu` flag. Currently this only works for GPUs supporting memory pooling and connected by NvLink.
+
+**New**: we have prepared specific scripts to train OGB graphs. E.g., run 
+
+`python -m graphsaint.pytorch_version.train_ogbn-products.py --data_prefix ./data/open_graph_benchmark/ogbn-products/ --train_config train_config/open_graph_benchmark/ogbn-product_3_e_gat.yml --gpu 0` 
+
+to achieve 0.8027 accuracy of ogbn-products under **inductive** setting. 
 
 ## Customization
 
