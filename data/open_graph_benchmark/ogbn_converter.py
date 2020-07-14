@@ -10,7 +10,7 @@ from ogb.nodeproppred import PygNodePropPredDataset
 Run this script to convert the graph from the open graph benchmark format
 to the GraphSAINT format.
 
-Right now, ogbn-product and ogbn-arxiv can be converted by this script.
+Right now, ogbn-products and ogbn-arxiv can be converted by this script.
 """
 
 

@@ -1,5 +1,7 @@
 """
-See README in the root directory of GraphSAINT for training instructions. 
+See README in the current directory and in the root directory for training instructions. 
+The graph format is converted via data/open_graph_benchmark/ogbn_converter.py
+Implementation is based on the PyTorch version.
 
 Contact: 
 

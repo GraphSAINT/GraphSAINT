@@ -67,14 +67,14 @@ You can add your own samplers and GNN layers easily. See the [Customization](#Cu
 
 ## Results
 
-**New**: We are testing GraphSAINT on [Open Graph Benchmark](https://ogb.stanford.edu/). Currently, we have results for the `ogbn-product` graph (under submission to the OGB team). Note that the `ogbn-product` accuracy on the leaderboard are mostly under the transductive setting. Our results are under inductive learning (which is harder).
+**New**: We are testing GraphSAINT on [Open Graph Benchmark](https://ogb.stanford.edu/). Currently, we have results for the `ogbn-products` graph (under submission to the OGB team). Note that the `ogbn-products` accuracy on the leaderboard are mostly under the transductive setting. Our results are under inductive learning (which is harder).
 
 All results in ICLR '20 can be reproduced by running the config in `./train_config/`. For example, `./train_config/table2/*.yml` stores all the config for Table 2 of our paper. `./train_config/explore/*,yml` stores all the config for deeper GNNs and various GNN architectures (GAT, JK, etc.). In addition, results related to OGB are trained by the config in `./train_config/open_graph_benchmark/*.yml`.
 
 
 Test set F1-mic score summarized below.
 
-| Sampler | Depth|  GNN | PPI | PPI (large) | Flickr | Reddit | Yelp | Amazon | ogbn-product |
+| Sampler | Depth|  GNN | PPI | PPI (large) | Flickr | Reddit | Yelp | Amazon | ogbn-products |
 |---:|:----:|:---:|:----:|:---:|:----:|:----:|:----:|:----:|:----:|
 | Node | 2 | SAGE | 0.960 |  | 0.507 | 0.962 | 0.641 | 0.782 | |
 | Edge | 2 | SAGE | 0.981 | | 0.510 | 0.966 | 0.653 | 0.807 | |
@@ -118,7 +118,7 @@ All datasets used in our papers are available for download:
 * Flickr
 * Yelp
 * Amazon
-* ogbn-product
+* ogbn-products
 * ... (more to be added)
 
 They are available on [Google Drive link](https://drive.google.com/open?id=1zycmmDES39zVlbVCYs88JTJ1Wm5FbfLz) (alternatively, [BaiduYun link (code: f1ao)](https://pan.baidu.com/s/1SOb0SiSAXavwAcNqkttwcg)). Rename the folder to `data` at the root directory.  The directory structure should be as below:
@@ -168,7 +168,7 @@ We also have a script that converts datasets from our format to GraphSAGE format
 For example `python convert.py ppi` will convert dataset PPI and save new data in GraphSAGE format to `./data.ignore/ppi/`
 
 
-**New**: For data conversion from the OGB format to the GraphSAINT format, please use the script `./data/open_graph_benchmark/ogb_converter.py`. Currently, this script can handle `ogbn-product` and `ogbn-arxiv`.
+**New**: For data conversion from the OGB format to the GraphSAINT format, please use the script `./data/open_graph_benchmark/ogbn_converter.py`. Currently, this script can handle `ogbn-products` and `ogbn-arxiv`.
 
 
 
@@ -228,11 +228,8 @@ For example `--gpu 0` will run on the first GPU. Also, use `--gpu <GPU number> -
 
 We have also implemented dual-GPU training to further speedup runtime. Simply add the flag `--dualGPU` and assign two GPUs using the `--gpu` flag. Currently this only works for GPUs supporting memory pooling and connected by NvLink.
 
-**New**: we have prepared specific scripts to train OGB graphs. E.g., run 
+**New**: we have prepared specific scripts to train OGB graphs. See `./graphsaint/open_graph_benchmark/` for the scripts and instructions.
 
-`python -m graphsaint.pytorch_version.train_ogbn-products.py --data_prefix ./data/open_graph_benchmark/ogbn-products/ --train_config train_config/open_graph_benchmark/ogbn-product_3_e_gat.yml --gpu 0` 
-
-to achieve 0.8027 accuracy of ogbn-products under **inductive** setting. 
 
 ## Customization
 
