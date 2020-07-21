@@ -67,7 +67,7 @@ You can add your own samplers and GNN layers easily. See the [Customization](#Cu
 
 ## Results
 
-**New**: We are testing GraphSAINT on [Open Graph Benchmark](https://ogb.stanford.edu/). Currently, we have results for the `ogbn-products` graph (under submission to the OGB team). Note that the `ogbn-products` accuracy on the leaderboard are mostly under the transductive setting. Our results are under inductive learning (which is harder).
+**New**: We are testing GraphSAINT on [Open Graph Benchmark](https://ogb.stanford.edu/). Currently, we have results for the `ogbn-products` graph. Note that the `ogbn-products` accuracy on the leaderboard trained with other methods are mostly under the transductive setting. Our results are under inductive learning (which is harder).
 
 All results in ICLR '20 can be reproduced by running the config in `./train_config/`. For example, `./train_config/table2/*.yml` stores all the config for Table 2 of our paper. `./train_config/explore/*,yml` stores all the config for deeper GNNs and various GNN architectures (GAT, JK, etc.). In addition, results related to OGB are trained by the config in `./train_config/open_graph_benchmark/*.yml`.
 
