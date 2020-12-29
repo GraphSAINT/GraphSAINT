@@ -124,8 +124,9 @@ class GraphSAINT:
         f_loss = tf.nn.sigmoid_cross_entropy_with_logits if self.sigmoid_loss\
                                 else tf.nn.softmax_cross_entropy_with_logits
         # weighted loss due to bias in appearance of vertices
-        self.loss_terms = f_loss(logits=self.node_preds,labels=self.placeholders['labels'])
-        if len(self.loss_terms.shape) == 1:
+        self.loss_terms = f_loss(logits=self.node_preds, labels=self.placeholders['labels'])
+        loss_terms_ndims = self.loss_terms.shape.ndims if self.loss_terms.shape is not None else None
+        if loss_terms_ndims == 1:
             self.loss_terms = tf.reshape(self.loss_terms,(-1,1))
         self._weight_loss_batch = tf.nn.embedding_lookup(self.norm_loss, self.node_subgraph)
         _loss_terms_weight = tf.linalg.matmul(tf.transpose(self.loss_terms),\
