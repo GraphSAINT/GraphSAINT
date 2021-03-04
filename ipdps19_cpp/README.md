@@ -2,31 +2,22 @@
 
 Hanqing Zeng*, Hongkuan Zhou*, Ajitesh Srivastava, Rajgopal Kannan, Viktor Prasanna
 
-#### IMPORTANT: This a self-contained directory for the C++ implementation of our parallel algorithm proposed in IEEE/IPDPS '19. If you are only interested in the GraphSAINT minibatch algorithm itself (ICLR '20), but not the parallelization techniques, please ignore this directory. 
+#### IMPORTANT: This a self-contained directory for the C++ implementation of our parallel algorithm proposed in IEEE/IPDPS '19 (journal version: JPDC 2021). If you are only interested in the GraphSAINT minibatch algorithm itself (ICLR '20), but not the parallelization techniques, please ignore this directory. 
 
 
 **Contact**
 
 Hanqing Zeng (zengh@usc.edu), Hongkuan Zhou (hongkuaz@usc.edu)
 
-**Citation**
+**Updates**
 
-
-```
-@INPROCEEDINGS{graphsaint-ipdps19,
-author={Hanqing Zeng and Hongkuan Zhou and Ajitesh Srivastava and Rajgopal Kannan and Viktor Prasanna},
-booktitle={2019 IEEE International Parallel and Distributed Processing Symposium (IPDPS)},
-title={Accurate, Efficient and Scalable Graph Embedding},
-year={2019},
-month={May},
-doi={10.1109/IPDPS.2019.00056}, 
-}
-```
+* 2021/02/07: Fix a bug in forward / backward prop for different dimensions. 
 
 
 
 ## Compilation
 
+### Default: MKL-based
 
 We rely on Intel MKL for optimized execution of dense matrix multiplication and we require compilation using Intel icc. The parallelization of sampler and subgraph feature aggregation are via OpenMP (provided with icc). You can install Intel Parallel Studio (which includes MKL, icc and OpenMP) following instructions on [this page](https://software.intel.com/en-us/get-started-with-mkl-for-linux). Students can obtain a free license for the Parallel Studio. 
 Below are the versions we have tested:
@@ -46,9 +37,18 @@ Finally, run from the current directory:
 make
 ```
 
-Now you are ready to perform parallel GCN training. 
+Now you are ready to perform parallel GNN training (use GraphSAGE as the backbone architecture). 
 
 If the above does not work, you may need to set other environment variables. See this [script](https://software.intel.com/en-us/mkl-macos-developer-guide-setting-environment-variables) provided by Intel.
+
+### Alternative: Non-MKL based (Not recommended: training would be much slower in this case) 
+
+If speed is critical to you and you just want to check the functionality without going through the trouble of installing MKL, ICC, etc., you can also use the non-MKL compilation. To do this:
+
+* Go to `global.h` and comment out line 42 (`#define USE_MKL`). 
+* Replace the `makefile` with `makefile.nomkl`. 
+* `make` in terminal
+
 
 ## Dataset
 
@@ -171,8 +171,36 @@ To train on your own data, you can use our script `convert.py` to convert from t
 python convert.py <dataset name>
 ```
 
+**Citation**
+
+
+```
+@INPROCEEDINGS{graphsaint-ipdps19,
+author={Hanqing Zeng and Hongkuan Zhou and Ajitesh Srivastava and Rajgopal Kannan and Viktor Prasanna},
+booktitle={2019 IEEE International Parallel and Distributed Processing Symposium (IPDPS)},
+title={Accurate, Efficient and Scalable Graph Embedding},
+year={2019},
+month={May},
+doi={10.1109/IPDPS.2019.00056}, 
+}
+```
+
+```
+@article{graphsaint-jpdc21,
+title = {Accurate, efficient and scalable training of Graph Neural Networks},
+journal = {Journal of Parallel and Distributed Computing},
+volume = {147},
+pages = {166-183},
+year = {2021},
+issn = {0743-7315},
+doi = {https://doi.org/10.1016/j.jpdc.2020.08.011},
+url = {https://www.sciencedirect.com/science/article/pii/S0743731520303579},
+author = {Hanqing Zeng and Hongkuan Zhou and Ajitesh Srivastava and Rajgopal Kannan and Viktor Prasanna},
+}
+```
+
 **TODO**
 
 * The current C++ code implements the algorithm described in our [IEEE/IPDPS](https://ieeexplore.ieee.org/document/8820993) paper, which is a 'premature' version of our [GraphSAINT](https://openreview.net/forum?id=BJe8pkHFwS) algorithm. The major differences are that this C++ version does not perform normalization, and currently only supports Frontier (or MRW) sampling. We will update our code to be consistent with the GraphSAINT version. 
 * The current C++ version does not support dropout yet. We should be able to support dropout easily given the current code framework. 
-* We will modify the C++ version so that it shares the same interface with the python+Tensorflow version. i.e., users should be able to use the same `yml` file to configure GCN architecture / hyper-parameters. Conversion of data formats should take place internally during runtime. 
+* We will modify the C++ version so that it shares the same interface with the python+Tensorflow version. i.e., users should be able to use the same `yml` file to configure GNN architecture / hyper-parameters. Conversion of data formats should take place internally during runtime. 

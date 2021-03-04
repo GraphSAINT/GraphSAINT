@@ -25,32 +25,32 @@ char *data;
 int num_itr;
 int num_thread;
 
-void forward_GCN(Model &model, s_data2d_sp &adj, 
+void forward_GNN(Model &model, s_data2d_sp &adj, 
                  s_idx1d_ds &v_subg, s_data2d_ds &feat_fullg, 
                  s_idx2d_ds &label_subg, s_stat_acc &loss_acc, s_idx1d_ds v_masked=s_idx1d_ds()) {
-    int num_layer = model.layer_GCN.size();
+    int num_layer = model.layer_SAGE.size();
     // setup layer-1 input
-    lookup_feats(v_subg, feat_fullg, model.layer_GCN[0].feat_in);
+    lookup_feats(v_subg, feat_fullg, model.layer_SAGE[0].feat_in);
     for (int l=0; l<num_layer-1; l++) {
-        model.layer_GCN[l].forward(adj, model.layer_GCN[l+1].feat_in);
+        model.layer_SAGE[l].forward(adj, model.layer_SAGE[l+1].feat_in);
     }
-    model.layer_GCN[num_layer-1].forward(adj, model.layer_l2norm.feat_in);
+    model.layer_SAGE[num_layer-1].forward(adj, model.layer_l2norm.feat_in);
     model.layer_l2norm.forward(model.layer_dense.feat_in, adj.num_v);
     model.layer_dense.forward(model.layer_loss.feat_in, adj.num_v);
     model.layer_loss.forward(label_subg, loss_acc, v_masked);
 }
 
-void backward_GCN(Model &model, s_data2d_sp &adj_trans, 
+void backward_GNN(Model &model, s_data2d_sp &adj, s_data2d_sp &adj_trans, 
                   s_idx2d_ds &label_subg, s_stat_acc &loss_acc) {
-    int num_layer = model.layer_GCN.size();
+    int num_layer = model.layer_SAGE.size();
     model.layer_loss.backward(label_subg, model.layer_dense.grad_in);
     model.layer_dense.backward(model.layer_l2norm.grad_in);
-    model.layer_l2norm.backward(model.layer_GCN[num_layer-1].grad_in);
+    model.layer_l2norm.backward(model.layer_SAGE[num_layer-1].grad_in);
     for (int l=num_layer-1; l>0; l--) {
-        model.layer_GCN[l].backward(adj_trans,model.layer_GCN[l-1].grad_in);
+        model.layer_SAGE[l].backward(adj, adj_trans, model.layer_SAGE[l-1].grad_in);
     }
     s_data2d_ds dummy = s_data2d_ds();
-    model.layer_GCN[0].backward(adj_trans,dummy);
+    model.layer_SAGE[0].backward(adj, adj_trans, dummy);
 }
 
 
@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
     for (int l=0; l<num_layer; l++) {
         int dim_weight_in = (l==0) ? dim_init : dim_hid;
         bool is_act = l==num_layer-1?false:true;
-        model.layer_GCN.push_back(Layer_GCN(l,size_g,num_thread,is_act,dim_hid,dim_weight_in,lr));
+        model.layer_SAGE.push_back(Layer_SAGE(l,size_g,num_thread,is_act,dim_hid,dim_weight_in,lr));
     }
     model.layer_l2norm = Layer_l2norm(0,size_g,num_thread,dim_hid);
     model.layer_dense = Layer_dense(0,size_g,num_thread,num_cls,dim_hid,lr);
@@ -139,7 +139,7 @@ int main(int argc, char* argv[]) {
     for (int itr=0; itr<num_itr; itr++) {
         // validation
         if (itr%EVAL_INTERVAL==0 && itr!=0) {
-            forward_GCN(model, adj_full, node_all, input, 
+            forward_GNN(model, adj_full, node_all, input, 
                         label_true_val, loss_acc, node_val);
             printf("Evaluation f1_mic: %f, f1_mac: %f\n", loss_acc.f1_mic, loss_acc.f1_mac);
         }
@@ -164,8 +164,8 @@ int main(int argc, char* argv[]) {
         subg_trans_cur = subgs_trans[num_subg_remain];
         subg_v_cur = subgs_v[num_subg_remain];
         lookup_labels(subg_v_cur, label_true, label_subg);
-        forward_GCN(model, subg_cur, subg_v_cur, input, label_subg, loss_acc);
-        backward_GCN(model, subg_trans_cur, label_subg, loss_acc);
+        forward_GNN(model, subg_cur, subg_v_cur, input, label_subg, loss_acc);
+        backward_GNN(model, subg_cur, subg_trans_cur, label_subg, loss_acc);
         printf("Training itr %d f1_mic: %f, f1_mac: %f\n", itr, loss_acc.f1_mic, loss_acc.f1_mac);
     }
     printf("--------------------\n");
@@ -180,7 +180,7 @@ int main(int argc, char* argv[]) {
     printf("SIGMOID time: %lf\n", time_ops[OP_SIGMOID]);
     printf("SOFTMAX time: %lf\n", time_ops[OP_SOFTMAX]);
     printf("--------------------\n");
-    forward_GCN(model, adj_full, node_all, input,
+    forward_GNN(model, adj_full, node_all, input,
                 label_true_test, loss_acc, node_test);
     printf("Testing f1_mic: %f, f1_mac: %f\n", loss_acc.f1_mic, loss_acc.f1_mac);
 }

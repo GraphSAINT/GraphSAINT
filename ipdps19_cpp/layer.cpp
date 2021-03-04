@@ -19,12 +19,12 @@
 #include <limits>
 
 
-Layer_GCN::Layer_GCN() {
+Layer_SAGE::Layer_SAGE() {
     id_layer = size_subg = num_thread = -1;
     dim_weight_out = dim_weight_in = -1;
 }
 
-Layer_GCN::Layer_GCN(int id_layer_, int size_subg_, int num_thread_, bool is_act_, int dim_weight_out_, int dim_weight_in_, double lr_)
+Layer_SAGE::Layer_SAGE(int id_layer_, int size_subg_, int num_thread_, bool is_act_, int dim_weight_out_, int dim_weight_in_, double lr_)
 {
     id_layer = id_layer_;
     size_subg = size_subg_;
@@ -41,10 +41,11 @@ Layer_GCN::Layer_GCN(int id_layer_, int size_subg_, int num_thread_, bool is_act
     init_glorot(weight_self);
     init_glorot(weight_neigh);
     init_zero(bias);
-    int dim_feat_aggr = dim_weight_out/2;
-    feat_aggr = s_data2d_ds(size_subg,dim_feat_aggr);
-    feat_in = s_data2d_ds(size_subg,dim_weight_in);
-    grad_in = s_data2d_ds(size_subg,dim_weight_out);
+    // determine the order of matrix chain multiplication (for both forward and backward)
+    is_order_AX_W = dim_weight_in < dim_weight_out / 2 ? true : false;
+    feat_aggr = s_data2d_ds(size_subg, is_order_AX_W ? dim_weight_in : dim_weight_out/2);
+    feat_in = s_data2d_ds(size_subg, dim_weight_in);
+    grad_in = s_data2d_ds(size_subg, dim_weight_out);
     is_act = is_act_;
     if (is_act) {
         mask = s_idx1d_ds(size_subg*dim_weight_out);
@@ -64,7 +65,7 @@ Layer_GCN::Layer_GCN(int id_layer_, int size_subg_, int num_thread_, bool is_act
     d_biases.push_back(&d_bias);
 }
 
-void Layer_GCN::update_size_subg(int size_subg_, s_data2d_ds &feat_out) {
+void Layer_SAGE::update_size_subg(int size_subg_, s_data2d_ds &feat_out) {
     size_subg = size_subg_;
     feat_aggr.dim1 = size_subg;
     feat_in.dim1 = size_subg;
@@ -76,7 +77,7 @@ void Layer_GCN::update_size_subg(int size_subg_, s_data2d_ds &feat_out) {
  * Assume before calling forward, feat_in has already been filled in. 
  * feat_out should be the feat_in of next layer
  */
-void Layer_GCN::forward(s_data2d_sp subg, s_data2d_ds &feat_out)
+void Layer_SAGE::forward(s_data2d_sp subg, s_data2d_ds &feat_out)
 {
     update_size_subg(subg.num_v, feat_out);
     feat_out.dim1 = subg.num_v;
@@ -91,12 +92,11 @@ void Layer_GCN::forward(s_data2d_sp subg, s_data2d_ds &feat_out)
     feat_out_part2.arr = feat_out.arr + feat_out_part1.dim1*feat_out_part1.dim2;
     denseMM(feat_in, weight_self, feat_out_part1);
     // feat_aggr*weight_neigh || feat_in*weight_self + bias
-    if (dim_weight_in < dim_weight_out/2) {
-        // feat aggregation
+    if (is_order_AX_W) {    // feat aggregation (order 1: (AX)W)
         feat_aggr.dim2 = dim_weight_in;
         sparseMM(subg, feat_in, feat_aggr, num_thread); // update feat_aggr
         denseMM(feat_aggr, weight_neigh, feat_out_part2);
-    } else {
+    } else {                // feat aggregation (order 2: A(XW))
         feat_aggr.dim2 = dim_weight_out/2;
         denseMM(feat_in, weight_neigh, feat_aggr);
         sparseMM(subg, feat_aggr, feat_out_part2, num_thread);
@@ -112,7 +112,7 @@ void Layer_GCN::forward(s_data2d_sp subg, s_data2d_ds &feat_out)
  * grad_out should be the grad_in of previous layer
  * grad_out = d L / d X^(l-1)
  */
-void Layer_GCN::backward(s_data2d_sp subg_trans, s_data2d_ds &grad_out)
+void Layer_SAGE::backward(s_data2d_sp subg, s_data2d_sp subg_trans, s_data2d_ds &grad_out)
 {
     if (is_act) {maskM(grad_in, mask);}
     // partition grad_in for the part of self and neighbor weights
@@ -125,17 +125,25 @@ void Layer_GCN::backward(s_data2d_sp subg_trans, s_data2d_ds &grad_out)
     grad_in_part2.dim2 = grad_in.dim2/2;
     grad_in_part2.arr = grad_in.arr + grad_in_part1.dim1*grad_in_part1.dim2;
     denseMM(feat_in, grad_in_part1, d_weight_self, true);
-    if (dim_weight_in < dim_weight_out/2) {
-        denseMM(feat_aggr, grad_in_part2, d_weight_neigh, true);
+    // In the below calculation, we use feat_aggr to store the temporary result for matrix multiplication. 
+    // Therefore, we do not need to allocation any new storage. 
+    if (is_order_AX_W) {
+        assert(feat_aggr.dim2 == dim_weight_in);        // feat_aggr stores the aggregated, raw feature
+        sparseMM(subg, feat_in, feat_aggr, num_thread);                     // feat_aggr = adj X_{in}
+        denseMM(feat_aggr, grad_in_part2, d_weight_neigh, true);            // grad_weight = feat_aggr^T grad_in
+        if (id_layer > 0) {
+            denseMM(grad_in_part2, weight_neigh, feat_aggr, false, true);   // feat_aggr = grad_in W_{neigh}^T
+            sparseMM(subg_trans, feat_aggr, grad_out, num_thread);
+        }
     } else {
-        feat_aggr.dim2 = dim_weight_out/2;
+        assert(feat_aggr.dim2 == dim_weight_out/2);     // feat_aggr stores the aggregated, transformed feature
         sparseMM(subg_trans, grad_in_part2, feat_aggr, num_thread);
         denseMM(feat_in, feat_aggr, d_weight_neigh, true);
+        if (id_layer > 0) {
+            denseMM(feat_aggr, weight_neigh, grad_out, false, true);        // grad_out = (adj^T grad_in) W_{neigh}^T
+        }
     }
     if (id_layer > 0) {
-        feat_aggr.dim2 = dim_weight_out/2;
-        sparseMM(subg_trans, grad_in_part2, feat_aggr, num_thread);         // use feat_aggr as temp var
-        denseMM(feat_aggr, weight_neigh, grad_out, false, true);
         denseMM(grad_in_part1, weight_self, grad_out, false, true, true);   // perform += of grad_out
     }
     // gradient of bias

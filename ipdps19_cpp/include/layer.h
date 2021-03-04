@@ -4,7 +4,7 @@
 #include <string>
 
 
-class Layer_GCN
+class Layer_SAGE
 {
 public:
     ADAM optm;
@@ -21,14 +21,15 @@ public:
     int num_thread;
     int dim_weight_in, dim_weight_out;
     bool is_act;
-    Layer_GCN();
-    Layer_GCN(int id_layer_, int size_subg_, int num_thread_, bool is_act_, int dim_weight_out_, int dim_weight_in_=-1, double lr_=0);
+    Layer_SAGE();
+    Layer_SAGE(int id_layer_, int size_subg_, int num_thread_, bool is_act_, int dim_weight_out_, int dim_weight_in_=-1, double lr_=0);
     void forward(s_data2d_sp subg, s_data2d_ds &feat_out);
-    void backward(s_data2d_sp subg, s_data2d_ds &grad_out);
+    void backward(s_data2d_sp subg, s_data2d_sp subg_trans, s_data2d_ds &grad_out);
 private:
     std::vector<s_data2d_ds*> weights, d_weights;
     std::vector<s_data1d_ds*> biases, d_biases;
     void update_size_subg(int size_subg_, s_data2d_ds &feat_out);
+    bool is_order_AX_W;         // true: compute (AX)W; false: compute A(XW)
 };
 
 
@@ -76,7 +77,7 @@ private:
 };
 
 
-class Layer_loss    // the final layer of the GCN
+class Layer_loss    // the final layer of the SAGE
 {
 public:
     s_data2d_ds feat_in;        // should be the output of last dense layer
@@ -101,7 +102,7 @@ private:
 
 
 struct Model {
-    std::vector<Layer_GCN> layer_GCN;
+    std::vector<Layer_SAGE> layer_SAGE;
     Layer_l2norm layer_l2norm;
     Layer_dense layer_dense;
     Layer_loss layer_loss;
