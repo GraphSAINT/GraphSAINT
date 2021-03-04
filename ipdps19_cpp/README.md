@@ -43,7 +43,7 @@ If the above does not work, you may need to set other environment variables. See
 
 ### Alternative: Non-MKL based (Not recommended: training would be much slower in this case) 
 
-If speed is critical to you and you just want to check the functionality without going through the trouble of installing MKL, ICC, etc., you can also use the non-MKL compilation. To do this:
+If speed is not critical to you and you just want to check the functionality without going through the trouble of installing MKL, ICC, etc., you can also use the non-MKL compilation. To do this:
 
 * Go to `global.h` and comment out line 42 (`#define USE_MKL`). 
 * Replace the `makefile` with `makefile.nomkl`. 
