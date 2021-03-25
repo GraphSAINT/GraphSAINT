@@ -457,16 +457,16 @@ class GatedAttentionAggregator(nn.Module):
         """
         Inputs:
             inputs          tuple / list of two elements:
-                            1. feat_in: 2D matrix of node features input to the layer
-                            2. adj_norm: normalized subgraph adj. Normalization should
+                            1. adj_norm: normalized subgraph adj. Normalization should
                                consider both the node degree and aggregation normalization
+                            2. feat_in: 2D matrix of node features input to the layer
 
         Outputs:
             feat_out        2D matrix of features for output nodes of the layer
             adj_norm        normalized adj same as the input. We have to return it to
                             support nn.Sequential called in models.py
         """
-        feat_in, adj_norm = inputs
+        adj_norm, feat_in = inputs
         feat_in = self.f_dropout(feat_in)
         # compute gate value
         adj_norm_cpu = adj_norm.cpu()
@@ -507,4 +507,4 @@ class GatedAttentionAggregator(nn.Module):
             feat_out = torch.cat(feat_partial, 1)
         else:
             raise NotImplementedError
-        return feat_out, adj_norm
+        return adj_norm, feat_out
