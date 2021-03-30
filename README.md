@@ -29,6 +29,8 @@ GraphSAINT performs "*graph sampling*" based training, whereas others perform "*
 **Scalability**: GraphSAINT achieves scalability w.r.t. 1). *graph size*: our subgraph size does not need to grow proportionally with the training graphs size. So even if we are dealing with a million-node graph, the subgraphs can still easily fit in the GPU memory; 2). *model size*: by resolving "neighbor explosion", training cost scales linearly with GNN width and depth; and 3). *amount of parallel resources*: graph sampling is highly scalable by trivial task parallelism. In addition, resolving "neighbor explosion" also implies dramatic reduction in communication overhead, which is critical in distributed setting (see our IEEE/IPDPS '19 or [hardware accelerator development](https://dl.acm.org/doi/abs/10.1145/3373087.3375312)).
 
 
+#### [News]: Check out our new work that generalizes subgraph sampling to both the training and inference: [shaDow-GNN](https://github.com/facebookresearch/shaDow_GNN)!
+
 ## About This Repo
 
 This repo contains source code of our two papers (ICLR '20 and IEEE/IPDPS '19, see the [Citation](#Citation-&-Acknowledgement) Section).
